@@ -59,6 +59,13 @@ export class EmbeddingClient {
     return this.disabledReason;
   }
 
+  /** Drop failure backoff and cached query vectors after a config change. */
+  reset(): void {
+    this.disabledReason = undefined;
+    this.retryAt = 0;
+    this.queryCache.clear();
+  }
+
   private fail(reason: string): null {
     this.disabledReason = reason;
     // Back off for a minute instead of disabling the endpoint for the whole

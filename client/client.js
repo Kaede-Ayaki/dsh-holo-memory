@@ -34,6 +34,21 @@
           ".hm-card-sub{font-size:10px;line-height:15px;color:var(--dsw-alias-label-tertiary,#8996b3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
           ".hm-meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:10.5px;line-height:17px;color:var(--dsw-alias-label-tertiary,#8996b3)}",
           ".hm-meta code{font-family:var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,monospace);font-size:10px;color:var(--dsw-alias-label-secondary,#a8b4cf)}",
+          ".hm-config{border:.5px solid var(--dsw-alias-border-l3,#2a3654);border-radius:9px;background:var(--dsw-alias-bg-layer-2,#0f182b);padding:10px 12px;display:flex;flex-direction:column;gap:8px}",
+          ".hm-config-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary,#a8b4cf)}",
+          ".hm-config-head b{color:var(--dsw-alias-brand-primary,#5b7cfa)}",
+          ".hm-config-current{font-size:10px;line-height:15px;color:var(--dsw-alias-label-tertiary,#8996b3);text-align:right}",
+          ".hm-config-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:8px}",
+          ".hm-field{display:flex;flex-direction:column;gap:4px;font-size:10.5px;line-height:15px;color:var(--dsw-alias-label-tertiary,#8996b3)}",
+          ".hm-field input{box-sizing:border-box;width:100%;padding:5px 8px;font-size:11.5px;line-height:17px;border:.5px solid var(--dsw-alias-border-l3,#2a3654);border-radius:6px;background:var(--dsw-alias-bg-layer-1,#0b1222);color:var(--dsw-alias-label-primary,#e8eeff);outline:none;font-family:inherit}",
+          ".hm-field input:focus{box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary,#5b7cfa)}",
+          ".hm-field-full{grid-column:1/-1}",
+          ".hm-config-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
+          ".hm-status{font-size:10.5px;line-height:16px}",
+          ".hm-status-ok{color:var(--dsw-alias-state-success-primary,#4ade80)}",
+          ".hm-status-warn{color:var(--dsw-alias-state-warning-primary,#f5b84c)}",
+          ".hm-status-err{color:var(--dsw-alias-state-error-primary,#f87171)}",
+          ".hm-status-work{color:var(--dsw-alias-label-tertiary,#8996b3)}",
           ".hm-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}",
           ".hm-search{flex:1 1 240px;min-width:180px;box-sizing:border-box;padding:6px 10px;font-size:12px;line-height:18px;border:.5px solid var(--dsw-alias-border-l3,#2a3654);border-radius:7px;background:var(--dsw-alias-bg-layer-2,#0f182b);color:var(--dsw-alias-label-primary,#e8eeff);outline:none}",
           ".hm-search:focus{box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary,#5b7cfa)}",
@@ -196,6 +211,28 @@
           var injectionsPair = react.useState([]);
           var injections = injectionsPair[0];
           var setInjections = injectionsPair[1];
+          var configPair = react.useState(null);
+          var config = configPair[0];
+          var setConfig = configPair[1];
+          var cfgBaseUrlPair = react.useState("");
+          var cfgBaseUrl = cfgBaseUrlPair[0];
+          var setCfgBaseUrl = cfgBaseUrlPair[1];
+          var cfgModelPair = react.useState("");
+          var cfgModel = cfgModelPair[0];
+          var setCfgModel = cfgModelPair[1];
+          var cfgKeyPair = react.useState("");
+          var cfgKey = cfgKeyPair[0];
+          var setCfgKey = cfgKeyPair[1];
+          var cfgDimsPair = react.useState("");
+          var cfgDims = cfgDimsPair[0];
+          var setCfgDims = cfgDimsPair[1];
+          var cfgLoadedRef = react.useRef(false);
+          var checkPair = react.useState({ state: "idle", text: "" });
+          var check = checkPair[0];
+          var setCheck = checkPair[1];
+          var savePair = react.useState({ state: "idle", text: "" });
+          var save = savePair[0];
+          var setSave = savePair[1];
 
           var load = react.useCallback(function () {
             setLoading(true);
@@ -204,11 +241,20 @@
               fetchJson("/holo-memory/stats"),
               fetchJson("/holo-memory/list?limit=500"),
               fetchJson("/holo-memory/injections?limit=50").catch(function () { return { injections: [] }; }),
+              fetchJson("/holo-memory/config").catch(function () { return { config: null }; }),
             ])
               .then(function (values) {
                 setStats(values[0]);
                 setRecords(values[1].records || []);
                 setInjections(values[2].injections || []);
+                var cfg = values[3].config || null;
+                setConfig(cfg);
+                if (cfg && !cfgLoadedRef.current) {
+                  cfgLoadedRef.current = true;
+                  setCfgBaseUrl(cfg.baseUrl || "");
+                  setCfgModel(cfg.model || "");
+                  setCfgDims(cfg.dimensions ? String(cfg.dimensions) : "");
+                }
               })
               .catch(function (err) {
                 setError(String(err && err.message ? err.message : err));
@@ -247,6 +293,52 @@
                 return load();
               })
               .catch(function (err) { setError(String(err && err.message ? err.message : err)); });
+          };
+
+          var testEmbedding = function () {
+            setCheck({ state: "work", text: "检测中…" });
+            fetchJson("/holo-memory/test-embedding", {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-holo-memory": "1" },
+              body: JSON.stringify({
+                baseUrl: cfgBaseUrl,
+                model: cfgModel,
+                apiKey: cfgKey,
+                dimensions: cfgDims ? Number(cfgDims) : 0,
+              }),
+            })
+              .then(function (data) {
+                var probe = data.probe || {};
+                if (probe.kind === "embedding") {
+                  setCheck({ state: "ok", text: "✓ " + probe.message + " · " + probe.latencyMs + "ms" });
+                } else if (probe.kind === "chat") {
+                  setCheck({ state: "warn", text: "⚠ " + probe.message + " · " + probe.latencyMs + "ms" });
+                } else {
+                  setCheck({ state: "err", text: "✕ " + (probe.message || "检测失败") });
+                }
+              })
+              .catch(function (err) { setCheck({ state: "err", text: "✕ " + String(err && err.message ? err.message : err) }); });
+          };
+
+          var saveEmbedding = function () {
+            setSave({ state: "work", text: "保存中…" });
+            fetchJson("/holo-memory/config", {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-holo-memory": "1" },
+              body: JSON.stringify({
+                baseUrl: cfgBaseUrl,
+                model: cfgModel,
+                apiKey: cfgKey,
+                dimensions: cfgDims ? Number(cfgDims) : 0,
+              }),
+            })
+              .then(function (data) {
+                setConfig(data.config || null);
+                setCfgKey("");
+                setSave({ state: "ok", text: "✓ 已保存，立即生效；新记录会在后台补齐向量" });
+                return load();
+              })
+              .catch(function (err) { setSave({ state: "err", text: "✕ " + String(err && err.message ? err.message : err) }); });
           };
 
           var card = function (label, value, sub, tone) {
@@ -306,6 +398,111 @@
                   react.createElement("span", null, "蒸馏：", react.createElement("code", null, stats.extract && stats.extract.enabled ? "启用" : "关闭")),
                 )
               : null,
+            react.createElement(
+              "div",
+              { className: "hm-config" },
+              react.createElement(
+                "div",
+                { className: "hm-config-head" },
+                react.createElement("span", null, "向量模型配置"),
+                react.createElement(
+                  "span",
+                  { className: "hm-config-current" },
+                  config
+                    ? (config.hasKey ? "key 已保存" : "key 未设置") + " · " + (config.enabled ? "已启用" : "未启用")
+                    : "读取中…",
+                ),
+              ),
+              react.createElement(
+                "div",
+                { className: "hm-config-grid" },
+                react.createElement(
+                  "label",
+                  { className: "hm-field hm-field-full" },
+                  "供应商 / 接口地址",
+                  react.createElement("input", {
+                    value: cfgBaseUrl,
+                    placeholder: "https://api.siliconflow.cn/v1",
+                    list: "hm-provider-list",
+                    onChange: function (event) { setCfgBaseUrl(event.target.value); },
+                  }),
+                ),
+                react.createElement(
+                  "datalist",
+                  { id: "hm-provider-list" },
+                  [
+                    "https://api.siliconflow.cn/v1",
+                    "https://api.openai.com/v1",
+                    "http://127.0.0.1:11434/v1",
+                    "https://ark.cn-beijing.volces.com/api/v3",
+                    "https://api.deepseek.com",
+                  ].map(function (url) { return react.createElement("option", { value: url, key: url }); }),
+                ),
+                react.createElement(
+                  "label",
+                  { className: "hm-field" },
+                  "模型",
+                  react.createElement("input", {
+                    value: cfgModel,
+                    placeholder: "Qwen/Qwen3-Embedding-8B",
+                    onChange: function (event) { setCfgModel(event.target.value); },
+                  }),
+                ),
+                react.createElement(
+                  "label",
+                  { className: "hm-field" },
+                  "API Key",
+                  react.createElement("input", {
+                    type: "password",
+                    value: cfgKey,
+                    autoComplete: "off",
+                    placeholder: config && config.hasKey ? "已保存；留空保持不变" : "输入 API Key（本地 Ollama 可空）",
+                    onChange: function (event) { setCfgKey(event.target.value); },
+                  }),
+                ),
+                react.createElement(
+                  "label",
+                  { className: "hm-field hm-field-full" },
+                  "维度（可选，0 = 用模型默认）",
+                  react.createElement("input", {
+                    type: "number",
+                    min: "0",
+                    value: cfgDims,
+                    placeholder: "0",
+                    onChange: function (event) { setCfgDims(event.target.value); },
+                  }),
+                ),
+              ),
+              react.createElement(
+                "div",
+                { className: "hm-config-actions" },
+                react.createElement(
+                  "button",
+                  { className: "hm-btn", onClick: testEmbedding, disabled: check.state === "work" },
+                  check.state === "work" ? "检测中…" : "检测可用性",
+                ),
+                react.createElement(
+                  "button",
+                  { className: "hm-btn hm-btn-primary", onClick: saveEmbedding, disabled: save.state === "work" },
+                  save.state === "work" ? "保存中…" : "保存配置",
+                ),
+                react.createElement(
+                  "span",
+                  { className: "hm-status hm-status-" + (check.state || "idle") },
+                  check.text,
+                ),
+                react.createElement(
+                  "span",
+                  { className: "hm-status hm-status-" + (save.state || "idle") },
+                  save.text,
+                ),
+              ),
+              react.createElement(
+                "p",
+                { className: "hm-note" },
+                "检测只请求一次 /embeddings（不保存，不会写入记忆）；保存后立即生效，已有记录会在后台按新模型重新回填向量。",
+              ),
+            ),
             react.createElement(
               "div",
               { className: "hm-toolbar" },
@@ -397,3 +594,4 @@
     console.warn("[dsh-holo-memory] client runtime error:", err);
   }
 })();
+

@@ -16,6 +16,13 @@ import { HoloStore } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { redactSecrets } from './sanitize.js';
 import { readInjections } from './injections.js';
+import {
+  hasEmbeddingKey,
+  loadEmbeddingConfig,
+  readEmbeddingKey,
+  saveEmbeddingConfig,
+} from './embedding-config.js';
+import { probeEmbedding } from './embedding-probe.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const DEFAULT_LIMIT = 200;
@@ -30,6 +37,8 @@ export interface ConsoleDeps {
   embedder: EmbeddingClient;
   config: HoloConfig;
   logger: LoggerLike;
+  /** Queue all records for re-embedding after the model changed. */
+  onConfigSaved?: () => void;
 }
 
 function sendJson(res: ServerResponse, status: number, payload: unknown): void {
@@ -194,6 +203,43 @@ async function remove(deps: ConsoleDeps, id: string): Promise<Record<string, unk
   return { ok: true, removed: publicRecord(match) };
 }
 
+function configPayload(deps: ConsoleDeps): Record<string, unknown> {
+  return {
+    baseUrl: deps.config.embeddingBaseUrl,
+    model: deps.config.embeddingModel,
+    dimensions: deps.config.embeddingDimensions,
+    baseline: deps.config.embeddingBaseline,
+    hasKey: hasEmbeddingKey(deps.config),
+    keyFile: deps.config.embeddingApiKeyFile,
+    enabled: deps.embedder.enabled,
+    saved: loadEmbeddingConfig(deps.store.dir) !== null,
+  };
+}
+
+function parseConfigBody(raw: unknown): {
+  baseUrl: string;
+  model: string;
+  dimensions: number;
+  baseline: number;
+  apiKey: string;
+} | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const body = raw as Record<string, unknown>;
+  const baseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : '';
+  const model = typeof body.model === 'string' ? body.model.trim() : '';
+  if (baseUrl.length === 0 || model.length === 0) return null;
+  const dimensions = Number(body.dimensions);
+  const baseline = Number(body.baseline);
+  const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+  return {
+    baseUrl,
+    model,
+    dimensions: Number.isFinite(dimensions) ? Math.max(0, dimensions) : 0,
+    baseline: Number.isFinite(baseline) ? Math.min(0.9, Math.max(0, baseline)) : 0.22,
+    apiKey,
+  };
+}
+
 /** Route handler. Returns nothing; writes the response itself. */
 async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
@@ -212,6 +258,66 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
         ok: true,
         injections: await readInjections(deps.store.dir, limitOf(url.searchParams.get('limit'))),
       });
+      return;
+    }
+    if (req.method === 'GET' && path === '/holo-memory/config') {
+      sendJson(res, 200, { ok: true, config: configPayload(deps) });
+      return;
+    }
+    if (req.method === 'POST' && path === '/holo-memory/config') {
+      if (req.headers['x-holo-memory'] !== '1') {
+        sendJson(res, 403, { ok: false, error: 'missing x-holo-memory header' });
+        return;
+      }
+      let payload: unknown;
+      try {
+        payload = JSON.parse(await readBody(req)) as unknown;
+      } catch {
+        sendJson(res, 400, { ok: false, error: 'invalid JSON body' });
+        return;
+      }
+      const parsed = parseConfigBody(payload);
+      if (!parsed) {
+        sendJson(res, 400, { ok: false, error: 'baseUrl and model are required' });
+        return;
+      }
+      if (!/^https?:\/\//i.test(parsed.baseUrl)) {
+        sendJson(res, 400, { ok: false, error: 'baseUrl must start with http:// or https://' });
+        return;
+      }
+      const saved = await saveEmbeddingConfig(deps.store.dir, parsed);
+      deps.config.embeddingEnabled = true;
+      deps.config.embeddingBaseUrl = saved.baseUrl;
+      deps.config.embeddingModel = saved.model;
+      deps.config.embeddingDimensions = saved.dimensions;
+      deps.config.embeddingBaseline = saved.baseline;
+      deps.config.embeddingApiKeyFile = saved.keyFile;
+      deps.embedder.reset();
+      deps.onConfigSaved?.();
+      sendJson(res, 200, { ok: true, config: configPayload(deps) });
+      return;
+    }
+    if (req.method === 'POST' && path === '/holo-memory/test-embedding') {
+      if (req.headers['x-holo-memory'] !== '1') {
+        sendJson(res, 403, { ok: false, error: 'missing x-holo-memory header' });
+        return;
+      }
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(await readBody(req)) as Record<string, unknown>;
+      } catch {
+        sendJson(res, 400, { ok: false, error: 'invalid JSON body' });
+        return;
+      }
+      const bodyKey = typeof payload.apiKey === 'string' ? payload.apiKey.trim() : '';
+      const probe = await probeEmbedding({
+        baseUrl: typeof payload.baseUrl === 'string' && payload.baseUrl.trim().length > 0 ? payload.baseUrl : deps.config.embeddingBaseUrl,
+        model: typeof payload.model === 'string' && payload.model.trim().length > 0 ? payload.model : deps.config.embeddingModel,
+        apiKey: bodyKey.length > 0 ? bodyKey : readEmbeddingKey(deps.config),
+        dimensions: Number.isFinite(Number(payload.dimensions)) ? Number(payload.dimensions) : deps.config.embeddingDimensions,
+        timeoutMs: 15000,
+      });
+      sendJson(res, 200, { ok: true, probe });
       return;
     }
     if (req.method === 'POST' && path === '/holo-memory/delete') {

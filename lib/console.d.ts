@@ -9,6 +9,8 @@ export interface ConsoleDeps {
     embedder: EmbeddingClient;
     config: HoloConfig;
     logger: LoggerLike;
+    /** Queue all records for re-embedding after the model changed. */
+    onConfigSaved?: () => void;
 }
 /** Mount the console API on the host web server; returns its disposer. */
 export declare function registerConsole(ctx: any, deps: ConsoleDeps): () => void;

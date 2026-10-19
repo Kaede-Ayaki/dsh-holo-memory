@@ -47,13 +47,18 @@ dsh plugin --profile web add link:/absolute/path/to/dsh-holo-memory
 安装/重载后打开 **设置 → 全息记忆**，可以看到：
 
 - 顶部总记忆数 + L1/L2/L3/已向量化/占用空间；
+- **向量模型配置**：供应商 / 接口地址、模型、API Key、可选维度；
+  - 「检测可用性」只发一次 `/embeddings` 探测：判断是否可达、是不是 embedding 模型、返回维度与延迟，**不保存**；
+  - 「保存配置」写入 `embedding.json` + `embedding.key`，立即生效，并后台按新模型重新回填已有记录；
 - 存储路径、embedding 模型与状态、蒸馏开关；
 - 搜索框、按层筛选（全部 / L1 / L2 / L3）；
 - 每条记忆的层、scope、项目、重要度、向量状态、时间、正文（可展开），以及删除按钮；
 - **最近自动召回**：每次注入的时间、session id、查询、L1/L2/L3 条数、注入字符数和命中的记录 id；
 - 删除立即落盘，并刷新统计。
 
-控制台由 host 半的只读/删除路由提供，数据来自 `$DSH_HOME/holo-memory/*.json`，不依赖外部 HTML 或网络资源。删除请求需要 `x-holo-memory: 1` 请求头，防止跨站触发。
+其他用户不需要改 YAML：打开控制台填自己的接口、模型、Key，点「检测可用性」确认是向量模型，再保存即可。API Key 永远不通过 GET 返回，也不会写进 `embedding.json`。
+
+控制台由 host 半的读写路由提供，数据来自 `$DSH_HOME/holo-memory/*.json`，不依赖外部 HTML 或网络资源。修改类请求需要 `x-holo-memory: 1` 请求头，防止跨站触发。
 
 ### 怎么确认“别的会话”真的用了记忆
 
