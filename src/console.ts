@@ -100,6 +100,9 @@ function publicRecord(record: AnyRecord): Record<string, unknown> {
     updatedAt: record.updatedAt,
     embedded: Array.isArray(record.embedding) && record.embedding.length > 0,
     embeddingModel: record.embeddingModel ?? '',
+    accessCount: record.accessCount ?? 0,
+    citedCount: record.citedCount ?? 0,
+    lastAccessedAt: record.lastAccessedAt ?? 0,
     title: titleOf(record),
     text: redactSecrets(textOf(record)),
   };
@@ -169,6 +172,8 @@ async function stats(deps: ConsoleDeps): Promise<Record<string, unknown>> {
       l1: deps.config.injectL1,
       l2: deps.config.injectL2,
       l3: deps.config.injectL3,
+      activeWindow: deps.config.activeWindowEnabled !== false,
+      activeWindowMaxItems: deps.config.activeWindowMaxItems ?? 2,
     },
     storageDir: deps.store.dir,
   };

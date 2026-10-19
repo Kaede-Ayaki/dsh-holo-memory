@@ -14,6 +14,13 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     injectL2: z<number, number, "defined">;
     injectL3: z<number, number, "defined">;
     injectSubagents: z<boolean, boolean, "defined">;
+    /** Query-independent resident memories added on top of query recall. */
+    activeWindowEnabled: z<boolean, boolean, "defined">;
+    activeWindowMaxItems: z<number, number, "defined">;
+    activeWindowMaxChars: z<number, number, "defined">;
+    activeWindowMinImportance: z<number, number, "defined">;
+    /** Reciprocal-rank-fusion constant; 60 is the standard default. */
+    rrfRankConstant: z<number, number, "defined">;
     /** Background extraction at turn end. */
     extractEnabled: z<boolean, boolean, "defined">;
     extractProvider: z<string, string, "defined">;
@@ -51,6 +58,13 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     injectL2: z<number, number, "defined">;
     injectL3: z<number, number, "defined">;
     injectSubagents: z<boolean, boolean, "defined">;
+    /** Query-independent resident memories added on top of query recall. */
+    activeWindowEnabled: z<boolean, boolean, "defined">;
+    activeWindowMaxItems: z<number, number, "defined">;
+    activeWindowMaxChars: z<number, number, "defined">;
+    activeWindowMinImportance: z<number, number, "defined">;
+    /** Reciprocal-rank-fusion constant; 60 is the standard default. */
+    rrfRankConstant: z<number, number, "defined">;
     /** Background extraction at turn end. */
     extractEnabled: z<boolean, boolean, "defined">;
     extractProvider: z<string, string, "defined">;
@@ -87,6 +101,11 @@ export type HoloConfig = {
     injectL2: number;
     injectL3: number;
     injectSubagents: boolean;
+    activeWindowEnabled: boolean;
+    activeWindowMaxItems: number;
+    activeWindowMaxChars: number;
+    activeWindowMinImportance: number;
+    rrfRankConstant: number;
     extractEnabled: boolean;
     extractProvider: string;
     extractModel: string;

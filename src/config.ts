@@ -15,6 +15,13 @@ export const Config = z.object({
   injectL2: z.number().default(5),
   injectL3: z.number().default(3),
   injectSubagents: z.boolean().default(false),
+  /** Query-independent resident memories added on top of query recall. */
+  activeWindowEnabled: z.boolean().default(true),
+  activeWindowMaxItems: z.number().default(2),
+  activeWindowMaxChars: z.number().default(420),
+  activeWindowMinImportance: z.number().default(7),
+  /** Reciprocal-rank-fusion constant; 60 is the standard default. */
+  rrfRankConstant: z.number().default(60),
   /** Background extraction at turn end. */
   extractEnabled: z.boolean().default(true),
   extractProvider: z.string().default(''),
@@ -52,6 +59,11 @@ export type HoloConfig = {
   injectL2: number;
   injectL3: number;
   injectSubagents: boolean;
+  activeWindowEnabled: boolean;
+  activeWindowMaxItems: number;
+  activeWindowMaxChars: number;
+  activeWindowMinImportance: number;
+  rrfRankConstant: number;
   extractEnabled: boolean;
   extractProvider: string;
   extractModel: string;
@@ -84,6 +96,11 @@ export const DEFAULT_CONFIG: HoloConfig = {
   injectL2: 5,
   injectL3: 3,
   injectSubagents: false,
+  activeWindowEnabled: true,
+  activeWindowMaxItems: 2,
+  activeWindowMaxChars: 420,
+  activeWindowMinImportance: 7,
+  rrfRankConstant: 60,
   extractEnabled: true,
   extractProvider: '',
   extractModel: '',

@@ -132,11 +132,17 @@ export class HoloStore {
     return record;
   }
 
-  update(layer: Layer, id: string, patch: Partial<AnyRecord>): AnyRecord | undefined {
+  update(layer: Layer, id: string, patch: Partial<AnyRecord>, touch = true): AnyRecord | undefined {
     const records = this.data[layer] as AnyRecord[];
     const index = records.findIndex((record) => record.id === id);
     if (index < 0) return undefined;
-    const updated = { ...records[index], ...patch, id, layer, updatedAt: Date.now() } as AnyRecord;
+    const updated = {
+      ...records[index],
+      ...patch,
+      id,
+      layer,
+      updatedAt: touch ? Date.now() : records[index].updatedAt,
+    } as AnyRecord;
     records[index] = updated;
     this.scheduleSave(layer);
     return updated;

@@ -7,6 +7,8 @@ import { HoloStore, contentHash, newId, projectIdFor } from '../lib/store.js';
 import { normalizeConfig } from '../lib/config.js';
 import { EmbeddingClient } from '../lib/embeddings.js';
 import { recall, recentFallback } from '../lib/retrieval.js';
+import { applyCitationFeedback } from '../lib/feedback.js';
+import { ngramCoverage } from '../lib/lexical.js';
 
 async function seed() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-recall-'));
@@ -79,6 +81,32 @@ test('recall returns relevant L1/L2/L3 under the budget', async () => {
   assert.match(result.text, /Windows/);
   assert.match(result.text, /holo-memory/);
   assert.ok(result.text.length <= 1200 + 20);
+  assert.ok(result.items.some((item) => item.channels.includes('lexical')), 'lexical channel contributes');
+  assert.ok(result.activeCount >= 1, 'active window adds a resident memory');
+  assert.match(result.text, /主动携带/);
+  assert.match(result.text, /\(id:[0-9a-f]{8}\)/);
+  await fs.rm(dir, { recursive: true, force: true });
+});
+
+test('ngram coverage is high for the matching document and low otherwise', () => {
+  assert.ok(ngramCoverage('部署 Windows 测试', '这个项目的部署目标是 Windows，测试命令是 pnpm test。') > 0.5);
+  assert.ok(ngramCoverage('明天天气', '这个项目的部署目标是 Windows，测试命令是 pnpm test。') < 0.2);
+});
+
+test('citation feedback records access and only counts a real suffix citation', async () => {
+  const { dir, store, project } = await seed();
+  const record = store.visible('l2', project.key)[0];
+  const before = record.updatedAt;
+  const cited = applyCitationFeedback(store, [record.id], `详见记忆 ${record.id.slice(-8)}。`);
+  assert.equal(cited.touched, 1);
+  assert.equal(cited.cited, 1);
+  assert.equal(store.find(record.id).accessCount, 1);
+  assert.equal(store.find(record.id).citedCount, 1);
+  assert.equal(store.find(record.id).updatedAt, before, 'feedback must not shift content recency');
+  const uncited = applyCitationFeedback(store, [record.id], '与记忆无关的回答。');
+  assert.equal(uncited.cited, 0);
+  assert.equal(store.find(record.id).accessCount, 2);
+  assert.equal(store.find(record.id).citedCount, 1);
   await fs.rm(dir, { recursive: true, force: true });
 });
 

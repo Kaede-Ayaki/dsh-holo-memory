@@ -36,7 +36,7 @@ export declare class HoloStore {
     /** Records visible from one project: user scope plus the matching project. */
     visible(layer: Layer, projectKey: string): AnyRecord[];
     insert<T extends AnyRecord>(record: T): T;
-    update(layer: Layer, id: string, patch: Partial<AnyRecord>): AnyRecord | undefined;
+    update(layer: Layer, id: string, patch: Partial<AnyRecord>, touch?: boolean): AnyRecord | undefined;
     remove(id: string): boolean;
     /** Drop the least valuable records when a layer exceeds its cap. */
     private trim;
