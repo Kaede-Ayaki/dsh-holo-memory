@@ -1,5 +1,7 @@
 # dsh-holo-memory
 
+> GitHub: <https://github.com/Kaede0757-sudo/dsh-holo-memory>
+
 三层全息记忆插件，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）补上跨会话长期记忆：
 
 - **L1 对话层**：每次对话结束，把这一轮蒸馏成一条紧凑摘要（用户要什么、做了什么、结果）。
