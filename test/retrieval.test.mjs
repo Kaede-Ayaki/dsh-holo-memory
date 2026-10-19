@@ -119,8 +119,9 @@ test('recentFallback surfaces L3 and recent L1 without a query', async () => {
   await fs.rm(dir, { recursive: true, force: true });
 });
 
-test('recall returns null when nothing clears the relevance bar', async () => {
-  const { dir, store, config, project } = await seed();
+test('recall returns null when nothing clears the relevance bar and active window is off', async () => {
+  const { dir, store, project } = await seed();
+  const config = normalizeConfig({ activeWindowEnabled: false });
   const embedder = new EmbeddingClient(config);
   const result = await recall(store, embedder, config, '明天天气怎么样？', {
     projectKey: project.key,
@@ -130,5 +131,21 @@ test('recall returns null when nothing clears the relevance bar', async () => {
     counts: { l1: 2, l2: 5, l3: 3 },
   });
   assert.equal(result, null);
+  await fs.rm(dir, { recursive: true, force: true });
+});
+
+test('active window still injects resident memory when the query has no hit', async () => {
+  const { dir, store, config, project } = await seed();
+  const embedder = new EmbeddingClient(config);
+  const result = await recall(store, embedder, config, '明天天气怎么样？', {
+    projectKey: project.key,
+    currentSessionId: 's-new',
+    maxChars: 1200,
+    minScore: 0.12,
+    counts: { l1: 2, l2: 5, l3: 3 },
+  });
+  assert.ok(result);
+  assert.ok(result.activeCount >= 1);
+  assert.match(result.text, /主动携带/);
   await fs.rm(dir, { recursive: true, force: true });
 });

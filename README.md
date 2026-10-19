@@ -178,7 +178,7 @@ $DSH_HOME/holo-memory/
 1. **记录**：监听 `session/event` 的 `turn/start`、`user/message`、`assistant/message`、`turn/end`，把当前回合的对话文本收集到内存缓冲区（有长度上限）。
 2. **蒸馏**：`turn/end` 后异步调用一次模型（复用当前会话的 provider/model，或配置覆盖），要求输出严格 JSON：`l1`、`l2[]`、`l3[]`。解析失败/没有模型时退化为确定性的 L1 摘要，所以“记录对话”永远不会因为模型不可用而丢失。
 3. **合并**：L2 做近似去重（同 scope 内相近事实更新而非追加）；L3 按 id/标题更新已有胶囊或新建；所有写入带出处（session/turn）。
-4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量三通道排名，RRF 融合；命中才注入，未命中不产生任何 token。命中后额外补 1–2 条高重要度 resident 记忆（Active Window），并按字符预算和 band 裁剪。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
+4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量三通道排名，RRF 融合；命中后额外补 1–2 条高重要度 resident 记忆（Active Window），并按字符预算和 band 裁剪。若 query 完全没有命中，只要 Active Window 有高重要度记忆，也会注入这些背景；两者都空时不产生 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
 5. **注入**：作为一条 user-role snapshot 消息插入本步，带 `source.kind = "holo-memory"`，并在后续回合作为普通历史保留；不会被再次计入 L1 捕获。
 
 ---
