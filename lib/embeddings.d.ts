@@ -14,6 +14,8 @@ export declare class EmbeddingClient {
     constructor(config: HoloConfig, fetcher?: EmbeddingFetch);
     get enabled(): boolean;
     get reason(): string | undefined;
+    /** Drop failure backoff and cached query vectors after a config change. */
+    reset(): void;
     private fail;
     private endpoint;
     private apiKey;

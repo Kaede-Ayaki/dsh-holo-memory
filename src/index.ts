@@ -27,6 +27,7 @@ import { extractTurn, type LlmLike } from './extract.js';
 import { registerTools } from './tools.js';
 import { registerConsole } from './console.js';
 import { appendInjection } from './injections.js';
+import { applySavedEmbeddingConfig } from './embedding-config.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
 export const name = 'holo-memory';
@@ -84,6 +85,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       ? config.storageDir.trim()
       : path.join(resolveDshHome(), 'holo-memory');
   const logger: LoggerLike = ctx.logger ?? { warn: () => undefined };
+  applySavedEmbeddingConfig(config, storageDir);
   const store = new HoloStore(storageDir, config);
   const embedder = new EmbeddingClient(config);
   const abort = new AbortController();
@@ -386,7 +388,14 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   try {
     ctx.inject(['webServer'], (wctx: any) => {
       ctx.effect(
-        () => registerConsole(wctx, { store, embedder, config, logger }),
+        () =>
+          registerConsole(wctx, {
+            store,
+            embedder,
+            config,
+            logger,
+            onConfigSaved: () => queueEmbedding([...store.list('l1'), ...store.list('l2'), ...store.list('l3')]),
+          }),
         'holo-memory: console route',
       );
     });
