@@ -1,0 +1,12 @@
+# dsh-holo-memory 组合包贡献的配置层。
+# insert 的 name 在已安装形态必须是 npm 包名（Node 模块解析）。
+# 默认配置全部由插件 schema 提供；需要覆盖时在你的 profile patch 里按 id 覆盖：
+#   - id: holo-memory
+#     config:
+#       injectMaxChars: 1200
+#       embeddingEnabled: true
+#       embeddingBaseUrl: http://127.0.0.1:11434/v1
+#       embeddingModel: nomic-embed-text
+- insert:
+    - id: holo-memory
+      name: dsh-holo-memory
