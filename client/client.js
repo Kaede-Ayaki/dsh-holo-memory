@@ -267,6 +267,8 @@
               h("span", null, "·"),
               h("span", null, record.embedded ? "已向量化" : "仅词法"),
               h("span", null, "·"),
+              h("span", null, "引用 ", h("b", null, record.citedCount || 0)),
+              h("span", null, "·"),
               h("code", { style: { fontSize: "8.5px" } }, "#" + shortId(record.id)),
             ),
             h("div", { className: "hm-item-text" + (expanded ? " hm-open" : "") }, text),
@@ -306,9 +308,11 @@
           var chars = Number.isFinite(data.chars) ? data.chars : text.length;
           var layers = data.layers || {};
           var selected = Array.isArray(data.selected) ? data.selected : [];
+          var active = Number.isFinite(data.active) ? data.active : 0;
           // The host text starts with the same label line the header already shows.
           var body = text.replace(/^\[[^\n]*holo-memory[^\n]*\]\s*\n?/i, "").trim();
           var meta = (data.mode === "recent-fallback" ? "兜底 · " : "") +
+            (active > 0 ? "主动×" + active + " · " : "") +
             "L1×" + (layers.l1 || 0) + " L2×" + (layers.l2 || 0) + " L3×" + (layers.l3 || 0) +
             " · " + chars + " 字符";
           return h(
@@ -359,6 +363,7 @@
                 query: typeof source.query === "string" ? source.query : "",
                 chars: Number.isFinite(source.chars) ? source.chars : text.length,
                 mode: source.mode === "recent-fallback" ? "recent-fallback" : "recall",
+                active: Number.isFinite(source.active) ? source.active : 0,
                 layers: source.layers && typeof source.layers === "object" ? source.layers : { l1: 0, l2: 0, l3: 0 },
                 selected: Array.isArray(source.selected) ? source.selected : [],
               },
@@ -723,7 +728,8 @@
                           h(
                             "div",
                             { className: "hm-audit-meta" },
-                            "L1×" + event.layers.l1 + "  L2×" + event.layers.l2 + "  L3×" + event.layers.l3 + "  ·  " + event.chars + " 字符",
+                            "L1×" + event.layers.l1 + "  L2×" + event.layers.l2 + "  L3×" + event.layers.l3 +
+                              (event.active > 0 ? "  主动×" + event.active : "") + "  ·  " + event.chars + " 字符",
                           ),
                         ),
                       );

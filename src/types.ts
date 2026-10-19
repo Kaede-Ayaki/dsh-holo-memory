@@ -28,6 +28,12 @@ export interface BaseRecord {
   hash: string;
   embedding?: number[];
   embeddingModel?: string;
+  /** How often this record was injected into a context. */
+  accessCount?: number;
+  /** How often the assistant actually cited this record's id. */
+  citedCount?: number;
+  /** Last time the record was injected/cited (not a content update). */
+  lastAccessedAt?: number;
 }
 
 export interface L1Record extends BaseRecord {
@@ -112,6 +118,8 @@ export interface TurnCapture {
   userTexts: string[];
   assistantTexts: string[];
   startedAt: number;
+  /** Ids injected into this turn's context; filled by pre-step recall. */
+  injectedIds?: string[];
   /** Provider/model captured from the live agent, used for the extraction call. */
   provider?: string;
   model?: string;
@@ -125,6 +133,15 @@ declare module '@deepseek-ai/dsh-llm' {
       form?: 'snapshot' | 'notice';
       sections?: ReadonlyArray<{ name: string; text: string }>;
       summary?: string;
+      /** Question that triggered this recall. */
+      query?: string;
+      /** Injected characters, including headers and active-window rows. */
+      chars?: number;
+      /** Number of active-window memories included besides query matches. */
+      active?: number;
+      mode?: 'recall' | 'recent-fallback';
+      layers?: { l1: number; l2: number; l3: number };
+      selected?: ReadonlyArray<{ id: string; layer: string; score: number }>;
     };
   }
 }

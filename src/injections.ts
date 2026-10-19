@@ -17,6 +17,7 @@ export interface InjectionSelection {
   id: string;
   layer: string;
   score: number;
+  channels?: string[];
 }
 
 export interface InjectionEvent {
@@ -27,6 +28,8 @@ export interface InjectionEvent {
   chars: number;
   mode: 'recall' | 'recent-fallback';
   layers: { l1: number; l2: number; l3: number };
+  /** Active-window rows included in addition to query matches. */
+  active?: number;
   selected: InjectionSelection[];
 }
 

@@ -6,6 +6,13 @@
 /** Split text into lowercase Latin words and CJK bigrams (unigram for len 1). */
 export declare function tokenize(text: string): string[];
 export declare function tokenSet(text: string): Set<string>;
+/**
+ * Character n-grams for a second, embedding-independent recall channel.
+ * CJK gets 2/3-grams; Latin words are kept whole so `pnpm`/`sqlite` still rank.
+ */
+export declare function ngramTokens(text: string): string[];
+/** Fraction of the query's character n-grams present in the document. */
+export declare function ngramCoverage(query: string, text: string): number;
 export declare function jaccard(a: Set<string>, b: Set<string>): number;
 export interface LexicalDoc {
     id: string;

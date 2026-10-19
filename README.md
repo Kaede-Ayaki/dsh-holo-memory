@@ -8,10 +8,16 @@
 - **L2 事实层**：从对话里抽出原子事实（偏好、决策、约定、关键实体、待办、纠正），带 scope / tags / confidence / 出处。
 - **L3 全息记忆层**：把多轮对话压缩成“部分包含整体”的整体胶囊（用户画像、项目状态、长期线索、未闭环事项）。一条 L3 就能让新会话回忆起整段关系的轮廓。
 
-每个新的用户回合，插件会按当前问题从 L1/L2/L3 混合召回最相关的记忆，压缩进一个受预算约束的 `holo-memory` 上下文块，自动注入到该回合。检索是双通道的：
+每个新的用户回合，插件会按当前问题从 L1/L2/L3 混合召回最相关的记忆，压缩进一个受预算约束的 `holo-memory` 上下文块，自动注入到该回合。检索使用三条独立排名通道做 RRF 融合：
 
 1. **BM25 + 中文 bigram**：零依赖、永远可用；
-2. **可选的向量模型**：任何 OpenAI 兼容的 `/embeddings` 端点（OpenAI、Ollama、火山方舟等），开启后与词法分数混合排序，查询向量超时会自动退回词法。
+2. **字符 2/3-gram**：中文子串、错字、中英混合时补位；
+3. **可选的向量模型**：任何 OpenAI 兼容的 `/embeddings` 端点（OpenAI、Ollama、火山方舟等），开启后按校准后的余弦排名参与 RRF。
+
+RRF 之后还会：
+- 用 **Active Window** 主动补 1–2 条高重要度 L2 / L3（不依赖当前问题，预算单独保留）；
+- 按 `IMMEDIATE / WORKING / BACKGROUND` 分配字符预算；
+- 每条注入行带 `(id:xxxxxxxx)`；回答里引用过的 id 会在下一轮回写 `citedCount`，获得轻微加权。
 
 纯本地存储，无服务端、无账号、无遥测。
 
@@ -115,6 +121,11 @@ API Key 推荐放在单独文件（首行），而不是写进 YAML；插件会�
 | `injectMinScore` | `0.12` | 召回阈值，低于不注入 |
 | `injectL1/L2/L3` | 2/5/3 | 每层最多注入条数 |
 | `injectSubagents` | `false` | 是否为子代理会话注入 |
+| `activeWindowEnabled` | `true` | 是否主动补位高重要度 L2/L3 |
+| `activeWindowMaxItems` | `2` | 主动补位最多几条 |
+| `activeWindowMaxChars` | `420` | 主动补位的字符上限（优先保留） |
+| `activeWindowMinImportance` | `7` | 进入主动补位的最低重要度（≥8 的事实不受 kind 限制） |
+| `rrfRankConstant` | `60` | RRF 的 k 值 |
 | `extractEnabled` | `true` | 回合结束是否蒸馏 |
 | `extractProvider/extractModel` | `''` | 蒸馏用模型；留空跟随当前会话的 provider/model |
 | `extractMaxTokens` | `1400` | 蒸馏输出上限 |
@@ -167,7 +178,7 @@ $DSH_HOME/holo-memory/
 1. **记录**：监听 `session/event` 的 `turn/start`、`user/message`、`assistant/message`、`turn/end`，把当前回合的对话文本收集到内存缓冲区（有长度上限）。
 2. **蒸馏**：`turn/end` 后异步调用一次模型（复用当前会话的 provider/model，或配置覆盖），要求输出严格 JSON：`l1`、`l2[]`、`l3[]`。解析失败/没有模型时退化为确定性的 L1 摘要，所以“记录对话”永远不会因为模型不可用而丢失。
 3. **合并**：L2 做近似去重（同 scope 内相近事实更新而非追加）；L3 按 id/标题更新已有胶囊或新建；所有写入带出处（session/turn）。
-4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题混合检索 L1/L2/L3；命中才注入，未命中不产生任何 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
+4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量三通道排名，RRF 融合；命中才注入，未命中不产生任何 token。命中后额外补 1–2 条高重要度 resident 记忆（Active Window），并按字符预算和 band 裁剪。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
 5. **注入**：作为一条 user-role snapshot 消息插入本步，带 `source.kind = "holo-memory"`，并在后续回合作为普通历史保留；不会被再次计入 L1 捕获。
 
 ---

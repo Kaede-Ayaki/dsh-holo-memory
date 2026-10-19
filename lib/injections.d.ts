@@ -2,6 +2,7 @@ export interface InjectionSelection {
     id: string;
     layer: string;
     score: number;
+    channels?: string[];
 }
 export interface InjectionEvent {
     ts: number;
@@ -15,6 +16,8 @@ export interface InjectionEvent {
         l2: number;
         l3: number;
     };
+    /** Active-window rows included in addition to query matches. */
+    active?: number;
     selected: InjectionSelection[];
 }
 export declare function injectionLogPath(dir: string): string;

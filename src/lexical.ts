@@ -45,6 +45,35 @@ export function tokenSet(text: string): Set<string> {
   return new Set(tokenize(text));
 }
 
+/**
+ * Character n-grams for a second, embedding-independent recall channel.
+ * CJK gets 2/3-grams; Latin words are kept whole so `pnpm`/`sqlite` still rank.
+ */
+export function ngramTokens(text: string): string[] {
+  if (!text) return [];
+  const lower = text.toLowerCase();
+  const tokens: string[] = [];
+  for (const word of lower.match(WORD_RE) ?? []) {
+    if (word.length >= 3) tokens.push(`w:${word}`);
+  }
+  for (const run of lower.match(CJK_RE) ?? []) {
+    for (const size of [2, 3]) {
+      for (let i = 0; i + size <= run.length; i++) tokens.push(`${size}:${run.slice(i, i + size)}`);
+    }
+  }
+  return tokens;
+}
+
+/** Fraction of the query's character n-grams present in the document. */
+export function ngramCoverage(query: string, text: string): number {
+  const queryTokens = new Set(ngramTokens(query));
+  if (queryTokens.size === 0) return 0;
+  const doc = new Set(ngramTokens(text));
+  let matched = 0;
+  for (const token of queryTokens) if (doc.has(token)) matched += 1;
+  return matched / queryTokens.size;
+}
+
 export function jaccard(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
   let inter = 0;

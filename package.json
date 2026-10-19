@@ -1,6 +1,6 @@
 {
   "name": "dsh-holo-memory",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Three-layer holographic memory for DeepSeek Harness: L1 dialogue summaries, L2 atomic facts, L3 holographic capsules, with hybrid vector/lexical recall injected per turn.",
   "type": "module",
   "main": "lib/index.js",
@@ -13,9 +13,16 @@
     "./client": "./client/client.js",
     "./package.json": "./package.json"
   },
-  "files": ["lib", "client", "cordis.patch.yml", "README.md"],
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "README.md"
+  ],
   "license": "MIT",
-  "engines": { "node": ">=22.19" },
+  "engines": {
+    "node": ">=22.19"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.mjs",
@@ -31,12 +38,24 @@
     "@deepseek-ai/schemastery": ">=3.18.5"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-tools": { "optional": true },
-    "@deepseek-ai/dsh-llm": { "optional": true },
-    "@deepseek-ai/dsh-home-paths": { "optional": true },
-    "@deepseek-ai/dsh-atomic-write": { "optional": true },
-    "@deepseek-ai/schemastery": { "optional": true }
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-home-paths": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-atomic-write": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
@@ -49,11 +68,12 @@
     "typescript": "^5.9.0"
   },
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true
     }
   }
 }
-

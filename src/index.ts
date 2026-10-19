@@ -29,6 +29,7 @@ import { registerConsole } from './console.js';
 import { appendInjection } from './injections.js';
 import { applySavedEmbeddingConfig } from './embedding-config.js';
 import { redactSecrets } from './sanitize.js';
+import { applyCitationFeedback } from './feedback.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
 export const name = 'holo-memory';
@@ -233,6 +234,19 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         break;
       }
       case 'turn/end': {
+        const buffer = buffers.get(sessionId);
+        if (buffer?.injectedIds && buffer.injectedIds.length > 0) {
+          try {
+            const feedback = applyCitationFeedback(store, buffer.injectedIds, buffer.assistantTexts.join('\n'));
+            if (config.debug) {
+              logger.info?.(`[holo-memory] feedback touched=${feedback.touched} cited=${feedback.cited}`);
+            }
+          } catch (error) {
+            if (config.debug) {
+              logger.warn(`[holo-memory] feedback failed: ${error instanceof Error ? error.message : String(error)}`);
+            }
+          }
+        }
         flushTurn(sessionId, event.data?.reason);
         break;
       }
@@ -306,13 +320,19 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         (query.trim().length < 12 ? await recentFallback(store, project.key, config.injectMaxChars) : null);
       if (!result || (typeof result === 'string' && result.trim().length === 0)) return decision;
       const text = typeof result === 'string' ? result : result.text;
+      const activeCount = typeof result === 'string' ? 0 : result.activeCount;
       const selected = typeof result === 'string' ? [] : result.items.map((item) => ({
         id: item.record.id,
         layer: item.layer,
         score: Math.round(item.score * 1000) / 1000,
+        channels: item.channels,
       }));
       const layers = { l1: 0, l2: 0, l3: 0 };
       for (const item of selected) layers[item.layer as 'l1' | 'l2' | 'l3'] += 1;
+      const buffer = buffers.get(sessionId);
+      if (buffer && typeof result !== 'string') {
+        buffer.injectedIds = [...new Set([...(buffer.injectedIds ?? []), ...result.items.map((item) => item.record.id)])];
+      }
       void appendInjection(store.dir, {
         ts: Date.now(),
         sessionId,
@@ -321,6 +341,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         chars: text.length,
         mode: typeof result === 'string' ? 'recent-fallback' : 'recall',
         layers,
+        active: activeCount,
         selected,
       });
       // The client projects this user-role context message into a collapsible
@@ -341,6 +362,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
               chars: text.length,
               mode: typeof result === 'string' ? 'recent-fallback' : 'recall',
               layers,
+              active: activeCount,
               selected,
             } as any,
           }),
@@ -364,6 +386,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       text:
         'You have a three-layer holographic long-term memory (L1 dialogue summaries, L2 atomic facts, L3 holistic capsules). ' +
         'Relevant memories may be injected automatically as a user-role "holo-memory" block; treat it as background facts and verify against current state. ' +
+        'Rows labelled with (id:xxxxxxxx) may be cited by that id when you actually use them. ' +
         'Use memory_recall for more context, memory_note to persist durable facts, memory_forget to correct stale ones. ' +
         'Do not save secrets or transient state.',
     });
