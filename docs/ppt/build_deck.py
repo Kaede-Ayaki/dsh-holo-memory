@@ -1,4 +1,8 @@
-"""Build the dsh-holo-memory introduction deck (16:9, dark theme)."""
+"""Build the dsh-holo-memory introduction deck (16:9, dark theme).
+
+Deck structure requested by the user:
+  01 插件介绍  ·  02 安装方式  ·  03 注意事项
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,7 +16,8 @@ from lxml import etree
 
 HERE = Path(__file__).resolve().parent
 ASSETS = HERE
-OUT = HERE.parent / "dsh-holo-memory-intro.pptx"
+DOCS = HERE.parent
+OUT = DOCS / "dsh-holo-memory-intro.pptx"
 
 # ---------------------------------------------------------------------------
 # Design tokens
@@ -27,6 +32,7 @@ MUTED = RGBColor(0x93, 0xA1, 0xBF)
 FAINT = RGBColor(0x5F, 0x6E, 0x8C)
 PANEL = RGBColor(0x0E, 0x17, 0x29)
 PANEL2 = RGBColor(0x11, 0x1D, 0x35)
+DEEP = RGBColor(0x0B, 0x13, 0x24)
 BORDER = RGBColor(0x23, 0x32, 0x55)
 ACCENT = RGBColor(0x5B, 0x7C, 0xFA)
 BLUE = RGBColor(0x4D, 0x6B, 0xFE)
@@ -36,11 +42,13 @@ GREEN = RGBColor(0x4A, 0xDE, 0x80)
 AMBER = RGBColor(0xF5, 0xB8, 0x4C)
 RED = RGBColor(0xF8, 0x71, 0x71)
 
+TOTAL = 11
+
 prs = Presentation()
 prs.slide_width = Inches(SW)
 prs.slide_height = Inches(SH)
 prs.core_properties.title = "dsh-holo-memory — 三层全息记忆"
-prs.core_properties.subject = "DeepSeek Harness memory plugin introduction"
+prs.core_properties.subject = "DeepSeek Harness memory plugin introduction and installation"
 prs.core_properties.author = "dsh-holo-memory"
 
 
@@ -173,9 +181,9 @@ def title(slide, value: str, size: float = 29):
     text(slide, value, 0.6, 0.78, 12.2, 0.8, size=size, color=TEXT, bold=True)
 
 
-def footer(slide, idx: int, total: int = 11):
+def footer(slide, idx: int):
     text(slide, "dsh-holo-memory  ·  DeepSeek Harness memory plugin", 0.62, 7.05, 8.5, 0.25, size=9, color=FAINT, font=FONT_EN)
-    text(slide, f"{idx:02d} / {total:02d}", 11.9, 7.02, 0.9, 0.3, size=9.5, color=MUTED, font=FONT_EN, align=PP_ALIGN.RIGHT)
+    text(slide, f"{idx:02d} / {TOTAL:02d}", 11.9, 7.02, 0.9, 0.3, size=9.5, color=MUTED, font=FONT_EN, align=PP_ALIGN.RIGHT)
 
 
 def badge(slide, label: str, x: float, y: float, d: float = 0.42, fill: RGBColor = ACCENT, color: RGBColor = RGBColor(8, 12, 24)):
@@ -213,6 +221,27 @@ def bullet_line(slide, x: float, y: float, w: float, head: str, body: str, color
     )
 
 
+def picture(slide, path: Path, x: float, y: float, w: float, h: float):
+    """Add a screenshot with a subtle panel frame behind it."""
+    rect(slide, x - 0.08, y - 0.08, w + 0.16, h + 0.16, fill=DEEP, line=BORDER, radius=0.04)
+    slide.shapes.add_picture(str(path), Inches(x), Inches(y), width=Inches(w), height=Inches(h))
+
+
+def section_divider(number: str, heading: str, subtitle: str, points, accent: RGBColor, idx: int):
+    s = new_slide("bg-section.png")
+    text(s, number, 0.58, 1.35, 3.0, 2.2, size=120, color=RGBColor(0x18, 0x27, 0x46), bold=True, font=FONT_EN)
+    text(s, "PART " + number, 0.7, 2.15, 3.5, 0.3, size=11, color=accent, bold=True, font=FONT_EN)
+    text(s, heading, 0.66, 2.55, 6.0, 0.85, size=38, color=TEXT, bold=True)
+    text(s, subtitle, 0.7, 3.48, 6.4, 0.6, size=15, color=MUTED, line_spacing=1.3)
+    for i, (label, body) in enumerate(points):
+        y = 4.42 + i * 0.62
+        badge(s, f"{i+1}", 0.74, y + 0.03, d=0.34, fill=accent)
+        text(s, label, 1.22, y, 2.0, 0.3, size=12, color=TEXT, bold=True)
+        text(s, body, 3.2, y - 0.02, 6.0, 0.35, size=11, color=MUTED)
+    footer(s, idx)
+    return s
+
+
 # ---------------------------------------------------------------------------
 # 01 — Cover
 # ---------------------------------------------------------------------------
@@ -222,450 +251,351 @@ rich_text(
     s,
     [("dsh-", TEXT, True, FONT_EN, 58), ("holo-memory", ACCENT, True, FONT_EN, 58)],
     0.7,
-    1.62,
-    8.3,
+    1.55,
+    8.5,
     1.0,
     size=58,
     line_spacing=0.95,
 )
-text(s, "三层全息记忆", 0.74, 2.72, 7.5, 0.75, size=38, color=TEXT, bold=True)
-text(s, "让 agent 跨会话记得你、记得项目、记得做过什么。", 0.76, 3.55, 7.2, 0.4, size=16.5, color=MUTED)
+text(s, "三层全息记忆", 0.74, 2.62, 7.5, 0.75, size=38, color=TEXT, bold=True)
+text(s, "让 agent 跨会话记得你、记得项目、记得做过什么。", 0.76, 3.42, 7.4, 0.4, size=16.5, color=MUTED)
+chip(s, "L1 对话层", 0.74, 4.12, 1.55, CYAN)
+chip(s, "L2 事实层", 2.43, 4.12, 1.55, ACCENT)
+chip(s, "L3 全息层", 4.12, 4.12, 1.55, VIOLET)
+text(s, "RRF 三通道召回  ·  Active Window  ·  引用回写  ·  工作步骤可见", 0.76, 4.78, 8.2, 0.35, size=12.5, color=MUTED)
+text(s, "纯本地  ·  可审计  ·  零服务端  ·  v0.3.0", 0.76, 5.2, 7.0, 0.35, size=11, color=FAINT, font=FONT_EN)
 
-chip(s, "L1 对话层", 0.74, 4.55, 1.55, CYAN)
-chip(s, "L2 事实层", 2.43, 4.55, 1.55, ACCENT)
-chip(s, "L3 全息层", 4.12, 4.55, 1.55, VIOLET)
-
-text(s, "向量检索 Qwen3-Embedding-8B  ·  4096D  ·  纯本地  ·  可审计  ·  零服务端", 0.76, 5.45, 7.6, 0.4, size=12.5, color=MUTED)
-text(s, "2026.10  ·  v0.1.0", 0.76, 6.6, 4.0, 0.3, size=10.5, color=FAINT, font=FONT_EN)
-
-# floating memory stack on the right
-stack_x, stack_y = 9.18, 1.95
+# right-side stack
+stack_x, stack_y = 9.18, 1.82
 stack_data = [
-    ("L3", "全息记忆", "≤ 300 条", VIOLET, 0.0),
-    ("L2", "事实层", "≤ 3000 条", ACCENT, 1.16),
-    ("L1", "对话层", "≤ 2000 条", CYAN, 2.32),
+    ("L3", "全息记忆", "整体胶囊", VIOLET, 0.0),
+    ("L2", "事实层", "原子事实", ACCENT, 1.12),
+    ("L1", "对话层", "每轮摘要", CYAN, 2.24),
 ]
 for label, name, cap, color, dy in stack_data:
     rect(s, stack_x, stack_y + dy, 3.35, 1.02, fill=PANEL, line=color, line_width=1.0, radius=0.12)
     badge(s, label, stack_x + 0.18, stack_y + dy + 0.26, d=0.5, fill=color, color=RGBColor(7, 10, 20))
     text(s, name, stack_x + 0.86, stack_y + dy + 0.17, 1.7, 0.35, size=15.5, color=TEXT, bold=True)
-    text(s, cap, stack_x + 0.86, stack_y + dy + 0.53, 1.7, 0.28, size=10.5, color=MUTED, font=FONT_EN)
-    text(s, "auto-inject", stack_x + 2.28, stack_y + dy + 0.34, 0.96, 0.3, size=9, color=FAINT, font=FONT_EN, align=PP_ALIGN.RIGHT)
+    text(s, cap, stack_x + 0.86, stack_y + dy + 0.53, 1.7, 0.28, size=10.5, color=MUTED)
+    text(s, "auto", stack_x + 2.55, stack_y + dy + 0.36, 0.6, 0.3, size=9, color=FAINT, font=FONT_EN, align=PP_ALIGN.RIGHT)
+
+# agenda strip
+text(s, "本 次 内 容", 0.76, 6.02, 2.0, 0.28, size=10, color=FAINT, bold=True, font=FONT_EN)
+agenda = [("01", "插件介绍", CYAN), ("02", "安装方式", GREEN), ("03", "注意事项", AMBER)]
+for i, (num, label, color) in enumerate(agenda):
+    x = 2.02 + i * 3.55
+    rect(s, x, 5.96, 3.25, 0.5, fill=PANEL, line=BORDER, radius=0.1)
+    text(s, num, x + 0.16, 6.03, 0.5, 0.3, size=10, color=color, bold=True, font=FONT_EN)
+    text(s, label, x + 0.62, 6.02, 2.2, 0.3, size=12, color=TEXT, bold=True)
+text(s, "2026.10  ·  v0.3.0", 0.76, 6.62, 4.0, 0.3, size=10.5, color=FAINT, font=FONT_EN)
 
 # ---------------------------------------------------------------------------
-# 02 — Problem
+# 02 — Section 01 divider
+# ---------------------------------------------------------------------------
+section_divider(
+    "01",
+    "插件介绍",
+    "三层记忆、三通道召回、主动补位，以及为什么这次“看得见”。",
+    [
+        ("三层记忆", "L1 对话摘要 · L2 原子事实 · L3 整体胶囊"),
+        ("混合召回", "RRF 三通道 + Active Window + 引用回写"),
+        ("看得见", "侧边栏一级页面 + 聊天工作步骤行"),
+    ],
+    CYAN,
+    2,
+)
+
+# ---------------------------------------------------------------------------
+# 03 — What it does / three layers
 # ---------------------------------------------------------------------------
 s = new_slide()
-kicker(s, "01 / PROBLEM")
-title(s, "每个新会话，agent 都从「初次见面」开始")
-problems = [
-    ("01", "会话一关，记忆归零", "DSH 默认只保留一个会话内的上下文；新开一个 tab，就是一张白纸。", RED),
-    ("02", "事件日志不是记忆", "append-only session log 面向审计与 replay，模型不会自动把它读回上下文。", AMBER),
-    ("03", "现有插件不是重，就是不全", "SQLite / 常驻 worker / embedding 服务；或者只负责存，不负责自动注入。", CYAN),
-    ("04", "跨项目串味", "用户偏好与项目事实混在一个池子里，换个工作区就被无关记忆污染。", VIOLET),
-]
-for i, (num, head, body, color) in enumerate(problems):
-    col, row = i % 2, i // 2
-    x = 0.62 + col * 6.12
-    y = 1.72 + row * 1.95
-    rect(s, x, y, 5.9, 1.7, fill=PANEL, line=BORDER, radius=0.08)
-    badge(s, num, x + 0.26, y + 0.28, d=0.46, fill=color, color=RGBColor(7, 10, 20))
-    text(s, head, x + 0.9, y + 0.24, 4.7, 0.4, size=17, color=TEXT, bold=True)
-    text(s, body, x + 0.9, y + 0.72, 4.75, 0.8, size=12.3, color=MUTED, line_spacing=1.35)
+kicker(s, "PLUGIN / WHAT IT DOES")
+title(s, "记忆不是数据库，是一条完整闭环")
+text(s, "新会话默认是一张白纸；插件把「记录 → 蒸馏 → 召回 → 注入」接了起来。", 0.64, 1.62, 7.2, 0.35, size=12.5, color=MUTED)
 
-rect(s, 0.62, 5.95, 12.1, 0.72, fill=RGBColor(0x0C, 0x16, 0x2C), line=ACCENT, line_width=0.9, radius=0.12)
-text(s, "缺的不是存储，而是「记录 → 蒸馏 → 召回 → 注入」的完整闭环。", 0.95, 6.12, 11.4, 0.4, size=15, color=TEXT, bold=True)
-footer(s, 2)
-
-# ---------------------------------------------------------------------------
-# 03 — Three layers
-# ---------------------------------------------------------------------------
-s = new_slide()
-kicker(s, "02 / ARCHITECTURE")
-title(s, "三层记忆，各管一件事")
 layers = [
-    ("L1", "对话层", "每轮对话一条摘要", "用户要什么 · 做了什么 · 结果如何", "上限 2000 条  ·  每轮注入 2 条", CYAN),
-    ("L2", "事实层", "原子事实，可追溯出处", "偏好 / 决策 / 约定 / 实体 / 待办 / 纠正", "上限 3000 条  ·  每轮注入 5 条", ACCENT),
-    ("L3", "全息层", "跨多轮的整体胶囊", "用户画像 / 项目状态 / 未闭环线索", "上限 300 条  ·  每轮注入 3 条", VIOLET),
+    ("L1", "对话层", "每轮一条摘要", "用户要什么 · 做了什么 · 结果如何", CYAN),
+    ("L2", "事实层", "原子事实，可追溯", "偏好 / 决策 / 约定 / 待办 / 纠正", ACCENT),
+    ("L3", "全息层", "跨多轮的整体胶囊", "用户画像 / 项目状态 / 未闭环线索", VIOLET),
 ]
-for i, (code, name, sub, body, cap, color) in enumerate(layers):
-    y = 1.72 + i * 1.68
-    rect(s, 0.62, y, 7.35, 1.48, fill=PANEL, line=BORDER, radius=0.08)
-    rect(s, 0.62, y, 0.09, 1.48, fill=color, line=None, radius=0)
-    badge(s, code, 0.9, y + 0.45, d=0.56, fill=color, color=RGBColor(7, 10, 20))
-    text(s, name, 1.62, y + 0.18, 2.6, 0.36, size=17, color=TEXT, bold=True)
-    text(s, sub, 1.62, y + 0.56, 2.8, 0.3, size=11, color=color, bold=True)
-    text(s, body, 4.35, y + 0.22, 3.4, 0.55, size=11.8, color=MUTED, line_spacing=1.25)
-    text(s, cap, 4.35, y + 0.9, 3.4, 0.3, size=10, color=FAINT, font=FONT_EN)
+for i, (code, name, sub, body, color) in enumerate(layers):
+    y = 2.12 + i * 1.28
+    rect(s, 0.62, y, 7.15, 1.1, fill=PANEL, line=BORDER, radius=0.08)
+    rect(s, 0.62, y, 0.08, 1.1, fill=color, line=None, radius=0)
+    badge(s, code, 0.88, y + 0.29, d=0.5, fill=color, color=RGBColor(7, 10, 20))
+    text(s, name, 1.56, y + 0.14, 2.0, 0.32, size=15.5, color=TEXT, bold=True)
+    text(s, sub, 1.56, y + 0.51, 2.5, 0.26, size=10.5, color=color, bold=True)
+    text(s, body, 4.05, y + 0.2, 3.45, 0.65, size=11, color=MUTED, line_spacing=1.25)
 
-# right-side injection budget panel
-px, py = 8.35, 1.72
-rect(s, px, py, 4.35, 5.0, fill=RGBColor(0x0B, 0x13, 0x24), line=BORDER, radius=0.08)
-text(s, "每次注入", px + 0.32, py + 0.25, 3.7, 0.3, size=11, color=CYAN, bold=True, font=FONT_EN)
-text(s, "≤ 1400", px + 0.3, py + 0.58, 2.2, 0.7, size=34, color=TEXT, bold=True, font=FONT_EN)
-text(s, "字符", px + 1.95, py + 0.9, 1.0, 0.3, size=13, color=MUTED)
-text(s, "按分数裁剪，不按层硬切", px + 0.32, py + 1.32, 3.6, 0.3, size=11, color=MUTED)
-text(s, "L3", px + 0.32, py + 1.95, 0.6, 0.3, size=11, color=VIOLET, bold=True)
-text(s, "L2", px + 0.32, py + 2.45, 0.6, 0.3, size=11, color=ACCENT, bold=True)
-text(s, "L1", px + 0.32, py + 2.95, 0.6, 0.3, size=11, color=CYAN, bold=True)
-for i, color in enumerate([VIOLET, ACCENT, CYAN]):
-    y = py + 2.02 + i * 0.5
-    rect(s, px + 0.85, y, 2.9 - i * 0.55, 0.18, fill=color, line=None, radius=0.5)
-text(s, "snapshot 注入，不是 system prompt 抖动", px + 0.32, py + 3.62, 3.65, 0.55, size=10.5, color=MUTED, line_spacing=1.3)
-chip(s, "0 token when nothing matches", px + 0.32, py + 4.3, 3.55, GREEN, size=9.5)
+text(s, "每层都有条数上限；超过上限按重要度与时间淘汰。", 0.64, 6.1, 7.0, 0.3, size=10.5, color=FAINT)
 
+# right pipeline card
+px, py = 8.2, 1.75
+rect(s, px, py, 4.5, 4.75, fill=DEEP, line=BORDER, radius=0.08)
+text(s, "ONE TURN", px + 0.3, py + 0.22, 2.0, 0.28, size=10, color=CYAN, bold=True, font=FONT_EN)
+steps = [
+    ("01", "捕获", "turn/start · user · assistant · turn/end", CYAN),
+    ("02", "蒸馏", "1 次 LLM → 严格 JSON（L1/L2/L3）", ACCENT),
+    ("03", "召回", "RRF + Active Window", VIOLET),
+    ("04", "注入", "带 id 的 snapshot，≤1400 字符", GREEN),
+]
+for i, (num, head, body, color) in enumerate(steps):
+    y = py + 0.64 + i * 0.93
+    badge(s, num, px + 0.28, y + 0.08, d=0.36, fill=color)
+    text(s, head, px + 0.78, y, 1.0, 0.3, size=13, color=TEXT, bold=True)
+    text(s, body, px + 1.62, y - 0.01, 2.65, 0.55, size=10.2, color=MUTED, line_spacing=1.25)
+text(s, "纯本地 JSON · 原子写 · 密钥脱敏", px + 0.3, py + 4.22, 3.9, 0.3, size=10, color=FAINT, font=FONT_EN)
 footer(s, 3)
 
 # ---------------------------------------------------------------------------
-# 04 — Pipeline
+# 04 — Retrieval
 # ---------------------------------------------------------------------------
 s = new_slide()
-kicker(s, "03 / PIPELINE")
-title(s, "从一条对话，到下一次自动想起")
-steps = [
-    ("01", "捕获", "turn/start · user · assistant · turn/end", CYAN),
-    ("02", "蒸馏", "1 次 LLM → 严格 JSON（L1 / L2 / L3）", ACCENT),
-    ("03", "合并", "近似去重 · 原地更新 · 向量回填", VIOLET),
-    ("04", "召回", "新用户消息 → BM25 + 向量混合", GREEN),
-    ("05", "注入", "≤1400 字符 snapshot → 本步", AMBER),
+kicker(s, "PLUGIN / RETRIEVAL")
+title(s, "召回：三条独立通道 + 一个主动窗口")
+
+channels = [
+    ("LEXICAL", "BM25 + 中文 bigram", "术语、路径、专名；零依赖永远可用", CYAN),
+    ("NGRAM", "字符 2/3-gram", "中文子串、错字、中英混合补位", GREEN),
+    ("VECTOR", "Qwen3-Embedding-8B", "4096 维语义；baseline 校准后参与", ACCENT),
 ]
-x0, y0, w, gap = 0.62, 1.95, 2.26, 0.23
-for i, (num, head, body, color) in enumerate(steps):
-    x = x0 + i * (w + gap)
-    rect(s, x, y0, w, 2.1, fill=PANEL, line=BORDER, radius=0.08)
-    rect(s, x, y0, w, 0.07, fill=color, line=None, radius=0)
-    badge(s, num, x + 0.22, y0 + 0.28, d=0.44, fill=color, color=RGBColor(7, 10, 20))
-    text(s, head, x + 0.76, y0 + 0.26, 1.4, 0.42, size=18, color=TEXT, bold=True)
-    text(s, body, x + 0.22, y0 + 0.93, w - 0.44, 0.85, size=10.8, color=MUTED, line_spacing=1.35)
-    if i < len(steps) - 1:
-        arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(x + w + 0.035), Inches(y0 + 0.92), Inches(0.16), Inches(0.25))
-        arrow.fill.solid()
-        arrow.fill.fore_color.rgb = FAINT
-        arrow.line.fill.background()
-        arrow.shadow.inherit = False
+for i, (tag, name, body, color) in enumerate(channels):
+    x = 0.62 + i * 4.06
+    rect(s, x, 1.72, 3.86, 1.42, fill=PANEL, line=color, line_width=0.9, radius=0.08)
+    text(s, tag, x + 0.22, 1.9, 1.4, 0.25, size=9.5, color=color, bold=True, font=FONT_EN)
+    text(s, name, x + 0.22, 2.18, 3.4, 0.32, size=13.5, color=TEXT, bold=True)
+    text(s, body, x + 0.22, 2.58, 3.4, 0.4, size=10.2, color=MUTED)
 
-text(s, "每个回合只多 1 次蒸馏调用；没有可用模型时退化为确定性 L1 摘要 —— 记录不会丢。", 0.64, 4.55, 12.0, 0.35, size=13, color=TEXT)
-text(s, "模型不可用 / 解析失败 / API 报错 都不会阻断对话；下一轮仍可检索已有记忆。", 0.64, 4.95, 12.0, 0.35, size=11.5, color=MUTED)
+# RRF formula
+rect(s, 0.62, 3.38, 7.55, 1.08, fill=DEEP, line=BORDER, radius=0.08)
+text(s, "RRF(d)  =  Σ  1 / (60 + rank_c(d))", 0.9, 3.55, 6.9, 0.38, size=16, color=TEXT, font=FONT_CODE)
+text(s, "三路排名融合，不把不同量纲的原始分硬相加；同 content_hash 并列。", 0.9, 3.98, 6.9, 0.3, size=10.2, color=MUTED)
 
-# a small event strip
-rect(s, 0.62, 5.62, 12.1, 0.95, fill=RGBColor(0x0B, 0x13, 0x24), line=BORDER, radius=0.1)
-text(s, "event stream", 0.9, 5.84, 1.6, 0.3, size=10.5, color=CYAN, bold=True, font=FONT_EN)
-text(s, "user/message  →  assistant/message  →  turn/end  ══▶  extraction queue  ══▶  l1/l2/l3.json", 2.4, 5.82, 9.9, 0.4, size=12, color=TEXT, font=FONT_CODE)
+# active window card
+rect(s, 0.62, 4.66, 3.8, 1.55, fill=PANEL, line=VIOLET, line_width=0.9, radius=0.08)
+text(s, "ACTIVE WINDOW", 0.86, 4.82, 2.0, 0.25, size=9.5, color=VIOLET, bold=True, font=FONT_EN)
+text(s, "主动补位", 0.86, 5.08, 2.6, 0.3, size=14, color=TEXT, bold=True)
+text(s, "高重要度 L2/L3；独立预留 420 字符；query 无命中也带。", 0.86, 5.45, 3.25, 0.55, size=10, color=MUTED, line_spacing=1.25)
+
+# citation card
+rect(s, 4.58, 4.66, 3.6, 1.55, fill=PANEL, line=GREEN, line_width=0.9, radius=0.08)
+text(s, "CITATION", 4.82, 4.82, 1.6, 0.25, size=9.5, color=GREEN, bold=True, font=FONT_EN)
+text(s, "引用回写", 4.82, 5.08, 2.5, 0.3, size=14, color=TEXT, bold=True)
+text(s, "每行带 (id:xxxxxxxx)；回答引用后回写 citedCount。", 4.82, 5.45, 3.1, 0.55, size=10, color=MUTED, line_spacing=1.25)
+
+# budget bars
+px, py = 8.45, 3.38
+rect(s, px, py, 4.25, 2.83, fill=DEEP, line=BORDER, radius=0.08)
+text(s, "INJECTION BUDGET", px + 0.26, py + 0.18, 2.4, 0.25, size=9.5, color=CYAN, bold=True, font=FONT_EN)
+text(s, "≤ 1400", px + 0.24, py + 0.46, 2.2, 0.55, size=28, color=TEXT, bold=True, font=FONT_EN)
+text(s, "字符", px + 1.82, py + 0.72, 0.8, 0.28, size=11, color=MUTED)
+bands = [("IMMEDIATE", 0.5, GREEN), ("WORKING", 0.3, ACCENT), ("BACKGROUND", 0.2, FAINT)]
+for i, (label, ratio, color) in enumerate(bands):
+    y = py + 1.2 + i * 0.42
+    text(s, label, px + 0.26, y, 1.35, 0.25, size=9.5, color=color, bold=True, font=FONT_EN)
+    rect(s, px + 1.68, y + 0.05, 1.9, 0.14, fill=RGBColor(0x1A, 0x25, 0x3D), line=None, radius=0.5)
+    rect(s, px + 1.68, y + 0.05, 1.9 * ratio, 0.14, fill=color, line=None, radius=0.5)
+text(s, "band 内按分数保留，active 行优先。", px + 0.26, py + 2.45, 3.6, 0.28, size=9.5, color=FAINT)
+
 footer(s, 4)
 
 # ---------------------------------------------------------------------------
-# 05 — Example
+# 05 — UI / work-step visibility
 # ---------------------------------------------------------------------------
 s = new_slide()
-kicker(s, "04 / IN PRACTICE")
-title(s, "一次闭环：从「记住 pnpm」到「下次自己想起来」")
+kicker(s, "PLUGIN / VISIBLE")
+title(s, "看得见的记忆：页面 + 工作步骤")
+text(s, "侧边栏一级入口进入控制台；每次召回在聊天工作步骤里留一行，点开看正文与命中 id。", 0.64, 1.6, 12.0, 0.35, size=12.2, color=MUTED)
 
-# left panel
-rect(s, 0.62, 1.7, 5.75, 4.65, fill=PANEL, line=BORDER, radius=0.08)
-text(s, "会话 A · 记录", 0.92, 1.92, 3.0, 0.35, size=14, color=CYAN, bold=True)
-text(s, "USER", 0.92, 2.42, 0.8, 0.3, size=10, color=FAINT, font=FONT_EN, bold=True)
-text(s, "这个项目用 pnpm，测试命令是 pnpm test。", 1.55, 2.38, 4.5, 0.4, size=12.5, color=TEXT)
-text(s, "→ 蒸馏", 0.92, 2.95, 1.0, 0.3, size=10, color=FAINT, font=FONT_EN, bold=True)
-for i, (code, value, color) in enumerate(
-    [
-        ("L1", "用户要求把包管理器统一为 pnpm，并确认测试命令。", CYAN),
-        ("L2", "项目使用 pnpm；测试命令 pnpm test。", ACCENT),
-        ("L3", "工具链约定：pnpm 为核心，后续任务默认遵循。", VIOLET),
-    ]
-):
-    y = 3.32 + i * 0.92
-    badge(s, code, 1.55, y + 0.05, d=0.42, fill=color, color=RGBColor(7, 10, 20))
-    text(s, value, 2.16, y, 3.85, 0.62, size=11.5, color=MUTED, line_spacing=1.25)
+picture(s, DOCS / "ppt" / "console-crop.png", 0.62, 2.02, 5.6, 3.93)
+text(s, "01  全息记忆控制台", 0.62, 6.12, 6.0, 0.28, size=10, color=CYAN, bold=True, font=FONT_EN)
+text(s, "统计 · 模型配置 · 检测/保存 · 搜索筛选 · 召回审计", 0.62, 6.42, 6.2, 0.25, size=9.2, color=FAINT)
 
-# arrow between panels
-arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(6.55), Inches(3.62), Inches(0.52), Inches(0.34))
-arrow.fill.solid()
-arrow.fill.fore_color.rgb = ACCENT
-arrow.line.fill.background()
-arrow.shadow.inherit = False
-
-# right panel
-rect(s, 7.25, 1.7, 5.45, 4.65, fill=PANEL, line=BORDER, radius=0.08)
-text(s, "会话 B · 召回", 7.55, 1.92, 3.0, 0.35, size=14, color=GREEN, bold=True)
-text(s, "USER", 7.55, 2.42, 0.8, 0.3, size=10, color=FAINT, font=FONT_EN, bold=True)
-text(s, "这个项目用什么包管理器？", 8.18, 2.38, 4.2, 0.4, size=12.5, color=TEXT)
-text(s, "→ 自动召回", 7.55, 2.95, 1.5, 0.3, size=10, color=FAINT, font=FONT_EN, bold=True)
-lines = [
-    ("[L2]", "项目使用 pnpm；测试命令 pnpm test。", ACCENT),
-    ("[L1]", "上次确认了 pnpm 约定，并写入 L3 胶囊。", CYAN),
-]
-for i, (tag, value, color) in enumerate(lines):
-    y = 3.33 + i * 0.72
-    text(s, tag, 8.18, y, 0.55, 0.3, size=10.5, color=color, bold=True, font=FONT_EN)
-    text(s, value, 8.78, y - 0.02, 3.6, 0.6, size=11.3, color=MUTED, line_spacing=1.2)
-text(s, "→ 回答 pnpm，不需要用户再解释一次。", 7.55, 4.78, 4.8, 0.4, size=12, color=TEXT, bold=True)
-rect(s, 7.55, 5.32, 4.75, 0.72, fill=RGBColor(0x10, 0x1B, 0x30), line=BORDER, radius=0.08)
-text(s, "回答：pnpm", 7.75, 5.46, 1.6, 0.3, size=12, color=GREEN, bold=True, font=FONT_EN)
-text(s, "来源：L2 事实 + L1 摘要，可追溯", 9.3, 5.47, 2.9, 0.3, size=10, color=MUTED)
-
-# bottom inject sample
-rect(s, 0.62, 6.52, 12.1, 0.34, fill=RGBColor(0x0B, 0x13, 0x24), line=BORDER, radius=0.5)
-text(s, "[holo-memory] 注入为 user-role snapshot，模型在开口前就带着背景事实。", 0.92, 6.57, 11.5, 0.26, size=10.5, color=MUTED)
+picture(s, DOCS / "recall-step.png", 6.95, 2.05, 4.6, 3.88)
+text(s, "02  工作步骤里的召回行", 6.95, 6.12, 5.2, 0.28, size=10, color=GREEN, bold=True, font=FONT_EN)
+text(s, "[长期记忆自动召回 | holo-memory]  ·  展开看问题/正文/id", 6.95, 6.42, 5.35, 0.5, size=9.2, color=FAINT, line_spacing=1.25)
 footer(s, 5)
 
 # ---------------------------------------------------------------------------
-# 06 — Retrieval
+# 06 — Section 02 divider
+# ---------------------------------------------------------------------------
+section_divider(
+    "02",
+    "安装方式",
+    "从源码到可用：构建、安装、重启、验证。",
+    [
+        ("准备", "DSH Desktop 0.2.1-rc.1+ · Node ≥ 22.19"),
+        ("安装", "设置 → 插件 → 添加插件 → 本地目录"),
+        ("配置", "可选向量模型；不配也能用词法召回"),
+    ],
+    GREEN,
+    6,
+)
+
+# ---------------------------------------------------------------------------
+# 07 — Install steps
 # ---------------------------------------------------------------------------
 s = new_slide()
-kicker(s, "05 / RETRIEVAL")
-title(s, "双通道混合检索：词法保底，向量提精度")
-
-# left channel cards
-rect(s, 0.62, 1.72, 5.55, 1.55, fill=PANEL, line=CYAN, line_width=0.9, radius=0.08)
-text(s, "BM25 + 中文 bigram", 0.92, 1.9, 4.2, 0.35, size=15, color=CYAN, bold=True)
-text(s, "零依赖 · 离线可用 · 对术语、路径、专名精确", 0.92, 2.32, 4.9, 0.3, size=11, color=MUTED)
-text(s, "任何时候的保底通道", 0.92, 2.78, 4.0, 0.3, size=10.5, color=FAINT, font=FONT_EN)
-
-rect(s, 0.62, 3.45, 5.55, 1.55, fill=PANEL, line=ACCENT, line_width=0.9, radius=0.08)
-text(s, "Qwen / Qwen3-Embedding-8B", 0.92, 3.63, 4.9, 0.35, size=15, color=ACCENT, bold=True)
-text(s, "4096 维 · 跨语言语义 · 硅基流动 API", 0.92, 4.05, 4.9, 0.3, size=11, color=MUTED)
-text(s, "单次查询约 200–400ms，超时自动退回词法", 0.92, 4.5, 5.0, 0.3, size=10.5, color=FAINT)
-
-# formula card
-rect(s, 6.5, 1.72, 6.22, 1.55, fill=RGBColor(0x0B, 0x13, 0x24), line=BORDER, radius=0.08)
-text(s, "relevance  =  0.62 · vec'  +  0.28 · lex", 6.78, 1.92, 5.7, 0.4, size=15.5, color=TEXT, font=FONT_CODE)
-text(s, "vec' = max(0, (cos − 0.22) / 0.78)", 6.78, 2.38, 5.4, 0.35, size=13, color=CYAN, font=FONT_CODE)
-text(s, "0.22 是无关文本的余弦基线；先减基线，噪声就不会伪装成相关。", 6.78, 2.82, 5.7, 0.3, size=10.5, color=MUTED)
-
-# scores
-text(s, "实测召回（同一 L1 记录）", 6.52, 3.55, 4.0, 0.3, size=11, color=FAINT, bold=True, font=FONT_EN)
-rows = [
-    ("这个项目用什么包管理器？", 0.546, "cos 0.454", GREEN, "✓"),
-    ("Which package manager…?", 0.246, "cos 0.429", GREEN, "✓"),
-    ("明天天气怎么样？", 0.0, "cos 0.30", RED, "过滤"),
-]
-for i, (query, score, cos_text, color, mark) in enumerate(rows):
-    y = 3.95 + i * 0.68
-    text(s, query, 6.52, y, 3.0, 0.3, size=10.5, color=TEXT)
-    rect(s, 9.55, y + 0.07, 1.9, 0.13, fill=RGBColor(0x1A, 0x25, 0x3D), line=None, radius=0.5)
-    if score > 0:
-        rect(s, 9.55, y + 0.07, 1.9 * min(1.0, score / 0.6), 0.13, fill=color, line=None, radius=0.5)
-    text(s, cos_text, 11.55, y, 0.9, 0.3, size=9.5, color=MUTED, font=FONT_EN)
-    text(s, mark, 12.35, y - 0.02, 0.5, 0.3, size=11, color=color, bold=True)
-
-rect(s, 0.62, 5.55, 12.1, 0.82, fill=RGBColor(0x0C, 0x16, 0x2C), line=BORDER, radius=0.1)
-text(s, "无关问题不注入（0 token）；查询 embedding 超过 2.5s 时本轮退回词法，不阻塞对话。", 0.92, 5.76, 11.4, 0.35, size=12.5, color=TEXT)
-text(s, "向量写入是后台异步的：新记录先可被词法检索，随后补齐 4096 维向量。", 0.92, 6.08, 11.4, 0.3, size=10.5, color=MUTED)
-footer(s, 6)
-
-# ---------------------------------------------------------------------------
-# 07 — Injection
-# ---------------------------------------------------------------------------
-s = new_slide()
-kicker(s, "06 / INJECTION")
-title(s, "只在需要时，只给需要的量")
+kicker(s, "INSTALL / 4 STEPS")
+title(s, "安装：四步，最后一定要重启")
 
 steps = [
-    ("01", "新用户消息到达", "每条消息只处理一次；后续工具步不重复注入", CYAN),
-    ("02", "排除当前会话 L1", "避免把本轮对话再复述一遍", ACCENT),
-    ("03", "阈值 + 配额排序", "L3 / L2 / L1 = 3 / 5 / 2 条", VIOLET),
-    ("04", "预算裁剪 → 注入", "≤1400 字符 snapshot，写入本步", GREEN),
+    ("01", "准备环境", "DSH Desktop 0.2.1-rc.1+；Node.js ≥ 22.19；不需要 Python/数据库。", CYAN),
+    ("02", "构建插件", "npm install  →  npm run build  →  npm test（可选）。", ACCENT),
+    ("03", "安装目录", "设置 → 插件 → 添加插件 → 填本地目录，或 web profile 用 dsh plugin add link。", VIOLET),
+    ("04", "重启验证", "完全退出并重启 DSH；新会话问一个只有记忆知道的问题。", GREEN),
 ]
 for i, (num, head, body, color) in enumerate(steps):
-    y = 1.78 + i * 1.12
-    rect(s, 0.62, y, 6.35, 0.95, fill=PANEL, line=BORDER, radius=0.08)
-    badge(s, num, 0.86, y + 0.22, d=0.44, fill=color, color=RGBColor(7, 10, 20))
-    text(s, head, 1.46, y + 0.14, 2.6, 0.32, size=14.5, color=TEXT, bold=True)
-    text(s, body, 1.46, y + 0.52, 4.9, 0.3, size=10.8, color=MUTED)
+    y = 1.72 + i * 1.1
+    rect(s, 0.62, y, 8.05, 0.92, fill=PANEL, line=BORDER, radius=0.08)
+    badge(s, num, 0.86, y + 0.21, d=0.46, fill=color, color=RGBColor(7, 10, 20))
+    text(s, head, 1.48, y + 0.12, 1.8, 0.3, size=14.5, color=TEXT, bold=True)
+    text(s, body, 1.48, y + 0.5, 6.7, 0.3, size=10.8, color=MUTED)
 
-# right panel
-px, py = 7.35, 1.78
-rect(s, px, py, 5.35, 4.55, fill=RGBColor(0x0B, 0x13, 0x24), line=BORDER, radius=0.08)
-text(s, "注入预算", px + 0.3, py + 0.22, 3.0, 0.3, size=11, color=CYAN, bold=True, font=FONT_EN)
-text(s, "1400 chars", px + 0.28, py + 0.56, 3.4, 0.5, size=25, color=TEXT, bold=True, font=FONT_EN)
-text(s, "按分数裁剪", px + 3.45, py + 0.72, 1.5, 0.3, size=10, color=MUTED, align=PP_ALIGN.RIGHT)
-# budget bar
-segments = [(0.0, 0.30, VIOLET, "L3"), (0.30, 0.62, ACCENT, "L2"), (0.62, 1.0, CYAN, "L1")]
-for start, end, color, label in segments:
-    rect(s, px + 0.3 + start * 4.7, py + 1.32, (end - start) * 4.7 - 0.05, 0.24, fill=color, line=None, radius=0.5)
-    text(s, label, px + 0.3 + start * 4.7, py + 1.66, 1.0, 0.25, size=9.5, color=color, bold=True)
-text(s, "高分条目优先；超预算时从最低分开始删，而不是砍掉整层。", px + 0.3, py + 2.05, 4.75, 0.55, size=10.8, color=MUTED, line_spacing=1.3)
+# right code / paths
+px, py = 9.0, 1.72
+rect(s, px, py, 3.7, 4.55, fill=DEEP, line=BORDER, radius=0.08)
+text(s, "LOCAL BUILD", px + 0.24, py + 0.2, 2.2, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
+code = [
+    "cd dsh-holo-memory",
+    "npm install",
+    "npm run build",
+    "npm test",
+]
+for i, line in enumerate(code):
+    text(s, line, px + 0.24, py + 0.56 + i * 0.32, 3.25, 0.28, size=10.2, color=TEXT, font=FONT_CODE)
+text(s, "DATA", px + 0.24, py + 2.1, 1.0, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
+text(s, "$DSH_HOME/holo-memory/", px + 0.24, py + 2.42, 3.25, 0.28, size=9.8, color=CYAN, font=FONT_CODE)
+text(s, "l1.json / l2.json / l3.json / embedding.key", px + 0.24, py + 2.72, 3.25, 0.28, size=8.8, color=MUTED, font=FONT_CODE)
+text(s, "DESKTOP", px + 0.24, py + 3.25, 1.1, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
+text(s, "desktop profile 由 Electron 管理；", px + 0.24, py + 3.58, 3.2, 0.28, size=9.2, color=MUTED)
+text(s, "用设置页安装，不要用 CLI 改 desktop profile。", px + 0.24, py + 3.86, 3.2, 0.45, size=9.2, color=AMBER, line_spacing=1.25)
 
-rect(s, px + 0.3, py + 2.85, 4.75, 0.78, fill=RGBColor(0x10, 0x1B, 0x30), line=BORDER, radius=0.08)
-text(s, "短问题", px + 0.5, py + 2.98, 0.9, 0.25, size=10, color=AMBER, bold=True)
-text(s, "“继续” → 最近 L1 + 最重要 L3 快照", px + 1.45, py + 2.95, 3.4, 0.3, size=10.5, color=TEXT)
-text(s, "无关问题 → 0 token", px + 1.45, py + 3.28, 3.2, 0.25, size=10, color=MUTED)
-
-text(s, "source.kind = \"holo-memory\"  ·  form = snapshot", px + 0.3, py + 3.9, 4.7, 0.3, size=10, color=FAINT, font=FONT_CODE)
-
+text(s, "装完 / 更新后：client 半在启动时加载，刷新页面不够，必须重启 DSH。", 0.64, 6.35, 12.0, 0.3, size=11.2, color=AMBER)
 footer(s, 7)
 
 # ---------------------------------------------------------------------------
-# 08 — Engineering & safety
+# 08 — Configure embedding
 # ---------------------------------------------------------------------------
 s = new_slide()
-kicker(s, "07 / ENGINEERING")
-title(s, "本地、可审计、不撑爆上下文")
-tiles = [
-    ("纯本地 JSON", "l1.json / l2.json / l3.json，可 grep、diff、手工改、rm 即遗忘。", CYAN),
-    ("原子写", "临时文件 + rename；崩溃不会留下半截记忆文件。", ACCENT),
-    ("容量护栏", "2000 / 3000 / 300；超过按重要度与时间淘汰。", VIOLET),
-    ("Scope 隔离", "user 跨项目；project 跟工作区，随 git 共享给团队。", GREEN),
-    ("密钥全链路脱敏", "写入拒存、召回渲染再脱敏；L1/L2/L3 都覆盖。", AMBER),
-    ("0 服务端 / 0 账号", "没有遥测；embedding 也可以指向本地 Ollama。", RED),
-]
-for i, (head, body, color) in enumerate(tiles):
-    col, row = i % 3, i // 3
-    x = 0.62 + col * 4.05
-    y = 1.72 + row * 2.05
-    rect(s, x, y, 3.87, 1.8, fill=PANEL, line=BORDER, radius=0.08)
-    rect(s, x, y, 3.87, 0.06, fill=color, line=None, radius=0)
-    text(s, head, x + 0.26, y + 0.26, 3.3, 0.35, size=15, color=TEXT, bold=True)
-    text(s, body, x + 0.26, y + 0.78, 3.35, 0.8, size=11.2, color=MUTED, line_spacing=1.35)
+kicker(s, "INSTALL / OPTIONAL")
+title(s, "配置向量模型（可选，不配也能用）")
 
-text(s, "运行时依赖 0  ·  宿主提供 @deepseek-ai/* 服务  ·  插件包 28.5 KB（tarball）", 0.64, 6.35, 12.0, 0.3, size=11.5, color=FAINT, font=FONT_EN)
+# left fields
+rect(s, 0.62, 1.7, 6.35, 4.75, fill=PANEL, line=BORDER, radius=0.08)
+text(s, "侧边栏 → 全息记忆 → 向量模型配置", 0.9, 1.9, 5.7, 0.32, size=13, color=CYAN, bold=True)
+fields = [
+    ("供应商 / 接口地址", "https://api.siliconflow.cn/v1", CYAN),
+    ("模型", "Qwen/Qwen3-Embedding-8B", ACCENT),
+    ("API Key", "已保存；留空保持不变", VIOLET),
+    ("维度（可选）", "0 = 用模型默认", GREEN),
+]
+for i, (label, value, color) in enumerate(fields):
+    y = 2.38 + i * 0.78
+    text(s, label, 0.92, y, 1.8, 0.25, size=10, color=FAINT)
+    rect(s, 2.75, y - 0.05, 3.95, 0.42, fill=DEEP, line=BORDER, radius=0.06)
+    text(s, value, 2.92, y + 0.02, 3.6, 0.28, size=10.2, color=color, font=FONT_CODE)
+text(s, "① 检测可用性：请求一次 /embeddings，判断是否向量模型", 0.92, 5.62, 5.8, 0.28, size=10, color=MUTED)
+text(s, "② 保存配置：写 embedding.json + embedding.key，立即生效", 0.92, 5.94, 5.8, 0.28, size=10, color=MUTED)
+text(s, "已有记录会在后台按新模型重新回填向量。", 0.92, 6.24, 5.8, 0.25, size=9.5, color=FAINT)
+
+# right note
+px = 7.35
+rect(s, px, 1.7, 5.35, 2.1, fill=DEEP, line=BORDER, radius=0.08)
+text(s, "不配向量模型？", px + 0.28, 1.9, 3.2, 0.3, size=13, color=GREEN, bold=True)
+text(s, "词法 + 字符 n-gram 仍然可用；只是少了语义召回通道。", px + 0.28, 2.28, 4.75, 0.6, size=10.8, color=MUTED, line_spacing=1.3)
+text(s, "API Key 不进 YAML、不进 GET 响应。", px + 0.28, 3.05, 4.75, 0.3, size=9.8, color=AMBER)
+rect(s, px, 4.0, 5.35, 1.8, fill=DEEP, line=BORDER, radius=0.08)
+text(s, "支持的端点", px + 0.28, 4.2, 3.0, 0.3, size=13, color=CYAN, bold=True)
+text(s, "SiliconFlow · OpenAI · 本地 Ollama · 火山方舟 · 任意 OpenAI 兼容 /embeddings", px + 0.28, 4.58, 4.75, 0.8, size=10.5, color=MUTED, line_spacing=1.35)
+text(s, "换模型 / 换维度后，旧向量会按 embeddingModel 自动失效并回填。", px + 0.28, 5.4, 4.75, 0.35, size=9.5, color=FAINT)
 footer(s, 8)
 
 # ---------------------------------------------------------------------------
-# 09 — Verification
+# 09 — Section 03 divider
+# ---------------------------------------------------------------------------
+section_divider(
+    "03",
+    "注意事项",
+    "安全、token、兼容性，以及上线前最容易忽略的细节。",
+    [
+        ("密钥", "单独文件 0600；不进仓库、不进日志"),
+        ("隐私", "记忆是本地明文；embedding 会发查询文本"),
+        ("兼容", "DSH 0.2.x；更新后必须重启 client"),
+    ],
+    AMBER,
+    9,
+)
+
+# ---------------------------------------------------------------------------
+# 10 — Notes / cautions
 # ---------------------------------------------------------------------------
 s = new_slide()
-kicker(s, "08 / VERIFIED")
-title(s, "不是 PPT 工程，是已经在跑的插件")
-metrics = [
-    ("17 / 17", "单元测试", CYAN),
-    ("4096", "向量维度", ACCENT),
-    ("341 ms", "2 条文本 embedding", VIOLET),
-    ("98 KB", "解包体积", GREEN),
+kicker(s, "NOTES / BEFORE YOU SHIP")
+title(s, "六条底线，先看再装")
+
+notes = [
+    ("密钥安全", "embedding.key 单独文件、0600；GET 不返回；不要提交到 Git。", RED),
+    ("隐私边界", "记忆是本地明文 JSON；开启 embedding 会把查询文本发给供应商。", AMBER),
+    ("Token 预算", "默认注入 ≤1400 字符；active 单独 420；可关 active 或调小。", CYAN),
+    ("更新重启", "client 半启动时加载；更新插件后刷新页面不够，要重启 DSH。", GREEN),
+    ("异步蒸馏", "turn/end 后异步；headless 退出太快可能丢最后一条；L3 可能暂为 0。", VIOLET),
+    ("Scope 隔离", "user 跨项目、project 跟工作区；共享/备份前先确认里面没有秘密。", ACCENT),
 ]
-for i, (num, label, color) in enumerate(metrics):
-    x = 0.62 + i * 3.05
-    rect(s, x, 1.68, 2.85, 1.22, fill=PANEL, line=BORDER, radius=0.08)
-    text(s, num, x + 0.24, 1.82, 2.4, 0.55, size=25, color=color, bold=True, font=FONT_EN)
-    text(s, label, x + 0.24, 2.38, 2.4, 0.3, size=10.5, color=MUTED)
+for i, (head, body, color) in enumerate(notes):
+    col, row = i % 3, i // 3
+    x = 0.62 + col * 4.06
+    y = 1.72 + row * 2.0
+    rect(s, x, y, 3.86, 1.72, fill=PANEL, line=BORDER, radius=0.08)
+    rect(s, x, y, 3.86, 0.06, fill=color, line=None, radius=0)
+    text(s, head, x + 0.24, y + 0.24, 3.3, 0.32, size=14, color=TEXT, bold=True)
+    text(s, body, x + 0.24, y + 0.7, 3.35, 0.8, size=10.6, color=MUTED, line_spacing=1.35)
 
-# left: e2e checks
-rect(s, 0.62, 3.18, 6.0, 3.05, fill=PANEL, line=BORDER, radius=0.08)
-text(s, "真实 DSH 运行时 E2E", 0.92, 3.38, 4.0, 0.35, size=14, color=CYAN, bold=True)
-checks = [
-    "临时 profile + mock Anthropic SSE 服务，插件正常加载",
-    "第 1 轮后生成 l1.json / l2.json / l3.json",
-    "第 2 轮模型请求中检测到注入块（injected=true）",
-    "已有 L1 自动回填 4096 维向量；新事实即时嵌入",
-]
-for i, value in enumerate(checks):
-    y = 3.86 + i * 0.52
-    text(s, "✓", 0.94, y, 0.3, 0.3, size=13, color=GREEN, bold=True, font=FONT_EN)
-    text(s, value, 1.28, y - 0.01, 5.1, 0.4, size=11.3, color=MUTED)
-
-# right: live stats + recall
-rect(s, 6.85, 3.18, 5.85, 3.05, fill=RGBColor(0x0B, 0x13, 0x24), line=BORDER, radius=0.08)
-text(s, "live memory_stats", 7.15, 3.38, 3.0, 0.3, size=11, color=FAINT, bold=True, font=FONT_EN)
-text(s, "L1 = 1   ·   L2 = 1   ·   L3 = 0", 7.15, 3.72, 5.1, 0.32, size=13, color=TEXT, font=FONT_CODE)
-text(s, "embedded = 2  ·  Qwen/Qwen3-Embedding-8B", 7.15, 4.1, 5.1, 0.32, size=11.5, color=MUTED, font=FONT_CODE)
-text(s, "召回分数", 7.15, 4.65, 2.0, 0.3, size=10.5, color=FAINT, bold=True, font=FONT_EN)
-for i, (label, score, color) in enumerate([("中文相关", 0.546, GREEN), ("英文相关", 0.246, GREEN), ("无关问题", 0.0, RED)]):
-    y = 5.02 + i * 0.38
-    text(s, label, 7.15, y, 1.2, 0.25, size=10, color=MUTED)
-    rect(s, 8.35, y + 0.06, 2.5, 0.12, fill=RGBColor(0x1A, 0x25, 0x3D), line=None, radius=0.5)
-    if score > 0:
-        rect(s, 8.35, y + 0.06, 2.5 * min(1.0, score / 0.6), 0.12, fill=color, line=None, radius=0.5)
-    text(s, f"{score:.3f}" if score > 0 else "filtered", 11.0, y - 0.02, 1.2, 0.25, size=9.5, color=color, font=FONT_EN)
-
-footer(s, 9)
-
-# ---------------------------------------------------------------------------
-# 10 — Usage
-# ---------------------------------------------------------------------------
-s = new_slide()
-kicker(s, "09 / USAGE")
-title(s, "怎么用：5 个工具 + 3 个文件")
-tools = [
-    ("memory_recall", "混合检索三层记忆，返回带 id 的记录"),
-    ("memory_note", "写入 L2 事实或 L3 全息胶囊"),
-    ("memory_list", "按层浏览最近的记忆"),
-    ("memory_forget", "按 id 删除过时/错误的记忆"),
-    ("memory_stats", "层数量、向量覆盖、存储路径"),
-]
-for i, (name, desc) in enumerate(tools):
-    y = 1.72 + i * 0.82
-    rect(s, 0.62, y, 6.1, 0.68, fill=PANEL, line=BORDER, radius=0.08)
-    text(s, name, 0.88, y + 0.13, 2.2, 0.3, size=12.5, color=CYAN, bold=True, font=FONT_CODE)
-    text(s, desc, 3.14, y + 0.14, 3.4, 0.3, size=10.8, color=MUTED)
-
-# config card
-rect(s, 7.0, 1.72, 5.65, 3.55, fill=RGBColor(0x0B, 0x13, 0x24), line=BORDER, radius=0.08)
-text(s, "cordis.patch.yml", 7.28, 1.9, 3.0, 0.3, size=10.5, color=FAINT, bold=True, font=FONT_EN)
-code = [
-    "- id: holo-memory",
-    "  config:",
-    "    embeddingEnabled: true",
-    "    embeddingBaseUrl:",
-    "      https://api.siliconflow.cn/v1",
-    "    embeddingModel:",
-    "      Qwen/Qwen3-Embedding-8B",
-    "    embeddingApiKeyFile:",
-    "      .../holo-memory/embedding.key",
-]
-for i, line in enumerate(code):
-    color = CYAN if i == 0 else (ACCENT if "embedding" in line else TEXT)
-    text(s, line, 7.28, 2.22 + i * 0.31, 5.1, 0.28, size=9.8, color=color, font=FONT_CODE)
-
-text(s, "安装", 0.64, 6.0, 0.8, 0.3, size=11, color=FAINT, bold=True, font=FONT_EN)
-text(s, "设置 → 插件 → 添加插件 → 填本地目录 → 重启 dsh", 1.28, 5.95, 5.8, 0.35, size=11.5, color=TEXT)
-text(s, "存储", 0.64, 6.38, 0.8, 0.3, size=11, color=FAINT, bold=True, font=FONT_EN)
-text(s, "$DSH_HOME/holo-memory/{l1,l2,l3}.json", 1.28, 6.34, 5.8, 0.32, size=10.5, color=MUTED, font=FONT_CODE)
+rect(s, 0.62, 5.55, 12.1, 1.12, fill=RGBColor(0x0C, 0x16, 0x2C), line=AMBER, line_width=0.9, radius=0.1)
+text(s, "兼容性：DSH 0.2.x。persona 模板不要写 {{cwd}}（只注册 provider/model）；工作目录由 runtime context 提供。", 0.9, 5.72, 11.6, 0.5, size=10.6, color=TEXT, line_spacing=1.25)
+text(s, "建议先在小 workspace 试运行，确认召回质量和 token 成本后再日常使用。", 0.9, 6.24, 11.6, 0.28, size=9.8, color=MUTED)
 footer(s, 10)
 
 # ---------------------------------------------------------------------------
-# 11 — Boundaries / next
+# 11 — Closing
 # ---------------------------------------------------------------------------
 s = new_slide("bg-section.png")
-kicker(s, "10 / BOUNDARIES & NEXT", VIOLET)
-title(s, "先做对记忆，再做多")
+kicker(s, "THANKS / LINKS", GREEN)
+text(s, "记住该记住的，", 0.66, 1.8, 9.0, 0.7, size=38, color=TEXT, bold=True)
+text(s, "忘掉该忘掉的。", 0.66, 2.55, 9.0, 0.7, size=38, color=CYAN, bold=True)
+text(s, "三层记忆 · 混合召回 · 主动补位 · 引用回写 · 全程可审计", 0.7, 3.55, 8.5, 0.35, size=14, color=MUTED)
 
-rect(s, 0.62, 1.75, 5.9, 3.55, fill=PANEL, line=BORDER, radius=0.08)
-text(s, "已知边界", 0.92, 1.95, 2.0, 0.35, size=14, color=AMBER, bold=True)
-limits = [
-    "每轮多 1 次蒸馏调用（可配置关闭或跟随会话模型）",
-    "headless 一次性任务退出太快时，最后一条蒸馏可能来不及",
-    "L2 写入去重是词法近似，极端近义改写可能各存一条",
-    "目前没有 Web 设置页，配置走 profile patch",
-]
-for i, value in enumerate(limits):
-    bullet_line(s, 0.94, 2.5 + i * 0.64, 5.2, "", value, AMBER, size=11)
-chip(s, "CURRENT · v0.1", 4.55, 1.92, 1.75, ACCENT, size=9.5)
+rect(s, 0.7, 4.35, 5.5, 1.4, fill=PANEL, line=BORDER, radius=0.08)
+text(s, "REPOSITORY", 0.95, 4.52, 2.0, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
+text(s, "github.com/Kaede0757-sudo/dsh-holo-memory", 0.95, 4.86, 5.0, 0.32, size=12, color=CYAN, font=FONT_CODE)
+text(s, "源码 · README · PPT 生成脚本 · 控制台截图", 0.95, 5.27, 4.9, 0.28, size=9.8, color=MUTED)
 
-rect(s, 6.62, 1.75, 6.1, 3.55, fill=PANEL, line=BORDER, radius=0.08)
-text(s, "下一步", 6.92, 1.95, 2.0, 0.35, size=14, color=GREEN, bold=True)
-nexts = [
-    "Web 设置页：查看 / 编辑 L1-L3，实时看召回",
-    "L3 定时 consolidation：跨会话合并主题胶囊",
-    "关系图与时间线：把记忆长成可浏览的结构",
-    "导出 / 导入、更多 embedding 后端",
-]
-for i, value in enumerate(nexts):
-    bullet_line(s, 6.94, 2.5 + i * 0.64, 5.3, "", value, GREEN, size=11)
-chip(s, "NEXT · v0.2", 10.55, 1.92, 1.75, GREEN, size=9.5)
+rect(s, 6.5, 4.35, 6.15, 1.4, fill=PANEL, line=BORDER, radius=0.08)
+text(s, "VERSION", 6.75, 4.52, 1.5, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
+text(s, "v0.3.0  ·  2026.10", 6.75, 4.86, 3.2, 0.32, size=12, color=GREEN, font=FONT_CODE)
+text(s, "测试 24/24  ·  RRF / Active Window / Citation / Bands", 6.75, 5.27, 5.6, 0.28, size=9.8, color=MUTED)
 
-text(s, "记住该记住的，忘掉该忘掉的。", 0.64, 5.75, 9.0, 0.55, size=22, color=TEXT, bold=True, font=FONT)
-text(s, "plugin-dev/dsh-holo-memory   ·   98 KB  ·   纯本地   ·   可审计", 0.66, 6.42, 9.0, 0.35, size=11, color=MUTED, font=FONT_CODE)
-text(s, "dsh-holo-memory  ·  v0.1.0  ·  2026.10", 9.5, 6.2, 3.2, 0.3, size=10, color=FAINT, font=FONT_EN, align=PP_ALIGN.RIGHT)
+text(s, "dsh-holo-memory  ·  DeepSeek Harness memory plugin", 0.7, 6.35, 8.5, 0.3, size=10.5, color=FAINT, font=FONT_EN)
+text(s, "END", 11.9, 6.25, 0.8, 0.3, size=11, color=FAINT, bold=True, font=FONT_EN, align=PP_ALIGN.RIGHT)
 
 # ---------------------------------------------------------------------------
-# Speaker notes (brief talking points, not shown on the slide)
+# Speaker notes
 # ---------------------------------------------------------------------------
 NOTES = [
-    "开场：DSH 默认没有跨会话记忆。dsh-holo-memory 用三层结构补上「记住 → 蒸馏 → 召回 → 注入」闭环。当前版本 v0.1.0，已在本机运行。",
-    "四个问题：会话结束归零、日志只用于审计、现有方案偏重或不自动注入、跨项目串味。结论：缺的是完整闭环而不是又一个数据库。",
-    "三层各司其职：L1 保留对话摘要，L2 保留可追溯原子事实，L3 把多轮压成整体胶囊。每层都有条数上限；每次注入总预算 1400 字符。",
-    "流水线：捕获事件 → 每轮一次 LLM 蒸馏 → 去重/更新/回填向量 → 新消息到达时混合召回 → 预算内注入。模型不可用时退化为确定性 L1 摘要。",
-    "用 pnpm 的例子说明闭环：A 会话写入 L1/L2/L3；B 会话在模型开口前自动召回，用户不需要再解释。",
-    "检索双通道：BM25+中文 bigram 永远可用；Qwen3-Embedding-8B 提供 4096 维语义。用 0.22 余弦基线校准，无关问题被过滤。",
-    "注入策略：每条新用户消息只处理一次；排除当前会话 L1；L3/L2/L1 配额 3/5/2；超预算从最低分删；短问题用最近快照兜底。",
-    "工程与安全：纯本地 JSON、原子写、容量护栏、user/project 隔离、密钥全链路脱敏、零服务端。运行时依赖为 0（宿主提供 @deepseek-ai/*）。",
-    "实测：17/17 单测；真实 DSH runtime + mock provider 跑通蒸馏与注入；SiliconFlow 4096 维、2 条文本 341ms；召回分数与过滤符合预期。",
-    "使用：5 个工具覆盖召回/写入/浏览/删除/统计；配置在 profile patch；数据在 $DSH_HOME/holo-memory/。安装走设置 → 插件 → 本地目录。",
-    "收尾：当前边界是每轮一次蒸馏、headless 尾部竞争、去重为词法近似、暂无 UI；下一步是 Web 设置页、L3 consolidation、关系图与导入导出。",
+    "开场：dsh-holo-memory v0.3.0。三部分：插件介绍、安装方式、注意事项。先用一句话说明它让 agent 跨会话记得你、记得项目。",
+    "第一部分：先讲三层记忆和闭环，再讲召回，最后看界面。强调它不是一个数据库，而是记录、蒸馏、召回、注入的完整链路。",
+    "三层各司其职：L1 对话摘要，L2 原子事实，L3 整体胶囊。右侧是一轮对话的闭环：捕获、蒸馏、召回、注入；纯本地 JSON。",
+    "召回升级为三通道 RRF：词法、字符 n-gram、向量；再加 Active Window 主动补位和 citation 回写。预算按 IMMEDIATE/WORKING/BACKGROUND 分配。",
+    "看得见的两个界面：侧边栏的独立控制台，以及聊天工作步骤里的召回行。工作步骤行可以展开看问题、正文和命中 id。",
+    "第二部分：安装方式。准备环境、构建、在设置里添加本地目录、重启验证。桌面版 profile 由 Electron 管理，不要用 CLI 改 desktop profile。",
+    "四步安装：Node 22.19+，npm install/build/test，设置→插件→添加插件→本地目录，最后完全重启 DSH。数据在 $DSH_HOME/holo-memory。",
+    "向量模型是可选的。在侧边栏页面填接口、模型、Key，先检测再保存；不配也能用词法和 n-gram。Key 单独文件保存，GET 不返回。",
+    "第三部分：注意事项。重点讲密钥、隐私、token、重启、异步蒸馏、scope 六条，以及 DSH 兼容性。",
+    "六条底线逐条过。最后给建议：先小 workspace 试运行，观察召回质量和 token 成本，再日常使用。",
+    "收尾：记住该记住的，忘掉该忘掉的。仓库、版本和下一步：P1 内容压缩/marker、Query Intent、更多评测。",
 ]
 for slide, note in zip(prs.slides, NOTES):
     slide.notes_slide.notes_text_frame.text = note
 
-# ---------------------------------------------------------------------------
 prs.save(OUT)
 print("saved", OUT, OUT.stat().st_size if OUT.exists() else "?")
