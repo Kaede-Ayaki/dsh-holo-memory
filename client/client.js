@@ -16,13 +16,15 @@
 
         var STYLE_ID = "dsh-holo-memory-style";
         var CSS = [
-          ".hm-pane{--hm-cyan:#22d3ee;--hm-blue:#5b7cfa;--hm-violet:#a78bfa;--hm-green:#4ade80;--hm-amber:#f5b84c;--hm-red:#f87171;--hm-surface:var(--dsw-alias-bg-layer-2,#0f182b);--hm-surface2:var(--dsw-alias-bg-layer-3,#142039);--hm-border:var(--dsw-alias-border-l3,#263450);--hm-text:var(--dsw-alias-label-primary,#e8eeff);--hm-sub:var(--dsw-alias-label-secondary,#a8b4cf);--hm-faint:var(--dsw-alias-label-tertiary,#8996b3);--hm-brand:var(--dsw-alias-brand-primary,#5b7cfa);display:flex;flex-direction:column;gap:14px;width:100%;max-width:1040px;padding:2px 0 30px;color:var(--hm-text);box-sizing:border-box;font-size:12px}",
+          ".hm-pane{--hm-cyan:#22d3ee;--hm-blue:#5b7cfa;--hm-violet:#a78bfa;--hm-green:#4ade80;--hm-amber:#f5b84c;--hm-red:#f87171;--hm-surface:var(--dsw-alias-bg-layer-2,#0f182b);--hm-surface2:var(--dsw-alias-bg-layer-3,#142039);--hm-border:var(--dsw-alias-border-l3,#263450);--hm-text:var(--dsw-alias-label-primary,#e8eeff);--hm-sub:var(--dsw-alias-label-secondary,#a8b4cf);--hm-faint:var(--dsw-alias-label-tertiary,#8996b3);--hm-brand:var(--dsw-alias-brand-primary,#5b7cfa);width:100%;height:100%;overflow:auto;padding:24px clamp(20px,4vw,44px) 42px;color:var(--hm-text);box-sizing:border-box;font-size:12px}",
+          "html[data-platform='darwin'] .hm-pane{padding-top:calc(24px + var(--dsh-frame-top-clearance,0px))}",
+          ".hm-shell{width:100%;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:14px}",
           ".hm-pane *{box-sizing:border-box}",
           ".hm-pane button{font-family:inherit}",
           "@keyframes hm-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}",
-          ".hm-pane>*{animation:hm-in .36s cubic-bezier(.22,.8,.3,1) both}",
-          ".hm-pane>*:nth-child(2){animation-delay:.04s}.hm-pane>*:nth-child(3){animation-delay:.08s}.hm-pane>*:nth-child(4){animation-delay:.12s}",
-          "@media (prefers-reduced-motion:reduce){.hm-pane>*{animation:none}}",
+          ".hm-shell>*{animation:hm-in .36s cubic-bezier(.22,.8,.3,1) both}",
+          ".hm-shell>*:nth-child(2){animation-delay:.04s}.hm-shell>*:nth-child(3){animation-delay:.08s}.hm-shell>*:nth-child(4){animation-delay:.12s}",
+          "@media (prefers-reduced-motion:reduce){.hm-shell>*{animation:none}}",
           /* hero */
           ".hm-hero{position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between;gap:22px;padding:20px 22px 18px;border:.5px solid var(--hm-border);border-radius:16px;background:linear-gradient(135deg,rgba(91,124,250,.16),rgba(167,139,250,.07) 48%,transparent 78%),var(--hm-surface)}",
           ".hm-hero:before{content:'';position:absolute;right:-90px;top:-150px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(91,124,250,.34),transparent 68%);pointer-events:none}",
@@ -641,56 +643,67 @@
             "div",
             { className: "hm-pane" },
             h(
-              "header",
-              { className: "hm-hero" },
+              "div",
+              { className: "hm-shell" },
               h(
-                "div",
-                { className: "hm-hero-copy" },
-                h("div", { className: "hm-kicker" }, "Holographic Memory"),
-                h("h2", null, "全息记忆控制台"),
-                h("p", null, "L1 对话 · L2 事实 · L3 全息 · 自动召回与跨会话审计"),
-              ),
-              h(
-                "div",
-                { className: "hm-hero-side" },
+                "header",
+                { className: "hm-hero", "data-window-drag": "true" },
                 h(
                   "div",
-                  { className: "hm-total-box" },
-                  h("div", { className: "hm-total-number" }, String(total)),
-                  h("div", { className: "hm-total-label" }, "memories"),
+                  { className: "hm-hero-copy" },
+                  h("div", { className: "hm-kicker" }, "Holographic Memory"),
+                  h("h2", null, "全息记忆控制台"),
+                  h("p", null, "L1 对话 · L2 事实 · L3 全息 · 自动召回与跨会话审计"),
                 ),
                 h(
-                  "button",
-                  { className: "hm-btn hm-hero-refresh", title: "刷新", onClick: load, disabled: loading },
-                  h("span", { className: loading ? "hm-spin" : "", style: { display: "inline-flex" } }, icon("refresh", 12)),
-                  loading ? "读取中" : "刷新",
+                  "div",
+                  { className: "hm-hero-side" },
+                  h(
+                    "div",
+                    { className: "hm-total-box" },
+                    h("div", { className: "hm-total-number" }, String(total)),
+                    h("div", { className: "hm-total-label" }, "memories"),
+                  ),
+                  h(
+                    "button",
+                    { className: "hm-btn hm-hero-refresh", title: "刷新", onClick: load, disabled: loading },
+                    h("span", { className: loading ? "hm-spin" : "", style: { display: "inline-flex" } }, icon("refresh", 12)),
+                    loading ? "读取中" : "刷新",
+                  ),
                 ),
               ),
-            ),
-            h(
-              "div",
-              { className: "hm-metrics" },
-              metric("L1 对话", counts.l1 || 0, "每轮摘要", "#22d3ee", "chat"),
-              metric("L2 事实", counts.l2 || 0, "原子事实", "#5b7cfa", "database"),
-              metric("L3 全息", counts.l3 || 0, "整体胶囊", "#a78bfa", "sparkles"),
-              metric("已向量化", embedded, "Qwen3 · 4096D", "#4ade80", "cpu"),
-              metric("占用", (counts.bytes / 1024).toFixed(1) + " KB", "l1/l2/l3.json", "#f5b84c", "box"),
-            ),
-            h(
-              "div",
-              { className: "hm-columns" },
-              h("div", { className: "hm-col-main" }, configPanel, memoryPanel),
-              h("div", { className: "hm-col-side" }, statusPanel, auditPanel),
+              h(
+                "div",
+                { className: "hm-metrics" },
+                metric("L1 对话", counts.l1 || 0, "每轮摘要", "#22d3ee", "chat"),
+                metric("L2 事实", counts.l2 || 0, "原子事实", "#5b7cfa", "database"),
+                metric("L3 全息", counts.l3 || 0, "整体胶囊", "#a78bfa", "sparkles"),
+                metric("已向量化", embedded, "Qwen3 · 4096D", "#4ade80", "cpu"),
+                metric("占用", (counts.bytes / 1024).toFixed(1) + " KB", "l1/l2/l3.json", "#f5b84c", "box"),
+              ),
+              h(
+                "div",
+                { className: "hm-columns" },
+                h("div", { className: "hm-col-main" }, configPanel, memoryPanel),
+                h("div", { className: "hm-col-side" }, statusPanel, auditPanel),
+              ),
             ),
           );
         }
 
+        function HoloMemoryIcon(props) {
+          return icon("layers", (props && props.size) || 18);
+        }
+
         function apply(ctx) {
           ensureStyleSheet();
-          ctx.slots.inject("settings.section", function () {
+          ctx.slots.inject("main", function () {
+            return ctx.slots.register({ name: "main", key: "holo-memory" }, HoloMemoryPane);
+          });
+          ctx.slots.inject("sidebar.panellist", function () {
             return ctx.slots.register(
-              { name: "settings.section", id: "holo-memory", order: 44, label: "全息记忆" },
-              HoloMemoryPane,
+              { name: "sidebar.panellist", id: "holo-memory", order: 10, label: "全息记忆" },
+              HoloMemoryIcon,
             );
           });
         }

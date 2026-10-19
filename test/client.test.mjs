@@ -29,7 +29,7 @@ function loadClient() {
   return mod;
 }
 
-test('client half registers the settings console slot', () => {
+test('client half registers a top-level panel and sidebar entry', () => {
   const mod = loadClient();
   assert.equal(mod.name, 'dsh-holo-memory');
   assert.equal(mod.inject.length, 1);
@@ -37,11 +37,11 @@ test('client half registers the settings console slot', () => {
   assert.equal(typeof mod.apply, 'function');
 
   const registrations = [];
-  let injectedSlot = '';
+  const injectedSlots = [];
   const ctx = {
     slots: {
       inject(name, callback) {
-        injectedSlot = name;
+        injectedSlots.push(name);
         callback();
       },
       register(definition, component) {
@@ -50,9 +50,18 @@ test('client half registers the settings console slot', () => {
     },
   };
   mod.apply(ctx);
-  assert.equal(injectedSlot, 'settings.section');
-  assert.equal(registrations.length, 1);
-  assert.equal(registrations[0].definition.label, '全息记忆');
-  assert.equal(registrations[0].definition.id, 'holo-memory');
-  assert.equal(typeof registrations[0].component, 'function');
+  assert.deepEqual(injectedSlots, ['main', 'sidebar.panellist']);
+  assert.equal(registrations.length, 2);
+
+  const main = registrations.find((item) => item.definition.name === 'main');
+  assert.ok(main);
+  assert.equal(main.definition.key, 'holo-memory');
+  assert.equal(typeof main.component, 'function');
+
+  const sidebar = registrations.find((item) => item.definition.name === 'sidebar.panellist');
+  assert.ok(sidebar);
+  assert.equal(sidebar.definition.id, 'holo-memory');
+  assert.equal(sidebar.definition.label, '全息记忆');
+  assert.equal(sidebar.definition.order, 10);
+  assert.equal(typeof sidebar.component, 'function');
 });
