@@ -28,6 +28,7 @@ import { registerTools } from './tools.js';
 import { registerConsole } from './console.js';
 import { appendInjection } from './injections.js';
 import { applySavedEmbeddingConfig } from './embedding-config.js';
+import { redactSecrets } from './sanitize.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
 export const name = 'holo-memory';
@@ -322,6 +323,9 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         layers,
         selected,
       });
+      // The client projects this user-role context message into a collapsible
+      // "[长期记忆自动召回 | holo-memory]" work-step row; the model still gets
+      // the same text as an ordinary context message.
       return {
         ...decision,
         messages: [
@@ -332,7 +336,13 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
               kind: 'holo-memory',
               form: 'snapshot',
               sections: [{ name: 'holo-memory', text }],
-            },
+              // Presentation metadata for the client's context-node renderer.
+              query: redactSecrets(query).slice(0, 300),
+              chars: text.length,
+              mode: typeof result === 'string' ? 'recent-fallback' : 'recall',
+              layers,
+              selected,
+            } as any,
           }),
         ],
       };

@@ -139,6 +139,20 @@
           ".hm-audit-query{margin-top:1px;font-size:10px;line-height:15px;color:var(--hm-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
           ".hm-audit-meta{margin-top:2px;font-size:8.5px;line-height:13px;color:var(--hm-faint);font-variant-numeric:tabular-nums}",
           ".hm-link{display:inline-block;margin-top:8px;padding:0;border:0;background:transparent;color:var(--hm-brand);font-size:9.5px;line-height:15px;cursor:pointer}",
+          /* conversation work-step row */
+          ".hm-recall{min-width:0;padding:1px 0}",
+          ".hm-recall-head{display:flex;align-items:center;gap:7px;width:100%;min-width:0;padding:3px 0;border:0;background:transparent;color:var(--dsw-alias-label-secondary,#a8b4cf);cursor:pointer;text-align:left;font:inherit;line-height:20px}",
+          ".hm-recall-head:hover .hm-recall-label{color:var(--dsw-alias-label-primary,#e8eeff)}",
+          ".hm-recall-icon{display:inline-flex;color:var(--dsw-alias-brand-primary,#5b7cfa);flex:0 0 auto;opacity:.95}",
+          ".hm-recall-label{font-size:12.5px;line-height:20px;color:var(--dsw-alias-label-secondary,#a8b4cf);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}",
+          ".hm-recall-meta{font-size:10.5px;line-height:20px;color:var(--dsw-alias-label-tertiary,#8996b3);white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums}",
+          ".hm-recall-chevron{display:inline-flex;margin-left:auto;color:var(--dsw-alias-label-tertiary,#8996b3);transition:transform .15s;flex:0 0 auto}",
+          ".hm-recall-chevron.hm-open{transform:rotate(180deg)}",
+          ".hm-recall-body{margin:4px 0 5px 21px;padding:8px 10px;border-radius:7px;border:.5px solid var(--dsw-alias-border-l3,#263450);background:var(--dsw-alias-markdown-code-block,rgba(255,255,255,.04));color:var(--dsw-alias-label-secondary,#a8b4cf);max-height:220px;overflow:auto}",
+          ".hm-recall-query{margin-bottom:4px;font:10px/15px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);color:var(--dsw-alias-label-tertiary,#8996b3);white-space:pre-wrap;word-break:break-word}",
+          ".hm-recall-text{margin:0;font:11px/16px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-secondary,#a8b4cf)}",
+          ".hm-recall-ids{margin-top:6px;font:9px/14px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);color:var(--dsw-alias-label-tertiary,#8996b3)}",
+          ".hm-recall-fallback{padding:3px 0;font:11px/16px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);color:var(--dsw-alias-label-tertiary,#8996b3);white-space:pre-wrap}",
           /* responsive */
           "@media (max-width:880px){.hm-columns{grid-template-columns:minmax(0,1fr)}.hm-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-hero{align-items:flex-start}.hm-total-box{text-align:left}}",
           "@media (max-width:520px){.hm-config-grid{grid-template-columns:minmax(0,1fr)}.hm-hero{padding:16px}.hm-hero h2{font-size:20px}.hm-hero-side{align-items:flex-start;gap:8px}}",
@@ -170,6 +184,7 @@
           shield: ["M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6l-7-3Z", "m9 12 2 2 4-4"],
           activity: ["M3 12h4l2.5-6 4 12 2.5-6H21"],
           box: ["M21 8 12 3 3 8v8l9 5 9-5V8Z", "m3 8 9 5 9-5", "M12 13v8"],
+          chevron: ["m6 9 6 6 6-6"],
         };
 
         function icon(name, size) {
@@ -266,6 +281,131 @@
                 )
               : null,
           );
+        }
+
+        var RECALL_LABEL = "[长期记忆自动召回 | holo-memory]";
+        var originalContext = null;
+
+        function contentText(content) {
+          if (typeof content === "string") return content;
+          if (!Array.isArray(content)) return "";
+          return content
+            .map(function (block) { return block && block.type === "text" && typeof block.text === "string" ? block.text : ""; })
+            .filter(function (part) { return part.length > 0; })
+            .join("\n");
+        }
+
+        /** One collapsible work-step row for an automatic memory recall. */
+        function MemoryRecallStep(props) {
+          var data = props && props.data ? props.data : {};
+          var openState = react.useState(false);
+          var open = openState[0];
+          var setOpen = openState[1];
+          var text = typeof data.text === "string" ? data.text : "";
+          var query = typeof data.query === "string" ? data.query : "";
+          var chars = Number.isFinite(data.chars) ? data.chars : text.length;
+          var layers = data.layers || {};
+          var selected = Array.isArray(data.selected) ? data.selected : [];
+          // The host text starts with the same label line the header already shows.
+          var body = text.replace(/^\[[^\n]*holo-memory[^\n]*\]\s*\n?/i, "").trim();
+          var meta = (data.mode === "recent-fallback" ? "兜底 · " : "") +
+            "L1×" + (layers.l1 || 0) + " L2×" + (layers.l2 || 0) + " L3×" + (layers.l3 || 0) +
+            " · " + chars + " 字符";
+          return h(
+            "div",
+            { className: "hm-recall" },
+            h(
+              "button",
+              {
+                type: "button",
+                className: "hm-recall-head",
+                "aria-expanded": open,
+                onClick: function () { setOpen(!open); },
+              },
+              h("span", { className: "hm-recall-icon" }, icon("layers", 14)),
+              h("span", { className: "hm-recall-label" }, RECALL_LABEL),
+              h("span", { className: "hm-recall-meta" }, meta),
+              h("span", { className: "hm-recall-chevron" + (open ? " hm-open" : "") }, icon("chevron", 12)),
+            ),
+            open
+              ? h(
+                  "div",
+                  { className: "hm-recall-body" },
+                  query ? h("div", { className: "hm-recall-query" }, "问题：" + query) : null,
+                  h("pre", { className: "hm-recall-text" }, body || text || "(空)"),
+                  selected.length > 0
+                    ? h(
+                        "div",
+                        { className: "hm-recall-ids" },
+                        "命中：" + selected.map(function (item) {
+                          return (item && item.layer ? item.layer.toUpperCase() : "?") + " " + String(item && item.id || "").slice(-8);
+                        }).join(" · "),
+                      )
+                    : null,
+                )
+              : null,
+          );
+        }
+
+        /** Replaces the shipped `context` row only for holo-memory messages. */
+        function MemoryContextNode(props) {
+          var data = props && props.node && props.node.data ? props.node.data : {};
+          var source = data.source || {};
+          if (source.kind === "holo-memory") {
+            var text = contentText(data.content);
+            return h(MemoryRecallStep, {
+              data: {
+                text: text,
+                query: typeof source.query === "string" ? source.query : "",
+                chars: Number.isFinite(source.chars) ? source.chars : text.length,
+                mode: source.mode === "recent-fallback" ? "recent-fallback" : "recall",
+                layers: source.layers && typeof source.layers === "object" ? source.layers : { l1: 0, l2: 0, l3: 0 },
+                selected: Array.isArray(source.selected) ? source.selected : [],
+              },
+            });
+          }
+          if (originalContext !== null) return h(originalContext, props);
+          return h("div", { className: "hm-recall-fallback" }, contentText(data.content));
+        }
+
+        /**
+         * Capture the shipped `context` renderer first, then replace it. The
+         * replacement delegates every non-holo context row to the original.
+         */
+        function installContextStep(ctx) {
+          var installed = false;
+          var install = function () {
+            if (originalContext !== null || installed) return;
+            var entries = typeof ctx.slots.entries === "function"
+              ? ctx.slots.entries("conversation.chat.node")
+              : typeof ctx.slots.entriesOfSlot === "function"
+                ? ctx.slots.entriesOfSlot("conversation.chat.node")
+                : [];
+            var entry = null;
+            for (var i = 0; i < entries.length; i += 1) {
+              var candidate = entries[i];
+              if (candidate && candidate.options && candidate.options.key === "context" && candidate.component !== MemoryContextNode) {
+                entry = candidate;
+                break;
+              }
+            }
+            if (entry === null) return;
+            originalContext = entry.component;
+            installed = true;
+            ctx.slots.inject("conversation.chat.node", function () {
+              return ctx.slots.register(
+                { name: "conversation.chat.node", key: "context" },
+                MemoryContextNode,
+              );
+            });
+          };
+          install();
+          if (!installed && typeof ctx.slots.subscribe === "function") {
+            var dispose = ctx.slots.subscribe("conversation.chat.node", install);
+            if (typeof ctx.effect === "function") {
+              ctx.effect(function () { return dispose; }, "holo-memory: context node");
+            }
+          }
         }
 
         function HoloMemoryPane() {
@@ -697,6 +837,7 @@
 
         function apply(ctx) {
           ensureStyleSheet();
+          installContextStep(ctx);
           ctx.slots.inject("main", function () {
             return ctx.slots.register({ name: "main", key: "holo-memory" }, HoloMemoryPane);
           });
