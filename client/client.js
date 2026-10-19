@@ -431,12 +431,14 @@
                   "datalist",
                   { id: "hm-provider-list" },
                   [
-                    "https://api.siliconflow.cn/v1",
-                    "https://api.openai.com/v1",
-                    "http://127.0.0.1:11434/v1",
-                    "https://ark.cn-beijing.volces.com/api/v3",
-                    "https://api.deepseek.com",
-                  ].map(function (url) { return react.createElement("option", { value: url, key: url }); }),
+                    { value: "https://api.siliconflow.cn/v1", label: "硅基流动 SiliconFlow" },
+                    { value: "https://api.openai.com/v1", label: "OpenAI" },
+                    { value: "http://127.0.0.1:11434/v1", label: "本地 Ollama" },
+                    { value: "https://ark.cn-beijing.volces.com/api/v3", label: "火山方舟 Ark" },
+                    { value: "https://api.deepseek.com", label: "DeepSeek" },
+                  ].map(function (item) {
+                    return react.createElement("option", { value: item.value, label: item.label, key: item.value });
+                  }),
                 ),
                 react.createElement(
                   "label",
