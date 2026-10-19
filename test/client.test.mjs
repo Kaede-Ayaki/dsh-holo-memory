@@ -29,7 +29,7 @@ function loadClient() {
   return mod;
 }
 
-test('client half registers a top-level panel and sidebar entry', () => {
+test('client half registers side panel, sidebar entry and context renderer', () => {
   const mod = loadClient();
   assert.equal(mod.name, 'dsh-holo-memory');
   assert.equal(mod.inject.length, 1);
@@ -38,8 +38,13 @@ test('client half registers a top-level panel and sidebar entry', () => {
 
   const registrations = [];
   const injectedSlots = [];
+  const originalContext = function ShippedContext() {};
   const ctx = {
     slots: {
+      entries(name) {
+        assert.equal(name, 'conversation.chat.node');
+        return [{ options: { key: 'context' }, component: originalContext }];
+      },
       inject(name, callback) {
         injectedSlots.push(name);
         callback();
@@ -50,8 +55,11 @@ test('client half registers a top-level panel and sidebar entry', () => {
     },
   };
   mod.apply(ctx);
-  assert.deepEqual(injectedSlots, ['main', 'sidebar.panellist']);
-  assert.equal(registrations.length, 2);
+  assert.equal(injectedSlots.length, 3);
+  assert.equal(injectedSlots[0], 'conversation.chat.node');
+  assert.equal(injectedSlots[1], 'main');
+  assert.equal(injectedSlots[2], 'sidebar.panellist');
+  assert.equal(registrations.length, 3);
 
   const main = registrations.find((item) => item.definition.name === 'main');
   assert.ok(main);
@@ -64,4 +72,10 @@ test('client half registers a top-level panel and sidebar entry', () => {
   assert.equal(sidebar.definition.label, '全息记忆');
   assert.equal(sidebar.definition.order, 10);
   assert.equal(typeof sidebar.component, 'function');
+
+  const node = registrations.find((item) => item.definition.name === 'conversation.chat.node');
+  assert.ok(node);
+  assert.equal(node.definition.key, 'context');
+  assert.equal(typeof node.component, 'function');
+  assert.notEqual(node.component, originalContext);
 });
