@@ -294,7 +294,13 @@ export async function recall(
     items.push(...ranked.slice(0, Math.max(0, quota)));
   }
 
-  if (items.length === 0) return null;
+  const active = activeWindowCandidates(
+    store,
+    config,
+    options.projectKey,
+    new Set(items.map((item) => item.record.id)),
+  );
+  if (items.length === 0 && active.length === 0) return null;
 
   // Band assignment: strongest query match gets the immediate budget, next
   // high-value facts/capsules get working, the rest is background.
@@ -304,13 +310,6 @@ export async function recall(
     else if (item.layer !== 'l1' && (item.record.importance >= 8 || item.score >= 0.6)) item.band = 'working';
     else item.band = 'background';
   });
-
-  const active = activeWindowCandidates(
-    store,
-    config,
-    options.projectKey,
-    new Set(items.map((item) => item.record.id)),
-  );
   items.push(...active);
 
   const header =
