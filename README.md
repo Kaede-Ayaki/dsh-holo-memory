@@ -44,6 +44,8 @@ dsh plugin --profile web add link:/absolute/path/to/dsh-holo-memory
 
 ## 设置页控制台（新）
 
+![全息记忆控制台](docs/console.png)
+
 安装/重载后打开 **设置 → 全息记忆**，可以看到：
 
 - 顶部总记忆数 + L1/L2/L3/已向量化/占用空间；
