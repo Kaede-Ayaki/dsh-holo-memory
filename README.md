@@ -193,7 +193,7 @@ $DSH_HOME/holo-memory/
 
 ## 文档与演示
 
-- 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（11 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项）
+- 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（12 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项；含“不依赖 MCP 服务”架构说明页）
 - 生成脚本与背景素材：[docs/ppt/](docs/ppt/)
 - 测试：`npm test`（24 项）
 

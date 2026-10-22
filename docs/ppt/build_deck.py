@@ -42,7 +42,7 @@ GREEN = RGBColor(0x4A, 0xDE, 0x80)
 AMBER = RGBColor(0xF5, 0xB8, 0x4C)
 RED = RGBColor(0xF8, 0x71, 0x71)
 
-TOTAL = 11
+TOTAL = 12
 
 prs = Presentation()
 prs.slide_width = Inches(SW)
@@ -348,7 +348,51 @@ text(s, "纯本地 JSON · 原子写 · 密钥脱敏", px + 0.3, py + 4.22, 3.9,
 footer(s, 3)
 
 # ---------------------------------------------------------------------------
-# 04 — Retrieval
+# 04 — Native plugin, not an MCP server
+# ---------------------------------------------------------------------------
+s = new_slide()
+kicker(s, "PLUGIN / ARCHITECTURE")
+title(s, "不是 MCP 服务，是 DSH 原生插件")
+text(s, "不额外起进程、不占端口、不经过 MCP 协议；直接挂进 agent 生命周期。", 0.64, 1.6, 12.2, 0.35, size=12.2, color=MUTED)
+
+# MCP comparison
+rect(s, 0.62, 2.08, 7.4, 1.45, fill=PANEL, line=BORDER, radius=0.08)
+text(s, "MCP SERVER", 0.9, 2.24, 2.2, 0.25, size=9.5, color=RED, bold=True, font=FONT_EN)
+text(s, "独立进程 + 端口 / stdio", 0.9, 2.52, 6.6, 0.32, size=15.5, color=TEXT, bold=True)
+text(s, "模型主动调用工具 → 多一跳协议、配置与运维", 0.9, 2.96, 6.7, 0.3, size=10.5, color=MUTED)
+
+rect(s, 0.62, 3.72, 7.4, 1.7, fill=PANEL, line=GREEN, line_width=1.0, radius=0.08)
+text(s, "DSH NATIVE PLUGIN", 0.9, 3.9, 3.0, 0.25, size=9.5, color=GREEN, bold=True, font=FONT_EN)
+text(s, "进程内插件 + 生命周期钩子", 0.9, 4.18, 6.6, 0.32, size=15.5, color=TEXT, bold=True)
+text(s, "agent/pre-step 自动注入；client slot 直接出 UI", 0.9, 4.62, 6.7, 0.3, size=10.5, color=MUTED)
+text(s, "无需 mcpServers 配置，也不依赖模型先“想起来”调工具", 0.9, 4.98, 6.7, 0.3, size=9.8, color=FAINT)
+
+# why it matters
+px, py = 8.3, 2.08
+rect(s, px, py, 4.4, 3.45, fill=DEEP, line=BORDER, radius=0.08)
+text(s, "为什么重要", px + 0.28, py + 0.2, 3.0, 0.3, size=12.5, color=CYAN, bold=True)
+reasons = [
+    ("零额外服务", "无独立进程、无端口"),
+    ("自动注入", "不靠模型主动点工具"),
+    ("事件完整", "turn + session 钩子"),
+    ("UI 原生", "侧边栏 + 工作步骤"),
+    ("数据本地", "JSON + 可审计"),
+]
+for i, (head, body) in enumerate(reasons):
+    y = py + 0.65 + i * 0.53
+    rect(s, px + 0.28, y + 0.08, 0.07, 0.07, fill=GREEN, line=None, radius=0, shape=MSO_SHAPE.OVAL)
+    text(s, head, px + 0.48, y, 1.25, 0.28, size=10.2, color=TEXT, bold=True)
+    text(s, body, px + 1.72, y, 2.45, 0.28, size=9.5, color=MUTED)
+
+# bottom note
+rect(s, 0.62, 5.62, 12.1, 0.95, fill=RGBColor(0x0C, 0x16, 0x2C), line=ACCENT, line_width=0.9, radius=0.1)
+text(s, "MCP 也能做记忆，但要多起一个进程、多一次工具调用；这里把这一跳省掉。", 0.9, 5.8, 11.6, 0.3, size=12, color=TEXT)
+text(s, "插件仍暴露 memory_* 工具，但记忆的读写与注入链路本身不依赖 MCP 服务器。", 0.9, 6.13, 11.6, 0.28, size=9.8, color=MUTED)
+
+footer(s, 4)
+
+# ---------------------------------------------------------------------------
+# 05 — Retrieval
 # ---------------------------------------------------------------------------
 s = new_slide()
 kicker(s, "PLUGIN / RETRIEVAL")
@@ -397,7 +441,7 @@ for i, (label, ratio, color) in enumerate(bands):
     rect(s, px + 1.68, y + 0.05, 1.9 * ratio, 0.14, fill=color, line=None, radius=0.5)
 text(s, "band 内按分数保留，active 行优先。", px + 0.26, py + 2.45, 3.6, 0.28, size=9.5, color=FAINT)
 
-footer(s, 4)
+footer(s, 5)
 
 # ---------------------------------------------------------------------------
 # 05 — UI / work-step visibility
@@ -414,7 +458,7 @@ text(s, "统计 · 模型配置 · 检测/保存 · 搜索筛选 · 召回审计
 picture(s, DOCS / "recall-step.png", 6.95, 2.05, 4.6, 3.88)
 text(s, "02  工作步骤里的召回行", 6.95, 6.12, 5.2, 0.28, size=10, color=GREEN, bold=True, font=FONT_EN)
 text(s, "[长期记忆自动召回 | holo-memory]  ·  展开看问题/正文/id", 6.95, 6.42, 5.35, 0.5, size=9.2, color=FAINT, line_spacing=1.25)
-footer(s, 5)
+footer(s, 6)
 
 # ---------------------------------------------------------------------------
 # 06 — Section 02 divider
@@ -429,7 +473,7 @@ section_divider(
         ("配置", "可选向量模型；不配也能用词法召回"),
     ],
     GREEN,
-    6,
+    7,
 )
 
 # ---------------------------------------------------------------------------
@@ -472,7 +516,7 @@ text(s, "desktop profile 由 Electron 管理；", px + 0.24, py + 3.58, 3.2, 0.2
 text(s, "用设置页安装，不要用 CLI 改 desktop profile。", px + 0.24, py + 3.86, 3.2, 0.45, size=9.2, color=AMBER, line_spacing=1.25)
 
 text(s, "装完 / 更新后：client 半在启动时加载，刷新页面不够，必须重启 DSH。", 0.64, 6.35, 12.0, 0.3, size=11.2, color=AMBER)
-footer(s, 7)
+footer(s, 8)
 
 # ---------------------------------------------------------------------------
 # 08 — Configure embedding
@@ -509,7 +553,7 @@ rect(s, px, 4.0, 5.35, 1.8, fill=DEEP, line=BORDER, radius=0.08)
 text(s, "支持的端点", px + 0.28, 4.2, 3.0, 0.3, size=13, color=CYAN, bold=True)
 text(s, "SiliconFlow · OpenAI · 本地 Ollama · 火山方舟 · 任意 OpenAI 兼容 /embeddings", px + 0.28, 4.58, 4.75, 0.8, size=10.5, color=MUTED, line_spacing=1.35)
 text(s, "换模型 / 换维度后，旧向量会按 embeddingModel 自动失效并回填。", px + 0.28, 5.4, 4.75, 0.35, size=9.5, color=FAINT)
-footer(s, 8)
+footer(s, 9)
 
 # ---------------------------------------------------------------------------
 # 09 — Section 03 divider
@@ -524,7 +568,7 @@ section_divider(
         ("兼容", "DSH 0.2.x；更新后必须重启 client"),
     ],
     AMBER,
-    9,
+    10,
 )
 
 # ---------------------------------------------------------------------------
@@ -554,7 +598,7 @@ for i, (head, body, color) in enumerate(notes):
 rect(s, 0.62, 5.55, 12.1, 1.12, fill=RGBColor(0x0C, 0x16, 0x2C), line=AMBER, line_width=0.9, radius=0.1)
 text(s, "兼容性：DSH 0.2.x。persona 模板不要写 {{cwd}}（只注册 provider/model）；工作目录由 runtime context 提供。", 0.9, 5.72, 11.6, 0.5, size=10.6, color=TEXT, line_spacing=1.25)
 text(s, "建议先在小 workspace 试运行，确认召回质量和 token 成本后再日常使用。", 0.9, 6.24, 11.6, 0.28, size=9.8, color=MUTED)
-footer(s, 10)
+footer(s, 11)
 
 # ---------------------------------------------------------------------------
 # 11 — Closing
@@ -585,6 +629,7 @@ NOTES = [
     "开场：dsh-holo-memory v0.3.0。三部分：插件介绍、安装方式、注意事项。先用一句话说明它让 agent 跨会话记得你、记得项目。",
     "第一部分：先讲三层记忆和闭环，再讲召回，最后看界面。强调它不是一个数据库，而是记录、蒸馏、召回、注入的完整链路。",
     "三层各司其职：L1 对话摘要，L2 原子事实，L3 整体胶囊。右侧是一轮对话的闭环：捕获、蒸馏、召回、注入；纯本地 JSON。",
+    "架构选择：它不是 MCP 服务器，而是 DSH 原生进程内插件。不额外起进程、不占端口、不经过 MCP 协议；agent/pre-step 直接自动注入，client slot 直接出 UI。仍暴露 memory_* 工具，但记忆读写不依赖 MCP。",
     "召回升级为三通道 RRF：词法、字符 n-gram、向量；再加 Active Window 主动补位和 citation 回写。预算按 IMMEDIATE/WORKING/BACKGROUND 分配。",
     "看得见的两个界面：侧边栏的独立控制台，以及聊天工作步骤里的召回行。工作步骤行可以展开看问题、正文和命中 id。",
     "第二部分：安装方式。准备环境、构建、在设置里添加本地目录、重启验证。桌面版 profile 由 Electron 管理，不要用 CLI 改 desktop profile。",
