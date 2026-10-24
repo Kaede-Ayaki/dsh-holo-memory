@@ -94,4 +94,4 @@ Format follows Keep a Changelog; versions follow the package version.
 - 本地 JSON 原子写、按 `user` / `project` scope 隔离。
 - 词法 + 可选向量混合召回、按字符预算注入、`memory_*` 工具集。
 
-[0.4.0]: https://github.com/Kaede0757-sudo/dsh-holo-memory/compare/ad70f4f...675e4db
+[0.4.0]: https://github.com/Kaede-Ayaki/dsh-holo-memory/compare/ad70f4f...675e4db

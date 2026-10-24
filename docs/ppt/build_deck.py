@@ -707,7 +707,7 @@ text(s, "三层记忆 · 混合召回 · 主动补位 · 引用回写 · 全程�
 
 rect(s, 0.7, 4.35, 5.5, 1.4, fill=PANEL, line=BORDER, radius=0.08)
 text(s, "REPOSITORY", 0.95, 4.52, 2.0, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
-text(s, "github.com/Kaede0757-sudo/dsh-holo-memory", 0.95, 4.86, 5.0, 0.32, size=12, color=CYAN, font=FONT_CODE)
+text(s, "github.com/Kaede-Ayaki/dsh-holo-memory", 0.95, 4.86, 5.0, 0.32, size=12, color=CYAN, font=FONT_CODE)
 text(s, "源码 · README · PPT 生成脚本 · 控制台截图", 0.95, 5.27, 4.9, 0.28, size=9.8, color=MUTED)
 
 rect(s, 6.5, 4.35, 6.15, 1.4, fill=PANEL, line=BORDER, radius=0.08)
