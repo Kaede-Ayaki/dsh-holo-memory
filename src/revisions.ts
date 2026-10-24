@@ -1,0 +1,36 @@
+/**
+ * Revision history for memory corrections. We never silently overwrite the
+ * previous content: the old snapshot is kept (bounded) and the current record
+ * carries a monotonically increasing revision number.
+ */
+import type { AnyRecord, RecordRevision } from './types.js';
+
+export const MAX_HISTORY = 20;
+
+function snapshotOf(record: AnyRecord): Record<string, unknown> {
+  const { embedding: _embedding, history: _history, ...rest } = record as AnyRecord & { history?: unknown };
+  return { ...rest };
+}
+
+/**
+ * Build the patch for a content update. The caller merges the returned patch
+ * through `store.update`, which preserves id/layer/updatedAt semantics.
+ */
+export function reviseRecord(
+  record: AnyRecord,
+  patch: Partial<AnyRecord>,
+  by: RecordRevision['by'] = 'extraction',
+): Partial<AnyRecord> {
+  const previous: RecordRevision = {
+    at: record.updatedAt,
+    revision: record.revision ?? 0,
+    by,
+    snapshot: snapshotOf(record),
+  };
+  const history = [...(record.history ?? []), previous].slice(-MAX_HISTORY);
+  return {
+    ...patch,
+    revision: (record.revision ?? 0) + 1,
+    history,
+  };
+}

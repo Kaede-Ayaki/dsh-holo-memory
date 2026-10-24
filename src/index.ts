@@ -30,6 +30,7 @@ import { appendInjection } from './injections.js';
 import { applySavedEmbeddingConfig } from './embedding-config.js';
 import { redactSecrets } from './sanitize.js';
 import { applyCitationFeedback } from './feedback.js';
+import { AUTHORITY_NOTE, EVIDENCE_NOTE } from './authority.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
 export const name = 'holo-memory';
@@ -215,6 +216,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
           userTexts: [],
           assistantTexts: [],
           startedAt: Date.now(),
+          seqStart: Number(event.seq ?? 0),
         });
         break;
       }
@@ -235,6 +237,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       }
       case 'turn/end': {
         const buffer = buffers.get(sessionId);
+        if (buffer) buffer.seqEnd = Number(event.seq ?? buffer.seqEnd ?? 0);
         if (buffer?.injectedIds && buffer.injectedIds.length > 0) {
           try {
             const feedback = applyCitationFeedback(store, buffer.injectedIds, buffer.assistantTexts.join('\n'));
@@ -388,6 +391,8 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         'Relevant memories may be injected automatically as a user-role "holo-memory" block; treat it as background facts and verify against current state. ' +
         'Rows labelled with (id:xxxxxxxx) may be cited by that id when you actually use them. ' +
         'Use memory_recall for more context, memory_note to persist durable facts, memory_forget to correct stale ones. ' +
+        'Before relying on a source-sensitive fact, call memory_open(id) to inspect the verbatim excerpt or session pointer. ' +
+        `${AUTHORITY_NOTE} ${EVIDENCE_NOTE} ` +
         'Do not save secrets or transient state.',
     });
   }

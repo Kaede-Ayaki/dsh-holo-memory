@@ -30,6 +30,8 @@ export const Config = z.object({
   extractTemperature: z.number().default(0.2),
   extractMinTurnChars: z.number().default(60),
   extractMaxTranscriptChars: z.number().default(12000),
+  /** Max verbatim excerpt stored on a source pointer. */
+  sourceExcerptMaxChars: z.number().default(1600),
   /** Optional OpenAI-compatible embedding endpoint. Disabled by default. */
   embeddingEnabled: z.boolean().default(false),
   embeddingBaseUrl: z.string().default(''),
@@ -71,6 +73,7 @@ export type HoloConfig = {
   extractTemperature: number;
   extractMinTurnChars: number;
   extractMaxTranscriptChars: number;
+  sourceExcerptMaxChars: number;
   embeddingEnabled: boolean;
   embeddingBaseUrl: string;
   embeddingModel: string;
@@ -108,6 +111,7 @@ export const DEFAULT_CONFIG: HoloConfig = {
   extractTemperature: 0.2,
   extractMinTurnChars: 60,
   extractMaxTranscriptChars: 12000,
+  sourceExcerptMaxChars: 1600,
   embeddingEnabled: false,
   embeddingBaseUrl: '',
   embeddingModel: '',

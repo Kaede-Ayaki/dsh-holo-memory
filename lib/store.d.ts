@@ -15,6 +15,18 @@ export interface StoreStats {
     l3: number;
     embedded: number;
     bytes: number;
+    /** Records with a verbatim source excerpt. */
+    sourceBacked: number;
+    /** Records with a session/turn pointer but no excerpt. */
+    sourcePointer: number;
+    /** Legacy/manual records without any source pointer. */
+    sourceNone: number;
+    /** Records that have at least one stored revision snapshot. */
+    revisioned: number;
+    /** Records that were injected at least once. */
+    injected: number;
+    /** Records whose id was actually cited by the assistant at least once. */
+    cited: number;
 }
 export declare class HoloStore {
     readonly dir: string;
