@@ -9,6 +9,7 @@ import path from 'node:path';
 import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write';
 import type { HoloConfig } from './config.js';
 import type { AnyRecord, L1Record, L2Record, L3Record, Layer } from './types.js';
+import { normalizeRecordSource, sourceFor } from './source.js';
 
 export interface ProjectId {
   key: string;
@@ -48,6 +49,18 @@ export interface StoreStats {
   l3: number;
   embedded: number;
   bytes: number;
+  /** Records with a verbatim source excerpt. */
+  sourceBacked: number;
+  /** Records with a session/turn pointer but no excerpt. */
+  sourcePointer: number;
+  /** Legacy/manual records without any source pointer. */
+  sourceNone: number;
+  /** Records that have at least one stored revision snapshot. */
+  revisioned: number;
+  /** Records that were injected at least once. */
+  injected: number;
+  /** Records whose id was actually cited by the assistant at least once. */
+  cited: number;
 }
 
 export class HoloStore {
@@ -89,7 +102,10 @@ export class HoloStore {
       const raw = await fs.readFile(this.fileFor(layer), 'utf8');
       const parsed: unknown = JSON.parse(raw);
       if (!Array.isArray(parsed)) return;
-      const records = parsed.filter(isRecord).filter((record) => record.layer === layer);
+      const records = parsed
+        .filter(isRecord)
+        .filter((record) => record.layer === layer)
+        .map((record) => normalizeRecordSource(record));
       if (layer === 'l1') this.data.l1 = records as L1Record[];
       else if (layer === 'l2') this.data.l2 = records as L2Record[];
       else this.data.l3 = records as L3Record[];
@@ -221,6 +237,17 @@ export class HoloStore {
       }
     }
     const all = [...this.data.l1, ...this.data.l2, ...this.data.l3];
+    let sourceBacked = 0;
+    let sourcePointer = 0;
+    let sourceNone = 0;
+    let revisioned = 0;
+    for (const record of all) {
+      const source = sourceFor(record);
+      if (source?.excerpt && source.excerpt.trim().length > 0) sourceBacked += 1;
+      else if (source) sourcePointer += 1;
+      else sourceNone += 1;
+      if ((record.history?.length ?? 0) > 0) revisioned += 1;
+    }
     return {
       dir: this.dir,
       l1: this.data.l1.length,
@@ -228,6 +255,12 @@ export class HoloStore {
       l3: this.data.l3.length,
       embedded: all.filter((record) => Array.isArray(record.embedding) && record.embedding.length > 0).length,
       bytes,
+      sourceBacked,
+      sourcePointer,
+      sourceNone,
+      revisioned,
+      injected: all.filter((record) => (record.accessCount ?? 0) > 0).length,
+      cited: all.filter((record) => (record.citedCount ?? 0) > 0).length,
     };
   }
 }

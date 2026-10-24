@@ -10,6 +10,7 @@ import type { EmbeddingClient } from './embeddings.js';
 import { cosine } from './embeddings.js';
 import { Bm25Index, ngramCoverage, tokenize } from './lexical.js';
 import { redactSecrets } from './sanitize.js';
+import { evidenceTag } from './source.js';
 import { localDate } from './time.js';
 
 export type RecallBand = 'immediate' | 'working' | 'background';
@@ -82,19 +83,20 @@ function lineFor(item: RecallItem): string {
   const record = item.record;
   const id = record.id.slice(-8);
   const suffix = ` (id:${id})`;
+  const tag = evidenceTag(record);
   if (record.layer === 'l3') {
     const l3 = record as L3Record;
     const loops = l3.openLoops.length > 0 ? ` | 待续: ${redactSecrets(l3.openLoops.slice(0, 3).join('；'))}` : '';
-    return `- [L3] ${redactSecrets(l3.title)}: ${redactSecrets(l3.hologram)}${loops}${suffix}`;
+    return `- [L3${tag}] ${redactSecrets(l3.title)}: ${redactSecrets(l3.hologram)}${loops}${suffix}`;
   }
   if (record.layer === 'l2') {
     const l2 = record as L2Record;
     const tags = l2.tags.length > 0 ? ` [${redactSecrets(l2.tags.slice(0, 4).join(','))}]` : '';
-    return `- [L2] ${redactSecrets(l2.text)}${tags}${suffix}`;
+    return `- [L2${tag}] ${redactSecrets(l2.text)}${tags}${suffix}`;
   }
   const l1 = record as L1Record;
   const date = localDate(l1.createdAt);
-  return `- [L1 ${date}] ${redactSecrets(l1.summary)}${suffix}`;
+  return `- [L1 ${date}${tag}] ${redactSecrets(l1.summary)}${suffix}`;
 }
 
 const LAYER_ORDER: Layer[] = ['l3', 'l2', 'l1'];
@@ -315,7 +317,8 @@ export async function recall(
   const header =
     '[长期记忆自动召回 | holo-memory]\n' +
     '以下是与当前请求可能相关的三层长期记忆。把它当作背景事实；若与当前代码/对话冲突，以现况为准。\n' +
-    '带 id 的记忆可在回答中用 id 引用；如果被引用，下一轮会更容易再次召回。\n';
+    '带 id 的记忆可在回答中用 id 引用；如果被引用，下一轮会更容易再次召回。\n' +
+    '标记 ·源 表示有逐字原文；·指针 表示只有会话/轮次指针；无标记表示仅摘要。memory_open 可回取原文。\n';
   const trailer =
     '\n（需要更多用 memory_recall(query, layers)；主动保存用 memory_note；纠错用 memory_forget(id)。）';
 

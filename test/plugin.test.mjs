@@ -80,10 +80,19 @@ test('apply registers tools, guidance section and lifecycle listeners', async ()
     extractEnabled: true,
     injectEnabled: true,
   });
-  assert.equal(ctx.registered.length, 6, 'six model-facing tools are registered');
+  assert.equal(ctx.registered.length, 8, 'eight model-facing tools are registered');
   assert.deepEqual(
     ctx.registered.map((tool) => tool.name).sort(),
-    ['memory_forget', 'memory_injections', 'memory_list', 'memory_note', 'memory_recall', 'memory_stats'],
+    [
+      'memory_doctor',
+      'memory_forget',
+      'memory_injections',
+      'memory_list',
+      'memory_note',
+      'memory_open',
+      'memory_recall',
+      'memory_stats',
+    ],
   );
   assert.equal(ctx.sections.length, 1);
   assert.equal(ctx.sections[0].name, 'holo-memory:guidance');
