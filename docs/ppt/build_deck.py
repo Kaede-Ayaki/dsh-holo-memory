@@ -712,8 +712,8 @@ text(s, "源码 · README · PPT 生成脚本 · 控制台截图", 0.95, 5.27, 4
 
 rect(s, 6.5, 4.35, 6.15, 1.4, fill=PANEL, line=BORDER, radius=0.08)
 text(s, "VERSION", 6.75, 4.52, 1.5, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
-text(s, "v0.3.0  ·  2026.10", 6.75, 4.86, 3.2, 0.32, size=12, color=GREEN, font=FONT_CODE)
-text(s, "测试 24/24  ·  RRF / Active Window / Citation / Bands", 6.75, 5.27, 5.6, 0.28, size=9.8, color=MUTED)
+text(s, "v0.4.0  ·  2026.10", 6.75, 4.86, 3.2, 0.32, size=12, color=GREEN, font=FONT_CODE)
+text(s, "测试 31/31  ·  Source / Revision / Doctor / RRF", 6.75, 5.27, 5.6, 0.28, size=9.8, color=MUTED)
 
 text(s, "dsh-holo-memory  ·  DeepSeek Harness memory plugin", 0.7, 6.35, 8.5, 0.3, size=10.5, color=FAINT, font=FONT_EN)
 text(s, "END", 11.9, 6.25, 0.8, 0.3, size=11, color=FAINT, bold=True, font=FONT_EN, align=PP_ALIGN.RIGHT)
