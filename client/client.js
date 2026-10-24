@@ -241,6 +241,16 @@
           var meta = LAYERS[record.layer] || LAYERS.l2;
           var text = record.text || "";
           var tags = record.tags || record.themes || [];
+          var evidenceText = {
+            source: "逐字源",
+            pointer: "仅指针",
+            manual: "手写",
+            summary: "摘要",
+          }[record.evidence] || "摘要";
+          var sourceTitle = record.source
+            ? "session " + shortId(record.source.sessionId || "") + " · turn " + (record.source.turn || "?") +
+              (record.source.seqStart ? " · seq " + record.source.seqStart + "–" + (record.source.seqEnd || record.source.seqStart) : "")
+            : "没有来源指针";
           var style = { "--hm-layer": meta.color, "--hm-layer-bg": meta.bg };
           return h(
             "div",
@@ -268,6 +278,10 @@
               h("span", null, record.embedded ? "已向量化" : "仅词法"),
               h("span", null, "·"),
               h("span", null, "引用 ", h("b", null, record.citedCount || 0)),
+              h("span", null, "·"),
+              h("span", { title: sourceTitle }, "证据 ", evidenceText),
+              record.revision > 0 ? h("span", null, "·") : null,
+              record.revision > 0 ? h("span", null, "rev ", record.revision, record.historyCount ? " · 历史 " + record.historyCount : "") : null,
               h("span", null, "·"),
               h("code", { style: { fontSize: "8.5px" } }, "#" + shortId(record.id)),
             ),
@@ -441,6 +455,12 @@
           var auditAllState = react.useState(false);
           var auditAll = auditAllState[0];
           var setAuditAll = auditAllState[1];
+          var doctorState = react.useState(null);
+          var doctor = doctorState[0];
+          var setDoctor = doctorState[1];
+          var doctorBusyState = react.useState(false);
+          var doctorBusy = doctorBusyState[0];
+          var setDoctorBusy = doctorBusyState[1];
           var configState = react.useState(null);
           var config = configState[0];
           var setConfig = configState[1];
@@ -566,6 +586,14 @@
             }).catch(function () {});
           };
 
+          var runDoctor = function () {
+            setDoctorBusy(true);
+            fetchJson("/holo-memory/doctor?deep=1")
+              .then(function (data) { setDoctor(data); })
+              .catch(function (err) { setError(String(err && err.message ? err.message : err)); })
+              .finally(function () { setDoctorBusy(false); });
+          };
+
           var metric = function (label, value, sub, tone, iconName) {
             return h(
               "div",
@@ -684,11 +712,57 @@
                 statusRow("向量模型", "cpu", stats && stats.embedding && stats.embedding.enabled ? h("b", null, stats.embedding.model) : "未启用"),
                 statusRow("API Key", "key", config && config.hasKey ? "已保存" : "未设置"),
                 statusRow("存储", "box", h("span", { className: "hm-code", title: stats ? stats.storageDir : "" }, stats ? stats.storageDir : ""), h("button", { className: "hm-mini-btn", onClick: copyPath }, "复制")),
+                statusRow("证据链", "shield", (stats && stats.source ? stats.source.coverage : 0) + "%", " · 逐字 " + (stats && stats.source ? stats.source.backed : 0)),
+                statusRow("引用回写", "chat", (stats && stats.citation ? stats.citation.injected : 0) + " 条注入", " · " + (stats && stats.citation ? stats.citation.cited : 0) + " 条被引用"),
                 statusRow("自动召回", "layers", h("b", null, "开"), " · " + (stats && stats.inject ? stats.inject.maxChars : 0) + " 字符"),
                 statusRow("蒸馏", "sparkles", stats && stats.extract && stats.extract.enabled ? h("b", null, "开") : "关闭"),
               ),
               h("div", { className: "hm-meter" }, h("span", { style: { width: embeddedPct + "%" } })),
               note ? h("div", { className: "hm-status", style: { marginTop: "8px", color: "var(--hm-green)" } }, note) : null,
+            ),
+          );
+
+          var doctorChecks = doctor && doctor.checks ? doctor.checks : [];
+          var doctorProblems = doctorChecks.filter(function (check) { return check.level === "warn" || check.level === "error"; });
+          var doctorPanel = h(
+            "section",
+            { className: "hm-panel" },
+            h(
+              "div",
+              { className: "hm-panel-head" },
+              h("div", { className: "hm-panel-title" }, icon("shield", 14), "记忆体检"),
+              h("span", { className: "hm-panel-meta" }, doctor ? (doctor.ok ? "PASS" : "FAIL") : "未运行"),
+            ),
+            h(
+              "div",
+              { className: "hm-panel-body" },
+              h(
+                "div",
+                { className: "hm-status-list" },
+                h(
+                  "div",
+                  { className: "hm-status-row" },
+                  h("span", { className: "hm-status-label" }, "检查"),
+                  h("span", { className: "hm-status-value" },
+                    doctor
+                      ? h("b", null, doctor.summary.ok + " 通过 · " + doctor.summary.warn + " 警告 · " + doctor.summary.error + " 错误 · " + doctor.summary.skip + " 跳过")
+                      : "点“运行体检”做快速检查；深检会真打开一条来源并跑一次召回"),
+                ),
+                doctorProblems.slice(0, 8).map(function (check) {
+                  return h(
+                    "div",
+                    { className: "hm-status-row", key: check.id },
+                    h("span", { className: "hm-status-label" }, check.title),
+                    h("span", { className: "hm-status-value hm-status-" + (check.level === "error" ? "err" : "warn"), title: check.detail }, check.detail),
+                  );
+                }),
+              ),
+              h(
+                "div",
+                { className: "hm-config-actions", style: { marginTop: "10px" } },
+                h("button", { className: "hm-btn", onClick: runDoctor, disabled: doctorBusy }, doctorBusy ? "体检中…" : "运行体检"),
+                h("span", { className: "hm-status hm-status-work" }, "深检：打开一条原文 + 词法召回探针"),
+              ),
             ),
           );
 
@@ -831,7 +905,7 @@
                 "div",
                 { className: "hm-columns" },
                 h("div", { className: "hm-col-main" }, configPanel, memoryPanel),
-                h("div", { className: "hm-col-side" }, statusPanel, auditPanel),
+                h("div", { className: "hm-col-side" }, statusPanel, doctorPanel, auditPanel),
               ),
             ),
           );

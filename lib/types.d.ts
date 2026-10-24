@@ -1,5 +1,31 @@
 export type Layer = 'l1' | 'l2' | 'l3';
 export type Scope = 'user' | 'project';
+export type SourceKind = 'turn' | 'manual';
+/**
+ * A pointer back to the material a memory was distilled from. The excerpt is
+ * verbatim (modulo secret redaction), never a second-generation summary.
+ */
+export interface RecordSource {
+    kind: SourceKind;
+    sessionId?: string;
+    turn?: number;
+    /** First DSH session-event seq belonging to the source turn. */
+    seqStart?: number;
+    /** The turn/end event seq (inclusive). */
+    seqEnd?: number;
+    /** Short verbatim excerpt captured at write time. */
+    excerpt?: string;
+    /** contentHash(excerpt), used to detect later tampering. */
+    excerptHash?: string;
+}
+/** One previous version of a record, kept for correction history. */
+export interface RecordRevision {
+    at: number;
+    revision: number;
+    by: 'extraction' | 'manual' | 'migration';
+    /** Content snapshot without embedding/history to avoid recursive growth. */
+    snapshot: Record<string, unknown>;
+}
 export interface BaseRecord {
     id: string;
     layer: Layer;
@@ -22,6 +48,12 @@ export interface BaseRecord {
     citedCount?: number;
     /** Last time the record was injected/cited (not a content update). */
     lastAccessedAt?: number;
+    /** Pointer to the verbatim source this record was distilled from. */
+    source?: RecordSource;
+    /** Current revision number; 0 for legacy records before history existed. */
+    revision?: number;
+    /** Previous content versions, capped and oldest-first. */
+    history?: RecordRevision[];
 }
 export interface L1Record extends BaseRecord {
     layer: 'l1';
@@ -92,6 +124,10 @@ export interface TurnCapture {
     userTexts: string[];
     assistantTexts: string[];
     startedAt: number;
+    /** First session-event seq observed for this turn. */
+    seqStart?: number;
+    /** The turn/end event seq. */
+    seqEnd?: number;
     /** Ids injected into this turn's context; filled by pre-step recall. */
     injectedIds?: string[];
     /** Provider/model captured from the live agent, used for the extraction call. */
