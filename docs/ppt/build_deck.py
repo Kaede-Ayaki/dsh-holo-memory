@@ -42,7 +42,7 @@ GREEN = RGBColor(0x4A, 0xDE, 0x80)
 AMBER = RGBColor(0xF5, 0xB8, 0x4C)
 RED = RGBColor(0xF8, 0x71, 0x71)
 
-TOTAL = 12
+TOTAL = 14
 
 prs = Presentation()
 prs.slide_width = Inches(SW)
@@ -262,8 +262,8 @@ text(s, "让 agent 跨会话记得你、记得项目、记得做过什么。", 0
 chip(s, "L1 对话层", 0.74, 4.12, 1.55, CYAN)
 chip(s, "L2 事实层", 2.43, 4.12, 1.55, ACCENT)
 chip(s, "L3 全息层", 4.12, 4.12, 1.55, VIOLET)
-text(s, "RRF 三通道召回  ·  Active Window  ·  引用回写  ·  工作步骤可见", 0.76, 4.78, 8.2, 0.35, size=12.5, color=MUTED)
-text(s, "纯本地  ·  可审计  ·  零服务端  ·  v0.3.0", 0.76, 5.2, 7.0, 0.35, size=11, color=FAINT, font=FONT_EN)
+text(s, "RRF 三通道召回  ·  Active Window  ·  来源指针  ·  记忆体检", 0.76, 4.78, 8.2, 0.35, size=12.5, color=MUTED)
+text(s, "纯本地  ·  可审计  ·  可回取原文  ·  零服务端  ·  v0.4.0", 0.76, 5.2, 8.0, 0.35, size=11, color=FAINT, font=FONT_EN)
 
 # right-side stack
 stack_x, stack_y = 9.18, 1.82
@@ -287,7 +287,7 @@ for i, (num, label, color) in enumerate(agenda):
     rect(s, x, 5.96, 3.25, 0.5, fill=PANEL, line=BORDER, radius=0.1)
     text(s, num, x + 0.16, 6.03, 0.5, 0.3, size=10, color=color, bold=True, font=FONT_EN)
     text(s, label, x + 0.62, 6.02, 2.2, 0.3, size=12, color=TEXT, bold=True)
-text(s, "2026.10  ·  v0.3.0", 0.76, 6.62, 4.0, 0.3, size=10.5, color=FAINT, font=FONT_EN)
+text(s, "2026.10  ·  v0.4.0", 0.76, 6.62, 4.0, 0.3, size=10.5, color=FAINT, font=FONT_EN)
 
 # ---------------------------------------------------------------------------
 # 02 — Section 01 divider
@@ -295,11 +295,11 @@ text(s, "2026.10  ·  v0.3.0", 0.76, 6.62, 4.0, 0.3, size=10.5, color=FAINT, fon
 section_divider(
     "01",
     "插件介绍",
-    "三层记忆、三通道召回、主动补位，以及为什么这次“看得见”。",
+    "三层记忆、三通道召回、来源可核对，以及为什么这次“看得见”。",
     [
         ("三层记忆", "L1 对话摘要 · L2 原子事实 · L3 整体胶囊"),
         ("混合召回", "RRF 三通道 + Active Window + 引用回写"),
-        ("看得见", "侧边栏一级页面 + 聊天工作步骤行"),
+        ("可核对", "来源指针 + memory_open + 记忆体检"),
     ],
     CYAN,
     2,
@@ -461,7 +461,103 @@ text(s, "[长期记忆自动召回 | holo-memory]  ·  展开看问题/正文/id
 footer(s, 6)
 
 # ---------------------------------------------------------------------------
-# 06 — Section 02 divider
+# 07 — Provenance: source pointer + memory_open
+# ---------------------------------------------------------------------------
+s = new_slide()
+kicker(s, "PLUGIN / PROVENANCE")
+title(s, "每条记忆，都能回到原文")
+text(s, "摘要只是索引；来源指针才是可核对的那一句。", 0.64, 1.6, 12.0, 0.35, size=12.2, color=MUTED)
+
+rect(s, 0.62, 1.98, 6.15, 2.12, fill=PANEL, line=BORDER, radius=0.08)
+text(s, "SOURCE POINTER", 0.9, 2.14, 2.4, 0.25, size=9.5, color=CYAN, bold=True, font=FONT_EN)
+text(s, "session / turn / seqStart–seqEnd", 0.9, 2.45, 5.5, 0.32, size=15.5, color=TEXT, bold=True)
+text(s, "逐字 excerpt（≤1600 字符，不是二次摘要）", 0.9, 2.86, 5.5, 0.3, size=10.8, color=MUTED)
+text(s, "excerptHash：写入后若被悄悄改过，校验会报错", 0.9, 3.2, 5.5, 0.3, size=10.4, color=FAINT)
+
+text(s, "证据等级", 0.64, 4.25, 2.0, 0.28, size=10, color=FAINT, bold=True, font=FONT_EN)
+levels = [
+    ("·源", "逐字原文", GREEN),
+    ("·指针", "仅 session/turn", CYAN),
+    ("·手写", "memory_note", VIOLET),
+    ("无标记", "仅摘要", MUTED),
+]
+for i, (label, body, color) in enumerate(levels):
+    col, row = i % 2, i // 2
+    x = 0.62 + col * 3.0
+    y = 4.55 + row * 0.62
+    rect(s, x, y, 2.86, 0.52, fill=PANEL, line=color, line_width=0.8, radius=0.08)
+    text(s, label, x + 0.16, y + 0.06, 0.95, 0.25, size=11, color=color, bold=True, font=FONT_EN)
+    text(s, body, x + 0.95, y + 0.09, 1.8, 0.25, size=9.2, color=MUTED)
+
+px, py = 7.05, 1.98
+rect(s, px, py, 5.5, 3.55, fill=DEEP, line=GREEN, line_width=0.9, radius=0.08)
+text(s, "MEMORY_OPEN", px + 0.28, py + 0.2, 2.2, 0.25, size=9.5, color=GREEN, bold=True, font=FONT_EN)
+text(s, 'memory_open("91ec8d6a")', px + 0.28, py + 0.52, 4.9, 0.3, size=11.5, color=TEXT, font=FONT_CODE)
+lines = [
+    ("source:", " session … · turn 7 · seq 41–57"),
+    ("evidence:", " verbatim excerpt (hash verified)"),
+    ("---", ""),
+    ("[user]", " 记住：部署目标是 Windows…"),
+    ("[assistant]", " 好的，已记录这个约定。"),
+    ("history=true", " → rev 1 / rev 0"),
+]
+for i, (head, body) in enumerate(lines):
+    y = py + 1.0 + i * 0.36
+    text(s, head, px + 0.28, y, 1.35, 0.26, size=9.5, color=CYAN if head in ("source:", "evidence:") else FAINT, font=FONT_CODE)
+    text(s, body, px + 1.55, y, 3.7, 0.26, size=9.2, color=MUTED, font=FONT_CODE)
+
+rect(s, 0.62, 6.0, 12.1, 0.72, fill=RGBColor(0x0C, 0x16, 0x2C), line=ACCENT, line_width=0.9, radius=0.1)
+text(s, "旧记录 = ·指针（没有逐字片段）；新记录 = ·源；拿不到来源就写 unavailable，绝不猜。", 0.9, 6.18, 11.6, 0.32, size=11.5, color=TEXT)
+
+footer(s, 7)
+
+# ---------------------------------------------------------------------------
+# 08 — Doctor + revision history
+# ---------------------------------------------------------------------------
+s = new_slide()
+kicker(s, "PLUGIN / OBSERVABILITY")
+title(s, "会体检，也会留痕")
+text(s, "医生真取一次；修正只增不盖。", 0.64, 1.6, 12.0, 0.35, size=12.2, color=MUTED)
+
+px, py = 0.62, 1.98
+rect(s, px, py, 6.3, 3.78, fill=PANEL, line=BORDER, radius=0.08)
+text(s, "MEMORY_DOCTOR", px + 0.25, py + 0.2, 2.6, 0.25, size=9.5, color=CYAN, bold=True, font=FONT_EN)
+text(s, "快检 9 项 · 深检 2 项", px + 0.25, py + 0.5, 3.2, 0.3, size=15, color=TEXT, bold=True)
+checks = [
+    "存储可读", "来源覆盖", "原文哈希",
+    "向量覆盖", "重复内容", "引用回写",
+    "召回审计", "阈值合法", "体检器自检",
+]
+for i, label in enumerate(checks):
+    col, row = i % 3, i // 3
+    x = px + 0.25 + col * 1.95
+    y = py + 1.0 + row * 0.5
+    rect(s, x, y + 0.07, 0.07, 0.07, fill=GREEN, line=None, radius=0, shape=MSO_SHAPE.OVAL)
+    text(s, label, x + 0.18, y, 1.65, 0.26, size=9.8, color=MUTED)
+text(s, "deep：真打开一条来源 + 跑一次词法召回探针", px + 0.25, py + 2.6, 5.7, 0.3, size=10.2, color=GREEN)
+text(s, "PASS · 9 ok / 0 warn / 0 error", px + 0.25, py + 3.05, 4.8, 0.35, size=13, color=GREEN, bold=True, font=FONT_EN)
+text(s, "配置看起来对，不算通过。", px + 0.25, py + 3.42, 4.8, 0.25, size=9.5, color=FAINT)
+
+rx, ry = 7.2, 1.98
+rect(s, rx, ry, 5.35, 3.78, fill=PANEL, line=VIOLET, line_width=0.9, radius=0.08)
+text(s, "REVISION", rx + 0.26, ry + 0.2, 2.0, 0.25, size=9.5, color=VIOLET, bold=True, font=FONT_EN)
+text(s, "rev 2", rx + 0.24, ry + 0.48, 2.2, 0.62, size=32, color=TEXT, bold=True, font=FONT_EN)
+text(s, "history 1 · 最多保留 20 条", rx + 0.26, ry + 1.17, 4.4, 0.28, size=10, color=MUTED)
+revision_lines = [
+    ("01", "L2 修正：旧文本进 history", VIOLET),
+    ("02", "revision 递增，不静默覆盖", ACCENT),
+    ("03", "memory_open(history=true) 回看", GREEN),
+]
+for i, (num, body, color) in enumerate(revision_lines):
+    y = ry + 1.65 + i * 0.55
+    badge(s, num, rx + 0.26, y, d=0.3, fill=color)
+    text(s, body, rx + 0.72, y - 0.02, 4.2, 0.3, size=9.8, color=MUTED)
+text(s, "修正不是覆盖，是留痕。", rx + 0.26, ry + 3.36, 4.2, 0.28, size=10.2, color=VIOLET)
+
+footer(s, 8)
+
+# ---------------------------------------------------------------------------
+# 09 — Section 02 divider
 # ---------------------------------------------------------------------------
 section_divider(
     "02",
@@ -473,7 +569,7 @@ section_divider(
         ("配置", "可选向量模型；不配也能用词法召回"),
     ],
     GREEN,
-    7,
+    9,
 )
 
 # ---------------------------------------------------------------------------
@@ -516,7 +612,7 @@ text(s, "desktop profile 由 Electron 管理；", px + 0.24, py + 3.58, 3.2, 0.2
 text(s, "用设置页安装，不要用 CLI 改 desktop profile。", px + 0.24, py + 3.86, 3.2, 0.45, size=9.2, color=AMBER, line_spacing=1.25)
 
 text(s, "装完 / 更新后：client 半在启动时加载，刷新页面不够，必须重启 DSH。", 0.64, 6.35, 12.0, 0.3, size=11.2, color=AMBER)
-footer(s, 8)
+footer(s, 10)
 
 # ---------------------------------------------------------------------------
 # 08 — Configure embedding
@@ -553,7 +649,7 @@ rect(s, px, 4.0, 5.35, 1.8, fill=DEEP, line=BORDER, radius=0.08)
 text(s, "支持的端点", px + 0.28, 4.2, 3.0, 0.3, size=13, color=CYAN, bold=True)
 text(s, "SiliconFlow · OpenAI · 本地 Ollama · 火山方舟 · 任意 OpenAI 兼容 /embeddings", px + 0.28, 4.58, 4.75, 0.8, size=10.5, color=MUTED, line_spacing=1.35)
 text(s, "换模型 / 换维度后，旧向量会按 embeddingModel 自动失效并回填。", px + 0.28, 5.4, 4.75, 0.35, size=9.5, color=FAINT)
-footer(s, 9)
+footer(s, 11)
 
 # ---------------------------------------------------------------------------
 # 09 — Section 03 divider
@@ -568,7 +664,7 @@ section_divider(
         ("兼容", "DSH 0.2.x；更新后必须重启 client"),
     ],
     AMBER,
-    10,
+    12,
 )
 
 # ---------------------------------------------------------------------------
@@ -598,7 +694,7 @@ for i, (head, body, color) in enumerate(notes):
 rect(s, 0.62, 5.55, 12.1, 1.12, fill=RGBColor(0x0C, 0x16, 0x2C), line=AMBER, line_width=0.9, radius=0.1)
 text(s, "兼容性：DSH 0.2.x。persona 模板不要写 {{cwd}}（只注册 provider/model）；工作目录由 runtime context 提供。", 0.9, 5.72, 11.6, 0.5, size=10.6, color=TEXT, line_spacing=1.25)
 text(s, "建议先在小 workspace 试运行，确认召回质量和 token 成本后再日常使用。", 0.9, 6.24, 11.6, 0.28, size=9.8, color=MUTED)
-footer(s, 11)
+footer(s, 13)
 
 # ---------------------------------------------------------------------------
 # 11 — Closing
@@ -626,18 +722,20 @@ text(s, "END", 11.9, 6.25, 0.8, 0.3, size=11, color=FAINT, bold=True, font=FONT_
 # Speaker notes
 # ---------------------------------------------------------------------------
 NOTES = [
-    "开场：dsh-holo-memory v0.3.0。三部分：插件介绍、安装方式、注意事项。先用一句话说明它让 agent 跨会话记得你、记得项目。",
+    "开场：dsh-holo-memory v0.4.0。三部分：插件介绍、安装方式、注意事项。先用一句话说明它让 agent 跨会话记得你、记得项目。",
     "第一部分：先讲三层记忆和闭环，再讲召回，最后看界面。强调它不是一个数据库，而是记录、蒸馏、召回、注入的完整链路。",
     "三层各司其职：L1 对话摘要，L2 原子事实，L3 整体胶囊。右侧是一轮对话的闭环：捕获、蒸馏、召回、注入；纯本地 JSON。",
     "架构选择：它不是 MCP 服务器，而是 DSH 原生进程内插件。不额外起进程、不占端口、不经过 MCP 协议；agent/pre-step 直接自动注入，client slot 直接出 UI。仍暴露 memory_* 工具，但记忆读写不依赖 MCP。",
     "召回升级为三通道 RRF：词法、字符 n-gram、向量；再加 Active Window 主动补位和 citation 回写。预算按 IMMEDIATE/WORKING/BACKGROUND 分配。",
     "看得见的两个界面：侧边栏的独立控制台，以及聊天工作步骤里的召回行。工作步骤行可以展开看问题、正文和命中 id。",
+    "来源链：每条记录带 session/turn/seq 指针和逐字 excerpt，excerptHash 可校验。证据等级分 ·源、·指针、·手写，无标记就是仅摘要。memory_open 可以回取原文和修订历史；拿不到来源会明确写 unavailable，不猜。",
+    "体检与修订：memory_doctor 快检覆盖存储、来源、哈希、向量、重复、引用、审计、阈值和自检；深检真的打开一条来源并跑召回探针。修正不会覆盖旧版本，revision/history 留痕，memory_open(history=true) 可回看。",
     "第二部分：安装方式。准备环境、构建、在设置里添加本地目录、重启验证。桌面版 profile 由 Electron 管理，不要用 CLI 改 desktop profile。",
     "四步安装：Node 22.19+，npm install/build/test，设置→插件→添加插件→本地目录，最后完全重启 DSH。数据在 $DSH_HOME/holo-memory。",
     "向量模型是可选的。在侧边栏页面填接口、模型、Key，先检测再保存；不配也能用词法和 n-gram。Key 单独文件保存，GET 不返回。",
     "第三部分：注意事项。重点讲密钥、隐私、token、重启、异步蒸馏、scope 六条，以及 DSH 兼容性。",
     "六条底线逐条过。最后给建议：先小 workspace 试运行，观察召回质量和 token 成本，再日常使用。",
-    "收尾：记住该记住的，忘掉该忘掉的。仓库、版本和下一步：P1 内容压缩/marker、Query Intent、更多评测。",
+    "收尾：记住该记住的，忘掉该忘掉的。仓库、版本和下一步：P2 内容压缩/marker、Query Intent、更多评测。",
 ]
 for slide, note in zip(prs.slides, NOTES):
     slide.notes_slide.notes_text_frame.text = note
