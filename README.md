@@ -1,6 +1,7 @@
 # dsh-holo-memory
 
-> GitHub: <https://github.com/Kaede0757-sudo/dsh-holo-memory>
+> GitHub: <https://github.com/Kaede0757-sudo/dsh-holo-memory>  
+> 版本：`0.4.0`（从“能召回”到“可核对”） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
 
 三层全息记忆插件，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）补上跨会话长期记忆：
 
@@ -241,7 +242,8 @@ $DSH_HOME/holo-memory/
 
 ## 文档与演示
 
-- 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（12 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项；含“不依赖 MCP 服务”架构说明页）
+- 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（14 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项；含“不依赖 MCP 服务”“来源链与体检”说明页）
+- 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 生成脚本与背景素材：[docs/ppt/](docs/ppt/)
 - 测试：`npm test`（31 项）
 
