@@ -44,6 +44,7 @@ Format follows Keep a Changelog; versions follow the package version.
   孤立断言。
 - `memory_stats` 输出明确标注权威源、证据等级、来源覆盖和阈值。
 - README 增补“权威源与证据等级”“记忆体检”“阈值来历”章节。
+- GitHub 用户名改为 `Kaede-Ayaki`；README / CHANGELOG / PPT 的仓库链接与本地 remote 已同步，旧用户名 URL 仍 301 重定向。
 - 包版本 `0.3.0` → `0.4.0`。
 
 ### Security / Privacy
