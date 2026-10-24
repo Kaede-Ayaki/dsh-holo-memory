@@ -9,6 +9,8 @@ import { HoloStore, contentHash, newId } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { nearDuplicate } from './lexical.js';
 import { looksSecret, redactSecrets } from './sanitize.js';
+import { sourceFromTurn } from './source.js';
+import { reviseRecord } from './revisions.js';
 
 export interface LlmLike {
   stream(options: unknown): AsyncIterable<unknown>;
@@ -285,6 +287,7 @@ export function applyExtraction(
 ): AnyRecord[] {
   const touched: AnyRecord[] = [];
   const now = Date.now();
+  const source = sourceFromTurn(capture, config.sourceExcerptMaxChars);
 
   if (extraction.l1 && extraction.l1.summary.length > 0) {
     const existing = store
@@ -293,7 +296,7 @@ export function applyExtraction(
       .find((record) => record.sessionId === capture.sessionId && record.turn === capture.turn);
     const summary = extraction.l1.summary;
     if (existing) {
-      store.update('l1', existing.id, {
+      store.update('l1', existing.id, reviseRecord(existing, {
         summary,
         topics: extraction.l1.topics,
         intent: extraction.l1.intent,
@@ -302,7 +305,8 @@ export function applyExtraction(
         hash: contentHash(summary),
         embedding: undefined,
         embeddingModel: undefined,
-      });
+        source,
+      }, 'extraction'));
       touched.push(store.find(existing.id)!);
     } else {
       const record: L1Record = {
@@ -315,6 +319,8 @@ export function applyExtraction(
         createdAt: now,
         updatedAt: now,
         hash: contentHash(summary),
+        revision: 1,
+        source,
         sessionId: capture.sessionId,
         turn: capture.turn,
         cwd: capture.cwd,
@@ -331,7 +337,7 @@ export function applyExtraction(
   for (const fact of extraction.l2 ?? []) {
     const existing = findExistingFact(store, capture.projectKey, fact.scope ?? 'project', fact.text);
     if (existing) {
-      store.update('l2', existing.id, {
+      store.update('l2', existing.id, reviseRecord(existing, {
         text: fact.text,
         kind: fact.kind ?? existing.kind,
         tags: fact.tags ?? existing.tags,
@@ -342,7 +348,8 @@ export function applyExtraction(
         hash: contentHash(fact.text),
         embedding: undefined,
         embeddingModel: undefined,
-      });
+        source,
+      }, 'extraction'));
       touched.push(store.find(existing.id)!);
     } else {
       const record: L2Record = {
@@ -355,6 +362,8 @@ export function applyExtraction(
         createdAt: now,
         updatedAt: now,
         hash: contentHash(fact.text),
+        revision: 1,
+        source,
         text: fact.text,
         kind: fact.kind ?? 'fact',
         tags: fact.tags ?? [],
@@ -371,7 +380,7 @@ export function applyExtraction(
     const existing = findL3(store, capture.projectKey, capsule.id, capsule.title);
     if (existing) {
       const sourceSessions = Array.from(new Set([...existing.sourceSessions, capture.sessionId]));
-      store.update('l3', existing.id, {
+      store.update('l3', existing.id, reviseRecord(existing, {
         title: capsule.title,
         hologram: capsule.hologram,
         themes: capsule.themes ?? existing.themes,
@@ -382,7 +391,8 @@ export function applyExtraction(
         hash: contentHash(`${capsule.title}\n${capsule.hologram}`),
         embedding: undefined,
         embeddingModel: undefined,
-      });
+        source,
+      }, 'extraction'));
       touched.push(store.find(existing.id)!);
     } else {
       const record: L3Record = {
@@ -395,6 +405,8 @@ export function applyExtraction(
         createdAt: now,
         updatedAt: now,
         hash: contentHash(`${capsule.title}\n${capsule.hologram}`),
+        revision: 1,
+        source,
         title: capsule.title,
         hologram: capsule.hologram,
         themes: capsule.themes ?? [],

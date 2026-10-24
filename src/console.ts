@@ -16,6 +16,11 @@ import { HoloStore } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { redactSecrets } from './sanitize.js';
 import { readInjections } from './injections.js';
+import { evidenceOf, sourceFor } from './source.js';
+import { openRecord } from './open.js';
+import { runDoctor } from './doctor.js';
+import { AUTHORITY_NOTE, EVIDENCE_NOTE, MEMORY_AUTHORITY } from './authority.js';
+import { thresholdAudit } from './thresholds.js';
 import {
   hasEmbeddingKey,
   loadEmbeddingConfig,
@@ -89,6 +94,7 @@ function titleOf(record: AnyRecord): string {
 }
 
 function publicRecord(record: AnyRecord): Record<string, unknown> {
+  const source = sourceFor(record);
   const common = {
     id: record.id,
     layer: record.layer,
@@ -103,6 +109,19 @@ function publicRecord(record: AnyRecord): Record<string, unknown> {
     accessCount: record.accessCount ?? 0,
     citedCount: record.citedCount ?? 0,
     lastAccessedAt: record.lastAccessedAt ?? 0,
+    revision: record.revision ?? 0,
+    historyCount: record.history?.length ?? 0,
+    evidence: evidenceOf(record),
+    source: source
+      ? {
+          kind: source.kind,
+          sessionId: source.sessionId ?? '',
+          turn: source.turn ?? 0,
+          seqStart: source.seqStart ?? 0,
+          seqEnd: source.seqEnd ?? 0,
+          hasExcerpt: Boolean(source.excerpt && source.excerpt.trim().length > 0),
+        }
+      : null,
     title: titleOf(record),
     text: redactSecrets(textOf(record)),
   };
@@ -153,12 +172,34 @@ function limitOf(value: string | null): number {
   return Math.max(1, Math.min(MAX_LIMIT, Math.floor(parsed)));
 }
 
+function maxCharsOf(value: string | null): number {
+  const parsed = Number(value ?? 4000);
+  if (!Number.isFinite(parsed)) return 4000;
+  return Math.max(200, Math.min(8000, Math.floor(parsed)));
+}
+
 async function stats(deps: ConsoleDeps): Promise<Record<string, unknown>> {
   const counts = await deps.store.stats();
+  const total = counts.l1 + counts.l2 + counts.l3;
+  const covered = counts.sourceBacked + counts.sourcePointer;
   return {
     ok: true,
     stats: counts,
-    total: counts.l1 + counts.l2 + counts.l3,
+    total,
+    authority: MEMORY_AUTHORITY,
+    authorityNote: AUTHORITY_NOTE,
+    evidenceNote: EVIDENCE_NOTE,
+    source: {
+      backed: counts.sourceBacked,
+      pointer: counts.sourcePointer,
+      none: counts.sourceNone,
+      coverage: total > 0 ? Math.round((covered / total) * 100) : 0,
+    },
+    citation: {
+      injected: counts.injected,
+      cited: counts.cited,
+    },
+    thresholds: thresholdAudit(deps.config),
     embedding: {
       enabled: deps.embedder.enabled,
       model: deps.config.embeddingModel,
@@ -262,6 +303,36 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
       sendJson(res, 200, {
         ok: true,
         injections: await readInjections(deps.store.dir, limitOf(url.searchParams.get('limit'))),
+      });
+      return;
+    }
+    if (req.method === 'GET' && path === '/holo-memory/doctor') {
+      sendJson(
+        res,
+        200,
+        await runDoctor(
+          { store: deps.store, config: deps.config, embedder: deps.embedder },
+          { deep: url.searchParams.get('deep') === '1' },
+        ),
+      );
+      return;
+    }
+    if (req.method === 'GET' && path === '/holo-memory/open') {
+      const id = url.searchParams.get('id') ?? '';
+      const found =
+        deps.store.find(id) ??
+        [...deps.store.list('l1'), ...deps.store.list('l2'), ...deps.store.list('l3')].find((record) => record.id.endsWith(id));
+      if (!found) {
+        sendJson(res, 404, { ok: false, error: 'not found' });
+        return;
+      }
+      sendJson(res, 200, {
+        ok: true,
+        id: found.id,
+        text: openRecord(found, {
+          maxChars: maxCharsOf(url.searchParams.get('limit')),
+          history: url.searchParams.get('history') === '1',
+        }),
       });
       return;
     }

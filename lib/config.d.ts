@@ -29,6 +29,8 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     extractTemperature: z<number, number, "defined">;
     extractMinTurnChars: z<number, number, "defined">;
     extractMaxTranscriptChars: z<number, number, "defined">;
+    /** Max verbatim excerpt stored on a source pointer. */
+    sourceExcerptMaxChars: z<number, number, "defined">;
     /** Optional OpenAI-compatible embedding endpoint. Disabled by default. */
     embeddingEnabled: z<boolean, boolean, "defined">;
     embeddingBaseUrl: z<string, string, "defined">;
@@ -73,6 +75,8 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     extractTemperature: z<number, number, "defined">;
     extractMinTurnChars: z<number, number, "defined">;
     extractMaxTranscriptChars: z<number, number, "defined">;
+    /** Max verbatim excerpt stored on a source pointer. */
+    sourceExcerptMaxChars: z<number, number, "defined">;
     /** Optional OpenAI-compatible embedding endpoint. Disabled by default. */
     embeddingEnabled: z<boolean, boolean, "defined">;
     embeddingBaseUrl: z<string, string, "defined">;
@@ -113,6 +117,7 @@ export type HoloConfig = {
     extractTemperature: number;
     extractMinTurnChars: number;
     extractMaxTranscriptChars: number;
+    sourceExcerptMaxChars: number;
     embeddingEnabled: boolean;
     embeddingBaseUrl: string;
     embeddingModel: string;

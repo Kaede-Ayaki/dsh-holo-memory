@@ -8,6 +8,11 @@ import { recall } from './retrieval.js';
 import { looksSecret, redactSecrets } from './sanitize.js';
 import { localDate } from './time.js';
 import { readInjections } from './injections.js';
+import { evidenceTag, sourceFromManual } from './source.js';
+import { openRecord } from './open.js';
+import { runDoctor } from './doctor.js';
+import { AUTHORITY_NOTE, EVIDENCE_NOTE, MEMORY_AUTHORITY } from './authority.js';
+import { thresholdAudit } from './thresholds.js';
 
 const LAYERS: Layer[] = ['l1', 'l2', 'l3'];
 
@@ -28,16 +33,25 @@ function shortId(id: string): string {
 }
 
 function formatRecord(record: AnyRecord): string {
+  const tag = evidenceTag(record);
   if (record.layer === 'l3') {
     const l3 = record as L3Record;
-    return `[L3 ${shortId(l3.id)}] ${redactSecrets(l3.title)}\n${redactSecrets(l3.hologram)}`;
+    return `[L3${tag} ${shortId(l3.id)}] ${redactSecrets(l3.title)}\n${redactSecrets(l3.hologram)}`;
   }
   if (record.layer === 'l2') {
     const l2 = record as L2Record;
-    return `[L2 ${shortId(l2.id)}] (${l2.kind}${l2.scope === 'user' ? ', user' : ''}) ${redactSecrets(l2.text)}`;
+    return `[L2${tag} ${shortId(l2.id)}] (${l2.kind}${l2.scope === 'user' ? ', user' : ''}) ${redactSecrets(l2.text)}`;
   }
   const l1 = record as L1Record;
-  return `[L1 ${shortId(l1.id)}] ${localDate(l1.createdAt)} · ${redactSecrets(l1.summary)}`;
+  return `[L1${tag} ${shortId(l1.id)}] ${localDate(l1.createdAt)} · ${redactSecrets(l1.summary)}`;
+}
+
+function findBySuffix(store: HoloStore, raw: string): AnyRecord | undefined {
+  const id = raw.trim();
+  return (
+    store.find(id) ??
+    [...store.list('l1'), ...store.list('l2'), ...store.list('l3')].find((record) => record.id.endsWith(id))
+  );
 }
 
 export function registerTools(ctx: { tools: { register(tool: unknown): void } }, deps: ToolDeps): void {
@@ -116,6 +130,8 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         if (text.length < 3) return 'Not saved: text is too short.';
         if (looksSecret(text)) return 'Not saved: the text contains a credential/token; memory never stores secrets.';
         const now = Date.now();
+        const sessionId = exec.agent?.session?.id;
+        const source = sourceFromManual(text, sessionId);
         if (layer === 'l3') {
           const title = (args.title ?? text.slice(0, 60)).trim();
           if (title.length === 0) return 'Not saved: an l3 capsule needs a title.';
@@ -129,12 +145,14 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
             createdAt: now,
             updatedAt: now,
             hash: contentHash(`${title}\n${text}`),
+            revision: 1,
+            source,
             title,
             hologram: text,
             themes: tags,
             entities: [],
             openLoops: [],
-            sourceSessions: exec.agent?.session?.id ? [exec.agent.session.id] : [],
+            sourceSessions: sessionId ? [sessionId] : [],
           };
           deps.store.insert(record);
           deps.onRecords?.([record]);
@@ -150,11 +168,13 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
           createdAt: now,
           updatedAt: now,
           hash: contentHash(text),
+          revision: 1,
+          source,
           text,
           kind: 'fact',
           tags,
           confidence: 0.9,
-          sourceSessionId: exec.agent?.session?.id,
+          sourceSessionId: sessionId,
         };
         deps.store.insert(record);
         deps.onRecords?.([record]);
@@ -189,6 +209,26 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
 
   ctx.tools.register(
     defineTool({
+      name: 'memory_open',
+      description:
+        'Open one memory back to its source. Returns the verbatim excerpt captured at write time, the session/turn/seq pointer, hash verification, and optionally revision history. ' +
+        'Use this to verify a memory before relying on it; if no source exists it says so explicitly instead of inventing a pointer.',
+      parameters: {
+        id: { type: 'string', required: true, description: 'Full id or the 8-character suffix shown in brackets.' },
+        maxChars: { type: 'number', description: 'Max excerpt characters (default 4000, max 8000).' },
+        history: { type: 'boolean', description: 'Include previous revisions when available (default false).' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
+      async execute(args) {
+        const found = findBySuffix(deps.store, args.id);
+        if (!found) return `No memory matching "${args.id}".`;
+        return openRecord(found, { maxChars: args.maxChars, history: args.history === true });
+      },
+    }),
+  );
+
+  ctx.tools.register(
+    defineTool({
       name: 'memory_forget',
       description: 'Delete one memory by id when it is stale or wrong. Use ids shown by memory_recall / memory_list.',
       parameters: {
@@ -196,14 +236,7 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
       },
       output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
       async execute(args) {
-        const found =
-          deps.store.find(args.id) ??
-          (() => {
-            const suffix = args.id.trim();
-            return [...deps.store.list('l1'), ...deps.store.list('l2'), ...deps.store.list('l3')].find((record) =>
-              record.id.endsWith(suffix),
-            );
-          })();
+        const found = findBySuffix(deps.store, args.id);
         if (!found) return `No memory matching "${args.id}".`;
         deps.store.remove(found.id);
         return `Forgot ${found.layer.toUpperCase()} ${found.id}.`;
@@ -241,6 +274,34 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
 
   ctx.tools.register(
     defineTool({
+      name: 'memory_doctor',
+      description:
+        'Run a memory health check. Fast checks inspect store/source/embedding/audit/config; deep=true also opens a real source and runs a lexical retrieval probe. ' +
+        'A green check means the probe actually ran, not that config merely looks valid.',
+      parameters: {
+        deep: { type: 'boolean', description: 'Run deep probes (source open + retrieval); default false.' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
+      async execute(args) {
+        const report = await runDoctor(
+          { store: deps.store, config: deps.config, embedder: deps.embedder },
+          { deep: args.deep === true },
+        );
+        const lines = [
+          `Memory doctor · ${report.deep ? 'deep' : 'fast'} · ${report.ok ? 'PASS' : 'FAIL'}`,
+          `authority: ${report.authority}`,
+          `checks: ${report.summary.ok} ok · ${report.summary.warn} warn · ${report.summary.error} error · ${report.summary.skip} skip`,
+        ];
+        for (const check of report.checks) {
+          lines.push(`- [${check.level}] ${check.id} — ${check.title}: ${check.detail}`);
+        }
+        return lines.join('\n');
+      },
+    }),
+  );
+
+  ctx.tools.register(
+    defineTool({
       name: 'memory_stats',
       description: 'Show holographic memory statistics: layer counts, embedding coverage, storage directory.',
       parameters: {},
@@ -250,14 +311,19 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         const embed = deps.embedder.enabled ? `enabled (${deps.config.embeddingModel})` : `disabled${deps.embedder.reason ? ` (${deps.embedder.reason})` : ''}`;
         return [
           `Holographic memory`,
+          `- authority: ${MEMORY_AUTHORITY}`,
           `- L1 dialogue summaries: ${stats.l1}`,
           `- L2 atomic facts: ${stats.l2}`,
           `- L3 holographic capsules: ${stats.l3}`,
+          `- source-backed: ${stats.sourceBacked} · pointer-only: ${stats.sourcePointer} · no source: ${stats.sourceNone} · revisioned: ${stats.revisioned}`,
           `- embedded records: ${stats.embedded}`,
           `- storage: ${stats.dir}`,
           `- embeddings: ${embed}`,
           `- embedding baseline: ${deps.config.embeddingBaseline}`,
           `- extraction: ${deps.config.extractEnabled ? 'enabled' : 'disabled'}`,
+          `- ${AUTHORITY_NOTE}`,
+          `- ${EVIDENCE_NOTE}`,
+          `- thresholds: ${thresholdAudit(deps.config).map((item) => `${item.key}=${item.value}`).join(', ')}`,
         ].join('\n');
       },
     }),

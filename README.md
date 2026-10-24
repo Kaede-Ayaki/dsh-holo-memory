@@ -17,7 +17,11 @@
 RRF 之后还会：
 - 用 **Active Window** 主动补 1–2 条高重要度 L2 / L3（不依赖当前问题，预算单独保留）；
 - 按 `IMMEDIATE / WORKING / BACKGROUND` 分配字符预算；
-- 每条注入行带 `(id:xxxxxxxx)`；回答里引用过的 id 会在下一轮回写 `citedCount`，获得轻微加权。
+- 每条注入行带 `(id:xxxxxxxx)`；回答里引用过的 id 会在下一轮回写 `citedCount`，获得轻微加权；
+- 每条注入行带 **证据等级**：`·源` = 有逐字原文片段，`·指针` = 只有 session/turn 指针，`·手写` = 手动写入，无标记 = 仅摘要；
+- 可用 `memory_open(id)` 回取原文片段、来源指针和修订历史。
+
+**权威源**：`dsh-holo-memory` 是自动 L1/L2/L3 记忆的唯一权威源；ALTM、内置记忆、笔记等只作只读参考，不要把同一条事实同时写进两个库（两处都写 = 双重记账）。
 
 纯本地存储，无服务端、无账号、无遥测。
 
@@ -59,8 +63,10 @@ dsh plugin --profile web add link:/absolute/path/to/dsh-holo-memory
   - 「检测可用性」只发一次 `/embeddings` 探测：判断是否可达、是不是 embedding 模型、返回维度与延迟，**不保存**；
   - 「保存配置」写入 `embedding.json` + `embedding.key`，立即生效，并后台按新模型重新回填已有记录；
 - 存储路径、embedding 模型与状态、蒸馏开关；
+- **证据链覆盖率**：有逐字原文 / 仅指针 / 无来源的条数，以及最近修订数；
+- **记忆体检**：快速检查存储、来源覆盖、哈希、向量、重复、召回审计、阈值合法性；深检会真的打开一条原文并跑一次词法召回探针；
 - 搜索框、按层筛选（全部 / L1 / L2 / L3）；
-- 每条记忆的层、scope、项目、重要度、向量状态、时间、正文（可展开），以及删除按钮；
+- 每条记忆的层、scope、项目、重要度、向量状态、证据等级、revision/历史、时间、正文（可展开），以及删除按钮；
 - **最近自动召回**：每次注入的时间、session id、查询、L1/L2/L3 条数、注入字符数和命中的记录 id；
 - 删除立即落盘，并刷新统计。
 
@@ -131,6 +137,7 @@ API Key 推荐放在单独文件（首行），而不是写进 YAML；插件会�
 | `extractMaxTokens` | `1400` | 蒸馏输出上限 |
 | `extractMinTurnChars` | `60` | 太短的回合不蒸馏 |
 | `extractMaxTranscriptChars` | `12000` | 喂给蒸馏模型的对话上限 |
+| `sourceExcerptMaxChars` | `1600` | 每条来源指针保存的逐字片段上限（不是摘要） |
 | `embeddingEnabled` | `false` | 是否启用向量检索 |
 | `embeddingBaseUrl` | `''` | 例：`http://127.0.0.1:11434/v1`、`https://ark.cn-beijing.volces.com/api/v3` |
 | `embeddingModel` | `''` | 例：`nomic-embed-text`、`doubao-embedding-*` |
@@ -143,6 +150,23 @@ API Key 推荐放在单独文件（首行），而不是写进 YAML；插件会�
 
 > 向量模型是可选项：不开启时插件完全靠 BM25+中文 bigram 工作，零网络依赖。开启后新写入记录会在后台分批补齐向量，查询时实时算一次问题向量。
 
+### 阈值不是拍脑袋：每条都挂一个具体失败
+
+| 阈值 | 默认 | 它防的是哪次失败 |
+|---|---|---|
+| `injectMinScore` | 0.12 | 无关问题因轻微词面重合被注入，制造噪声 |
+| `injectMaxChars` | 1400 | 长记忆挤占对话上下文、拉高首 token 延迟 |
+| `activeWindowMaxChars` | 420 | 主动补位变成常驻大段背景，压过本轮问题 |
+| `activeWindowMinImportance` | 7 | 低价值记忆每轮都被主动携带 |
+| `extractMinTurnChars` | 60 | 寒暄、单字回合生成无意义 L1 |
+| `extractMaxTranscriptChars` | 12000 | 超长回合把蒸馏 prompt 撑爆、超时 |
+| `sourceExcerptMaxChars` | 1600 | 原文片段把记忆文件撑大、挤占注入预算 |
+| `rrfRankConstant` | 60 | 单一通道靠前几名垄断融合排名 |
+| `embeddingBaseline` | 0.22 | 无关文本的余弦相似度伪装成相关 |
+| `queryEmbeddingTimeoutMs` | 1200 | embedding 抖动拖慢 pre-step、阻塞对话 |
+
+`memory_doctor` 会检查这些阈值是否合法；`memory_stats` 会列出当前值。改默认值前请先写下它防的是哪次失败，否则下一次误伤没人解释得清。
+
 ---
 
 ## 数据布局
@@ -154,7 +178,7 @@ $DSH_HOME/holo-memory/
 └── l3.json   # 全息记忆胶囊
 ```
 
-全部是普通 JSON，可读、可 diff、可手工编辑；每条记录都带 `scope`（`user` 跨项目 / `project` 当前工作区）、`projectKey`、时间戳、重要度和来源会话。写入是原子的（临时文件 + rename），不会写坏半截文件。
+全部是普通 JSON，可读、可 diff、可手工编辑；每条记录都带 `scope`（`user` 跨项目 / `project` 当前工作区）、`projectKey`、时间戳、重要度、`source`（session/turn/seq + 逐字片段 + 哈希）、`revision` 与可选的 `history`。写入是原子的（临时文件 + rename），不会写坏半截文件。
 
 ---
 
@@ -162,14 +186,38 @@ $DSH_HOME/holo-memory/
 
 | 工具 | 用途 |
 |---|---|
-| `memory_recall(query, layers?, limit?)` | 混合检索三层记忆，返回带 id 的记录 |
+| `memory_recall(query, layers?, limit?)` | 混合检索三层记忆，返回带 id、证据标记的记录 |
+| `memory_open(id, maxChars?, history?)` | 回取一条记忆的逐字原文片段、session/turn/seq 指针、哈希校验和修订历史 |
 | `memory_note(text, layer?, scope?, title?, tags?, importance?)` | 主动写入 L2 事实或 L3 胶囊 |
 | `memory_list(layer?, limit?)` | 按时间列出某一层记忆 |
 | `memory_forget(id)` | 按 id（或 8 位后缀）删除过时/错误的记忆 |
 | `memory_injections(limit?)` | 最近自动召回审计：session id、query、层条数、命中 id |
-| `memory_stats()` | 各层数量、向量覆盖、存储路径、蒸馏状态 |
+| `memory_stats()` | 各层数量、来源覆盖、向量覆盖、存储路径、蒸馏状态、阈值 |
+| `memory_doctor(deep?)` | 记忆体检：来源覆盖/哈希/向量/重复/审计/阈值；deep 会真打开原文并跑召回探针 |
 
-另外插件会注册一段很短的静态 guidance，告诉模型“你有三层长期记忆，可以主动 recall/note/forget”。
+另外插件会注册一段很短的静态 guidance，告诉模型“你有三层长期记忆，可以主动 recall/open/note/forget”。
+
+### 权威源与证据等级
+
+- **唯一权威源**：`dsh-holo-memory` 自动 L1/L2/L3；ALTM、内置记忆、笔记只作只读参考，不并行写同一事实。
+- `·源`：有逐字原文片段（`memory_open` 可看，哈希可校验）；
+- `·指针`：只有 session/turn/seq 指针，没有保存原文片段；
+- `·手写`：`memory_note` 手动写入；
+- 无标记：只有摘要，**不要**在没有 `memory_open` 校验的情况下把它当原文。
+- 指针拿不到时明确报 `source unavailable`，绝不猜一个假位置；**错的门牌比没有更坏**。
+- 修正历史：内容更新会递增 `revision` 并把旧快照压入 `history`（最多 20 条），`memory_open(id, history=true)` 可查看；不会静默覆盖旧版本。
+
+### 记忆体检
+
+`memory_doctor(deep=true)` 与控制台的「记忆体检」会：
+
+1. 读存储、来源覆盖、原文哈希、向量覆盖/漂移、重复哈希；
+2. 读最近召回审计，检查审计里的 id 是否还能解析；
+3. 检查阈值合法性；
+4. 深检真的 `memory_open` 一条记录，并用词法通道跑一次召回探针；
+5. 最后自检“所有检查项都跑了，没有跳过未知项”。
+
+“配置看起来对”不算通过；检查项必须真的取到证据。
 
 ---
 
@@ -177,9 +225,9 @@ $DSH_HOME/holo-memory/
 
 1. **记录**：监听 `session/event` 的 `turn/start`、`user/message`、`assistant/message`、`turn/end`，把当前回合的对话文本收集到内存缓冲区（有长度上限）。
 2. **蒸馏**：`turn/end` 后异步调用一次模型（复用当前会话的 provider/model，或配置覆盖），要求输出严格 JSON：`l1`、`l2[]`、`l3[]`。解析失败/没有模型时退化为确定性的 L1 摘要，所以“记录对话”永远不会因为模型不可用而丢失。
-3. **合并**：L2 做近似去重（同 scope 内相近事实更新而非追加）；L3 按 id/标题更新已有胶囊或新建；所有写入带出处（session/turn）。
+3. **合并**：L2 做近似去重（同 scope 内相近事实更新而非追加）；L3 按 id/标题更新已有胶囊或新建；所有写入带 `source`（session/turn/seq + 逐字片段 + 哈希）和 `revision`，更新时保留旧快照。
 4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量三通道排名，RRF 融合；命中后额外补 1–2 条高重要度 resident 记忆（Active Window），并按字符预算和 band 裁剪。若 query 完全没有命中，只要 Active Window 有高重要度记忆，也会注入这些背景；两者都空时不产生 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
-5. **注入**：作为一条 user-role snapshot 消息插入本步，带 `source.kind = "holo-memory"`，并在后续回合作为普通历史保留；不会被再次计入 L1 捕获。
+5. **注入**：作为一条 user-role snapshot 消息插入本步，带 `source.kind = "holo-memory"`，并在后续回合作为普通历史保留；不会被再次计入 L1 捕获。每行带证据标记，需要核对时用 `memory_open`。
 
 ---
 
@@ -195,7 +243,7 @@ $DSH_HOME/holo-memory/
 
 - 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（12 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项；含“不依赖 MCP 服务”架构说明页）
 - 生成脚本与背景素材：[docs/ppt/](docs/ppt/)
-- 测试：`npm test`（24 项）
+- 测试：`npm test`（31 项）
 
 ## License
 
