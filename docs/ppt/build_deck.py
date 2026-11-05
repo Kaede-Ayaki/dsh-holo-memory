@@ -262,8 +262,8 @@ text(s, "让 agent 跨会话记得你、记得项目、记得做过什么。", 0
 chip(s, "L1 对话层", 0.74, 4.12, 1.55, CYAN)
 chip(s, "L2 事实层", 2.43, 4.12, 1.55, ACCENT)
 chip(s, "L3 全息层", 4.12, 4.12, 1.55, VIOLET)
-text(s, "RRF 三通道召回  ·  Active Window  ·  来源指针  ·  记忆体检", 0.76, 4.78, 8.2, 0.35, size=12.5, color=MUTED)
-text(s, "纯本地  ·  可审计  ·  可回取原文  ·  零服务端  ·  v0.4.0", 0.76, 5.2, 8.0, 0.35, size=11, color=FAINT, font=FONT_EN)
+text(s, "RRF 三通道召回  ·  来源可核对  ·  记忆体检  ·  每日归档", 0.76, 4.78, 8.2, 0.35, size=12.5, color=MUTED)
+text(s, "纯本地  ·  可审计  ·  可回取原文  ·  零服务端  ·  v0.4.1", 0.76, 5.2, 8.0, 0.35, size=11, color=FAINT, font=FONT_EN)
 
 # right-side stack
 stack_x, stack_y = 9.18, 1.82
@@ -287,7 +287,7 @@ for i, (num, label, color) in enumerate(agenda):
     rect(s, x, 5.96, 3.25, 0.5, fill=PANEL, line=BORDER, radius=0.1)
     text(s, num, x + 0.16, 6.03, 0.5, 0.3, size=10, color=color, bold=True, font=FONT_EN)
     text(s, label, x + 0.62, 6.02, 2.2, 0.3, size=12, color=TEXT, bold=True)
-text(s, "2026.10  ·  v0.4.0", 0.76, 6.62, 4.0, 0.3, size=10.5, color=FAINT, font=FONT_EN)
+text(s, "2026.10  ·  v0.4.1", 0.76, 6.62, 4.0, 0.3, size=10.5, color=FAINT, font=FONT_EN)
 
 # ---------------------------------------------------------------------------
 # 02 — Section 01 divider
@@ -522,7 +522,7 @@ text(s, "医生真取一次；修正只增不盖。", 0.64, 1.6, 12.0, 0.35, siz
 px, py = 0.62, 1.98
 rect(s, px, py, 6.3, 3.78, fill=PANEL, line=BORDER, radius=0.08)
 text(s, "MEMORY_DOCTOR", px + 0.25, py + 0.2, 2.6, 0.25, size=9.5, color=CYAN, bold=True, font=FONT_EN)
-text(s, "快检 9 项 · 深检 2 项", px + 0.25, py + 0.5, 3.2, 0.3, size=15, color=TEXT, bold=True)
+text(s, "快检 11 项 · 深检 3 项", px + 0.25, py + 0.5, 3.2, 0.3, size=15, color=TEXT, bold=True)
 checks = [
     "存储可读", "来源覆盖", "原文哈希",
     "向量覆盖", "重复内容", "引用回写",
@@ -535,7 +535,7 @@ for i, label in enumerate(checks):
     rect(s, x, y + 0.07, 0.07, 0.07, fill=GREEN, line=None, radius=0, shape=MSO_SHAPE.OVAL)
     text(s, label, x + 0.18, y, 1.65, 0.26, size=9.8, color=MUTED)
 text(s, "deep：真打开一条来源 + 跑一次词法召回探针", px + 0.25, py + 2.6, 5.7, 0.3, size=10.2, color=GREEN)
-text(s, "PASS · 9 ok / 0 warn / 0 error", px + 0.25, py + 3.05, 4.8, 0.35, size=13, color=GREEN, bold=True, font=FONT_EN)
+text(s, "PASS · 全部检查通过", px + 0.25, py + 3.05, 4.8, 0.35, size=13, color=GREEN, bold=True, font=FONT_EN)
 text(s, "配置看起来对，不算通过。", px + 0.25, py + 3.42, 4.8, 0.25, size=9.5, color=FAINT)
 
 rx, ry = 7.2, 1.98
@@ -553,6 +553,9 @@ for i, (num, body, color) in enumerate(revision_lines):
     badge(s, num, rx + 0.26, y, d=0.3, fill=color)
     text(s, body, rx + 0.72, y - 0.02, 4.2, 0.3, size=9.8, color=MUTED)
 text(s, "修正不是覆盖，是留痕。", rx + 0.26, ry + 3.36, 4.2, 0.28, size=10.2, color=VIOLET)
+
+rect(s, 0.62, 5.95, 12.1, 0.52, fill=RGBColor(0x0C, 0x16, 0x2C), line=AMBER, line_width=0.8, radius=0.1)
+text(s, "每日 04:30 · L1 过期/低重要度归档到 archive/l1-YYYY-MM.jsonl · 重启后 30 秒补跑", 0.9, 6.1, 11.6, 0.25, size=10, color=AMBER)
 
 footer(s, 8)
 
@@ -712,8 +715,8 @@ text(s, "源码 · README · PPT 生成脚本 · 控制台截图", 0.95, 5.27, 4
 
 rect(s, 6.5, 4.35, 6.15, 1.4, fill=PANEL, line=BORDER, radius=0.08)
 text(s, "VERSION", 6.75, 4.52, 1.5, 0.25, size=9.5, color=FAINT, bold=True, font=FONT_EN)
-text(s, "v0.4.0  ·  2026.10", 6.75, 4.86, 3.2, 0.32, size=12, color=GREEN, font=FONT_CODE)
-text(s, "测试 31/31  ·  Source / Revision / Doctor / RRF", 6.75, 5.27, 5.6, 0.28, size=9.8, color=MUTED)
+text(s, "v0.4.1  ·  2026.10", 6.75, 4.86, 3.2, 0.32, size=12, color=GREEN, font=FONT_CODE)
+text(s, "测试 32/32  ·  Maintenance / Archive / Source / Doctor", 6.75, 5.27, 5.6, 0.28, size=9.8, color=MUTED)
 
 text(s, "dsh-holo-memory  ·  DeepSeek Harness memory plugin", 0.7, 6.35, 8.5, 0.3, size=10.5, color=FAINT, font=FONT_EN)
 text(s, "END", 11.9, 6.25, 0.8, 0.3, size=11, color=FAINT, bold=True, font=FONT_EN, align=PP_ALIGN.RIGHT)
@@ -722,14 +725,14 @@ text(s, "END", 11.9, 6.25, 0.8, 0.3, size=11, color=FAINT, bold=True, font=FONT_
 # Speaker notes
 # ---------------------------------------------------------------------------
 NOTES = [
-    "开场：dsh-holo-memory v0.4.0。三部分：插件介绍、安装方式、注意事项。先用一句话说明它让 agent 跨会话记得你、记得项目。",
+    "开场：dsh-holo-memory v0.4.1。三部分：插件介绍、安装方式、注意事项。先用一句话说明它让 agent 跨会话记得你、记得项目。",
     "第一部分：先讲三层记忆和闭环，再讲召回，最后看界面。强调它不是一个数据库，而是记录、蒸馏、召回、注入的完整链路。",
     "三层各司其职：L1 对话摘要，L2 原子事实，L3 整体胶囊。右侧是一轮对话的闭环：捕获、蒸馏、召回、注入；纯本地 JSON。",
     "架构选择：它不是 MCP 服务器，而是 DSH 原生进程内插件。不额外起进程、不占端口、不经过 MCP 协议；agent/pre-step 直接自动注入，client slot 直接出 UI。仍暴露 memory_* 工具，但记忆读写不依赖 MCP。",
     "召回升级为三通道 RRF：词法、字符 n-gram、向量；再加 Active Window 主动补位和 citation 回写。预算按 IMMEDIATE/WORKING/BACKGROUND 分配。",
     "看得见的两个界面：侧边栏的独立控制台，以及聊天工作步骤里的召回行。工作步骤行可以展开看问题、正文和命中 id。",
     "来源链：每条记录带 session/turn/seq 指针和逐字 excerpt，excerptHash 可校验。证据等级分 ·源、·指针、·手写，无标记就是仅摘要。memory_open 可以回取原文和修订历史；拿不到来源会明确写 unavailable，不猜。",
-    "体检与修订：memory_doctor 快检覆盖存储、来源、哈希、向量、重复、引用、审计、阈值和自检；深检真的打开一条来源并跑召回探针。修正不会覆盖旧版本，revision/history 留痕，memory_open(history=true) 可回看。",
+    "体检与修订：memory_doctor 快检覆盖存储、来源、哈希、向量、重复、引用、审计、阈值和自检；深检真的打开一条来源并跑召回探针。修正不会覆盖旧版本，revision/history 留痕，memory_open(history=true) 可回看。0.4.1 起每天 04:30 归档过期/低重要度 L1，先写 archive/l1-YYYY-MM.jsonl 再移出活跃集；重启后 30 秒补跑一次。",
     "第二部分：安装方式。准备环境、构建、在设置里添加本地目录、重启验证。桌面版 profile 由 Electron 管理，不要用 CLI 改 desktop profile。",
     "四步安装：Node 22.19+，npm install/build/test，设置→插件→添加插件→本地目录，最后完全重启 DSH。数据在 $DSH_HOME/holo-memory。",
     "向量模型是可选的。在侧边栏页面填接口、模型、Key，先检测再保存；不配也能用词法和 n-gram。Key 单独文件保存，GET 不返回。",
