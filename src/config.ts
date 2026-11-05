@@ -32,6 +32,16 @@ export const Config = z.object({
   extractMaxTranscriptChars: z.number().default(12000),
   /** Max verbatim excerpt stored on a source pointer. */
   sourceExcerptMaxChars: z.number().default(1600),
+  /** Daily maintenance: archive stale L1 dialogue summaries. */
+  maintenanceEnabled: z.boolean().default(true),
+  maintenanceHour: z.number().default(4),
+  maintenanceMinute: z.number().default(30),
+  /** Archive L1 older than this when importance is below the keep threshold. */
+  l1ArchiveAfterDays: z.number().default(14),
+  /** L1 with at least this importance survives until the hard max age. */
+  l1ArchiveKeepImportance: z.number().default(8),
+  /** Archive L1 at this age regardless of importance. */
+  l1ArchiveMaxDays: z.number().default(60),
   /** Optional OpenAI-compatible embedding endpoint. Disabled by default. */
   embeddingEnabled: z.boolean().default(false),
   embeddingBaseUrl: z.string().default(''),
@@ -74,6 +84,12 @@ export type HoloConfig = {
   extractMinTurnChars: number;
   extractMaxTranscriptChars: number;
   sourceExcerptMaxChars: number;
+  maintenanceEnabled: boolean;
+  maintenanceHour: number;
+  maintenanceMinute: number;
+  l1ArchiveAfterDays: number;
+  l1ArchiveKeepImportance: number;
+  l1ArchiveMaxDays: number;
   embeddingEnabled: boolean;
   embeddingBaseUrl: string;
   embeddingModel: string;
@@ -112,6 +128,12 @@ export const DEFAULT_CONFIG: HoloConfig = {
   extractMinTurnChars: 60,
   extractMaxTranscriptChars: 12000,
   sourceExcerptMaxChars: 1600,
+  maintenanceEnabled: true,
+  maintenanceHour: 4,
+  maintenanceMinute: 30,
+  l1ArchiveAfterDays: 14,
+  l1ArchiveKeepImportance: 8,
+  l1ArchiveMaxDays: 60,
   embeddingEnabled: false,
   embeddingBaseUrl: '',
   embeddingModel: '',

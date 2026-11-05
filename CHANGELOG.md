@@ -3,6 +3,39 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.4.1] - 2026-11-06
+
+**主题：每日维护与 L1 归档。**
+
+### Added
+
+- **每日维护定时器**：宿主启动后按本地时间 **04:30** 运行；若 `maintenance.json`
+  显示上次运行超过 20 小时或从未运行，启动约 30 秒后补跑一次。
+- **L1 归档**：L1 超过 `l1ArchiveAfterDays`（默认 14 天）且重要度低于
+  `l1ArchiveKeepImportance`（默认 8）时归档；超过 `l1ArchiveMaxDays`
+  （默认 60 天）则无论重要度一律归档。
+- **归档前先落盘**：记录先追加到 `archive/l1-YYYY-MM.jsonl`，再从活跃
+  `l1.json` 移除；归档文件只追加，不自动删除。
+- **`memory_maintenance(olderThanDays?, dryRun?)`**：手动预览/立即执行归档。
+- **`maintenance.json`**：记录上次维护时间、归档条数与归档文件路径。
+- **doctor 新增 `maintenance:recent`**：最近 48 小时没有维护时给 warn。
+- **配置项**：`maintenanceEnabled`、`maintenanceHour`、`maintenanceMinute`、
+  `l1ArchiveAfterDays`、`l1ArchiveKeepImportance`、`l1ArchiveMaxDays`。
+- **测试**：从 31 项增至 **32 项**，新增归档选择、dry-run、归档文件内容、
+  维护状态与下次调度时间断言。
+
+### Changed
+
+- 包版本 `0.4.0` → `0.4.1`。
+- README 新增「每日维护与 L1 归档」、数据布局中的 `archive/` 与维护配置。
+
+### Upgrade notes
+
+- 需要重启 DSH 加载新宿主代码；重启后定时器会在约 30 秒后补跑一次。
+- 默认只归档过期/低重要度 L1，不删除 L2/L3；如需更激进或更保守，改
+  `l1Archive*` 配置。
+- 归档文件保留在 `$DSH_HOME/holo-memory/archive/`，可按 `record.id` 搜索。
+
 ## [0.4.0] - 2026-10-24
 
 **主题：从“能召回”到“可核对”。**

@@ -1,7 +1,7 @@
 # dsh-holo-memory
 
 > GitHub: <https://github.com/Kaede-Ayaki/dsh-holo-memory>  
-> 版本：`0.4.0`（从“能召回”到“可核对”） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
+> 版本：`0.4.1`（每日维护 / L1 归档） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
 
 三层全息记忆插件，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）补上跨会话长期记忆：
 
@@ -139,6 +139,11 @@ API Key 推荐放在单独文件（首行），而不是写进 YAML；插件会�
 | `extractMinTurnChars` | `60` | 太短的回合不蒸馏 |
 | `extractMaxTranscriptChars` | `12000` | 喂给蒸馏模型的对话上限 |
 | `sourceExcerptMaxChars` | `1600` | 每条来源指针保存的逐字片段上限（不是摘要） |
+| `maintenanceEnabled` | `true` | 是否启用每日维护 |
+| `maintenanceHour/maintenanceMinute` | `4/30` | 每日维护的本地时间（默认凌晨 4:30） |
+| `l1ArchiveAfterDays` | `14` | L1 超过这个天数且重要度低于保留阈值时归档 |
+| `l1ArchiveKeepImportance` | `8` | 达到这个重要度的 L1 保留到硬上限 |
+| `l1ArchiveMaxDays` | `60` | 无论重要度，L1 超过这个天数一律归档 |
 | `embeddingEnabled` | `false` | 是否启用向量检索 |
 | `embeddingBaseUrl` | `''` | 例：`http://127.0.0.1:11434/v1`、`https://ark.cn-beijing.volces.com/api/v3` |
 | `embeddingModel` | `''` | 例：`nomic-embed-text`、`doubao-embedding-*` |
@@ -174,12 +179,33 @@ API Key 推荐放在单独文件（首行），而不是写进 YAML；插件会�
 
 ```
 $DSH_HOME/holo-memory/
-├── l1.json   # 每轮对话摘要
+├── l1.json   # 每轮对话摘要（活跃集）
 ├── l2.json   # 原子事实
-└── l3.json   # 全息记忆胶囊
+├── l3.json   # 全息记忆胶囊
+├── maintenance.json  # 上次维护时间与归档数
+└── archive/
+    └── l1-YYYY-MM.jsonl  # 已归档的 L1（只追加，不自动删除）
 ```
 
 全部是普通 JSON，可读、可 diff、可手工编辑；每条记录都带 `scope`（`user` 跨项目 / `project` 当前工作区）、`projectKey`、时间戳、重要度、`source`（session/turn/seq + 逐字片段 + 哈希）、`revision` 与可选的 `history`。写入是原子的（临时文件 + rename），不会写坏半截文件。
+
+---
+
+## 每日维护与 L1 归档
+
+插件宿主启动后会读 `maintenance.json`：
+
+- 每天本地 **04:30** 运行一次；
+- 如果上次维护超过 20 小时（或从未运行），启动后约 30 秒补跑一次；
+- 归档条件：
+  - L1 超过 `l1ArchiveAfterDays`（默认 14 天）且重要度低于 `l1ArchiveKeepImportance`（默认 8）；
+  - 或超过 `l1ArchiveMaxDays`（默认 60 天），无论重要度；
+- 归档是**先追加到 `archive/l1-YYYY-MM.jsonl`，再从活跃 L1 移除**；归档文件不自动删除；
+- L1 是一手历史，默认只做“过期归档”，不做无差别删除；L2/L3 不在此流程中删除；
+- 可手动执行 `memory_maintenance(olderThanDays?, dryRun?)` 预览或立即归档；
+- `memory_doctor` 会检查最近一次维护是否在 48 小时内。
+
+> 归档记录仍保留在 `archive/*.jsonl` 里；需要找回时按 `record.id` 搜索该文件。
 
 ---
 
@@ -195,6 +221,7 @@ $DSH_HOME/holo-memory/
 | `memory_injections(limit?)` | 最近自动召回审计：session id、query、层条数、命中 id |
 | `memory_stats()` | 各层数量、来源覆盖、向量覆盖、存储路径、蒸馏状态、阈值 |
 | `memory_doctor(deep?)` | 记忆体检：来源覆盖/哈希/向量/重复/审计/阈值；deep 会真打开原文并跑召回探针 |
+| `memory_maintenance(olderThanDays?, dryRun?)` | 立即运行每日维护：归档过期/低重要度 L1，返回归档数与文件路径；dryRun 只预览 |
 
 另外插件会注册一段很短的静态 guidance，告诉模型“你有三层长期记忆，可以主动 recall/open/note/forget”。
 
@@ -245,7 +272,7 @@ $DSH_HOME/holo-memory/
 - 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（14 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项；含“不依赖 MCP 服务”“来源链与体检”说明页）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 生成脚本与背景素材：[docs/ppt/](docs/ppt/)
-- 测试：`npm test`（31 项）
+- 测试：`npm test`（32 项）
 
 ## License
 
