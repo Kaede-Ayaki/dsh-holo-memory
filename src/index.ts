@@ -31,6 +31,7 @@ import { applySavedEmbeddingConfig } from './embedding-config.js';
 import { redactSecrets } from './sanitize.js';
 import { applyCitationFeedback } from './feedback.js';
 import { AUTHORITY_NOTE, EVIDENCE_NOTE } from './authority.js';
+import { startMaintenanceSchedule } from './maintenance.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
 export const name = 'holo-memory';
@@ -92,6 +93,10 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   const store = new HoloStore(storageDir, config);
   const embedder = new EmbeddingClient(config);
   const abort = new AbortController();
+
+  // Daily L1 archival / maintenance timer (catch-up run shortly after startup
+  // when the last recorded run is older than 20h).
+  ctx.effect(() => startMaintenanceSchedule(store, config, logger));
 
   // ------------------------------------------------------------------ //
   // Background embedding indexer                                        //

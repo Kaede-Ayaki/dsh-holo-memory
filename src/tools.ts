@@ -11,6 +11,7 @@ import { readInjections } from './injections.js';
 import { evidenceTag, sourceFromManual } from './source.js';
 import { openRecord } from './open.js';
 import { runDoctor } from './doctor.js';
+import { maintainMemory } from './maintenance.js';
 import { AUTHORITY_NOTE, EVIDENCE_NOTE, MEMORY_AUTHORITY } from './authority.js';
 import { thresholdAudit } from './thresholds.js';
 
@@ -296,6 +297,34 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
           lines.push(`- [${check.level}] ${check.id} — ${check.title}: ${check.detail}`);
         }
         return lines.join('\n');
+      },
+    }),
+  );
+
+  ctx.tools.register(
+    defineTool({
+      name: 'memory_maintenance',
+      description:
+        'Run daily memory maintenance now: archive stale/outdated L1 dialogue summaries to archive/l1-YYYY-MM.jsonl, keep recent or high-importance L1, and report the result. ' +
+        'Use dryRun=true to preview what would be archived.',
+      parameters: {
+        olderThanDays: { type: 'number', description: 'Override the default L1 archive age (default from config, 14 days).' },
+        dryRun: { type: 'boolean', description: 'Preview only; do not archive or delete (default false).' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
+      async execute(args) {
+        const result = await maintainMemory(deps.store, deps.config, {
+          olderThanDays: args.olderThanDays,
+          dryRun: args.dryRun === true,
+        });
+        return [
+          `Memory maintenance${result.dryRun ? ' (dry run)' : ''}`,
+          `- archive age: ${result.olderThanDays} days`,
+          `- archived: ${result.archived}`,
+          `- kept L1: ${result.kept}`,
+          `- archive: ${result.archiveFile}`,
+          result.ids.length > 0 ? `- ids: ${result.ids.map((id) => id.slice(-8)).join(', ')}` : '- ids: (none)',
+        ].join('\n');
       },
     }),
   );

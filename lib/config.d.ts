@@ -31,6 +31,16 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     extractMaxTranscriptChars: z<number, number, "defined">;
     /** Max verbatim excerpt stored on a source pointer. */
     sourceExcerptMaxChars: z<number, number, "defined">;
+    /** Daily maintenance: archive stale L1 dialogue summaries. */
+    maintenanceEnabled: z<boolean, boolean, "defined">;
+    maintenanceHour: z<number, number, "defined">;
+    maintenanceMinute: z<number, number, "defined">;
+    /** Archive L1 older than this when importance is below the keep threshold. */
+    l1ArchiveAfterDays: z<number, number, "defined">;
+    /** L1 with at least this importance survives until the hard max age. */
+    l1ArchiveKeepImportance: z<number, number, "defined">;
+    /** Archive L1 at this age regardless of importance. */
+    l1ArchiveMaxDays: z<number, number, "defined">;
     /** Optional OpenAI-compatible embedding endpoint. Disabled by default. */
     embeddingEnabled: z<boolean, boolean, "defined">;
     embeddingBaseUrl: z<string, string, "defined">;
@@ -77,6 +87,16 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     extractMaxTranscriptChars: z<number, number, "defined">;
     /** Max verbatim excerpt stored on a source pointer. */
     sourceExcerptMaxChars: z<number, number, "defined">;
+    /** Daily maintenance: archive stale L1 dialogue summaries. */
+    maintenanceEnabled: z<boolean, boolean, "defined">;
+    maintenanceHour: z<number, number, "defined">;
+    maintenanceMinute: z<number, number, "defined">;
+    /** Archive L1 older than this when importance is below the keep threshold. */
+    l1ArchiveAfterDays: z<number, number, "defined">;
+    /** L1 with at least this importance survives until the hard max age. */
+    l1ArchiveKeepImportance: z<number, number, "defined">;
+    /** Archive L1 at this age regardless of importance. */
+    l1ArchiveMaxDays: z<number, number, "defined">;
     /** Optional OpenAI-compatible embedding endpoint. Disabled by default. */
     embeddingEnabled: z<boolean, boolean, "defined">;
     embeddingBaseUrl: z<string, string, "defined">;
@@ -118,6 +138,12 @@ export type HoloConfig = {
     extractMinTurnChars: number;
     extractMaxTranscriptChars: number;
     sourceExcerptMaxChars: number;
+    maintenanceEnabled: boolean;
+    maintenanceHour: number;
+    maintenanceMinute: number;
+    l1ArchiveAfterDays: number;
+    l1ArchiveKeepImportance: number;
+    l1ArchiveMaxDays: number;
     embeddingEnabled: boolean;
     embeddingBaseUrl: string;
     embeddingModel: string;
