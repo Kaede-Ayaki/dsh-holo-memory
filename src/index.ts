@@ -488,6 +488,13 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
             config,
             logger,
             onConfigSaved: () => queueEmbedding([...store.list('l1'), ...store.list('l2'), ...store.list('l3')]),
+            getNeuron: () => {
+              try {
+                return ctx.get?.('neuronMemory');
+              } catch {
+                return undefined;
+              }
+            },
           }),
         'holo-memory: console route',
       );
