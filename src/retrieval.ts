@@ -81,6 +81,19 @@ function residentScore(record: AnyRecord): number {
   );
 }
 
+/**
+ * Curated tags are a cheap topical switch. A fact whose tags are explicitly
+ * present in the query is allowed a lower evidence floor; an untagged
+ * preference/rule must clear a much higher bar on its own.
+ */
+function tagMatchesQuery(record: AnyRecord, queryLower: string): boolean {
+  if (record.layer !== 'l2') return false;
+  return record.tags.some((tag) => {
+    const normalized = tag.trim().toLowerCase();
+    return normalized.length >= 2 && queryLower.includes(normalized);
+  });
+}
+
 function lineFor(item: RecallItem): string {
   const record = item.record;
   const id = record.id.slice(-8);
@@ -223,11 +236,14 @@ export async function recall(
   if (trimmedQuery.length < 4) return null;
   const queryTokens = tokenize(trimmedQuery);
   if (queryTokens.length === 0) return null;
+  const queryLower = trimmedQuery.toLowerCase();
 
   const queryVector = await embedder.query(trimmedQuery, options.signal, config.queryEmbeddingTimeoutMs);
   const useVectors = embedder.enabled && queryVector !== null;
   const items: RecallItem[] = [];
   const rrfConstant = Math.max(1, Math.round(config.rrfRankConstant || 60));
+  const minEvidence = Math.max(0, Math.min(1, config.injectMinEvidence ?? 0.44));
+  let queryHits = 0;
   const neuronById = new Map(
     (options.neuronHits ?? []).map((hit) => [hit.id, Math.max(0, Math.min(1, hit.activation))]),
   );
@@ -260,6 +276,29 @@ export async function recall(
       if (layer === 'l1' && lexical < 0.2 && neuron <= 0) continue;
       const relevance = Math.max(lexical, ngram, vector);
       if (neuron <= 0 && relevance < options.minScore) continue;
+      // A weak lexical/vector near-match must not win a quota slot merely
+      // because the layer has few records. Count it as a query hit (so an
+      // unrelated active-window prefix is not appended), then require real
+      // per-record evidence before it reaches RRF.
+      queryHits += 1;
+      const evidence = Math.max(relevance, neuron);
+      // L1 is already anchored by lexical overlap. L2 policy/preference
+      // records are the main source of topic drift: without a curated tag
+      // that literally appears in the query, require much stronger evidence.
+      const layerFloor =
+        layer === 'l1'
+          ? Math.max(minEvidence, 0.50)
+          : layer === 'l2' && !tagMatchesQuery(record, queryLower)
+            ? Math.max(
+                minEvidence,
+                (record as L2Record).kind === 'decision' ||
+                  (record as L2Record).kind === 'task' ||
+                  (record as L2Record).kind === 'entity'
+                  ? 0.50
+                  : 0.55,
+              )
+            : minEvidence;
+      if (evidence < Math.max(options.minScore, layerFloor)) continue;
       scored.push({ record, lexical, ngram, vector, relevance, neuron });
     }
     if (scored.length === 0) continue;
@@ -321,12 +360,14 @@ export async function recall(
     items.push(...selected);
   }
 
-  const active = activeWindowCandidates(
-    store,
-    config,
-    options.projectKey,
-    new Set(items.map((item) => item.record.id)),
-  );
+  const active = (!config.activeWindowFallbackOnly || queryHits === 0)
+    ? activeWindowCandidates(
+        store,
+        config,
+        options.projectKey,
+        new Set(items.map((item) => item.record.id)),
+      )
+    : [];
   if (items.length === 0 && active.length === 0) return null;
 
   // Band assignment: strongest query match gets the immediate budget, next

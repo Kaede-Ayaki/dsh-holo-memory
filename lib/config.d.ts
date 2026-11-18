@@ -10,6 +10,12 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     injectEnabled: z<boolean, boolean, "defined">;
     injectMaxChars: z<number, number, "defined">;
     injectMinScore: z<number, number, "defined">;
+    /**
+     * Per-record evidence floor after channel fusion. This is deliberately
+     * stricter than injectMinScore: a weak lexical/vector near-match must not
+     * win a quota slot merely because the layer had few candidates.
+     */
+    injectMinEvidence: z<number, number, "defined">;
     injectL1: z<number, number, "defined">;
     injectL2: z<number, number, "defined">;
     injectL3: z<number, number, "defined">;
@@ -19,6 +25,11 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     activeWindowMaxItems: z<number, number, "defined">;
     activeWindowMaxChars: z<number, number, "defined">;
     activeWindowMinImportance: z<number, number, "defined">;
+    /**
+     * Resident memories are a fallback, not a per-turn prefix. Keep them out of
+     * turns where a query channel already produced at least one candidate.
+     */
+    activeWindowFallbackOnly: z<boolean, boolean, "defined">;
     /** Reciprocal-rank-fusion constant; 60 is the standard default. */
     rrfRankConstant: z<number, number, "defined">;
     /** Background extraction at turn end. */
@@ -66,6 +77,12 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     injectEnabled: z<boolean, boolean, "defined">;
     injectMaxChars: z<number, number, "defined">;
     injectMinScore: z<number, number, "defined">;
+    /**
+     * Per-record evidence floor after channel fusion. This is deliberately
+     * stricter than injectMinScore: a weak lexical/vector near-match must not
+     * win a quota slot merely because the layer had few candidates.
+     */
+    injectMinEvidence: z<number, number, "defined">;
     injectL1: z<number, number, "defined">;
     injectL2: z<number, number, "defined">;
     injectL3: z<number, number, "defined">;
@@ -75,6 +92,11 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     activeWindowMaxItems: z<number, number, "defined">;
     activeWindowMaxChars: z<number, number, "defined">;
     activeWindowMinImportance: z<number, number, "defined">;
+    /**
+     * Resident memories are a fallback, not a per-turn prefix. Keep them out of
+     * turns where a query channel already produced at least one candidate.
+     */
+    activeWindowFallbackOnly: z<boolean, boolean, "defined">;
     /** Reciprocal-rank-fusion constant; 60 is the standard default. */
     rrfRankConstant: z<number, number, "defined">;
     /** Background extraction at turn end. */
@@ -121,6 +143,7 @@ export type HoloConfig = {
     injectEnabled: boolean;
     injectMaxChars: number;
     injectMinScore: number;
+    injectMinEvidence: number;
     injectL1: number;
     injectL2: number;
     injectL3: number;
@@ -129,6 +152,7 @@ export type HoloConfig = {
     activeWindowMaxItems: number;
     activeWindowMaxChars: number;
     activeWindowMinImportance: number;
+    activeWindowFallbackOnly: boolean;
     rrfRankConstant: number;
     extractEnabled: boolean;
     extractProvider: string;
