@@ -3,6 +3,40 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.5.2] - 2026-11-19
+
+**主题：聊天工作步骤里的召回块。**
+
+### Added
+
+- **聊天工作步骤召回块**：
+  - 在聊天「已完成」工作步骤内插入可折叠行：
+    `长期记忆自动召回 | holo-memory · N 字符`；
+  - 展开显示 query、字符数、L1/L2/L3 数量、selected id、channels、score；
+  - 只读 `/holo-memory/injections` 审计，不修改消息数据；
+  - MutationObserver 跟随新一轮工作步骤重渲染。
+- **轨迹召回折叠行**（0.5.1 基础上继续保留）：
+  - 当前 DSH 轨迹面板没有 per-record slot，使用只读 DOM 装饰器展示完整召回正文。
+
+### Fixed
+
+- 聊天里 context 节点不会被原生 Work Steps 列表渲染的问题；
+- 召回数据只存在于轨迹、聊天工作步骤看不到摘要的问题。
+
+### Verification
+
+```text
+真实测试 profile 聊天页：
+.hm-workstep-recall        1
+summary                    长期记忆自动召回 | holo-memory · 4869 字符
+.hm-workstep-recall-body   1
+```
+
+### Changed
+
+- 版本 `0.5.1` → `0.5.2`。
+- 需要重启 DSH 加载新的 client bundle。
+
 ## [0.5.1] - 2026-11-19
 
 **主题：修复工作步骤里的召回可视化。**

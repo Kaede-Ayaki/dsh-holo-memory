@@ -1,7 +1,7 @@
 # dsh-holo-memory
 
 > GitHub: <https://github.com/Kaede-Ayaki/dsh-holo-memory>  
-> 版本：`0.5.1`（工作步骤召回可视化修复 / 神经元联想索引） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
+> 版本：`0.5.2`（聊天工作步骤召回块 / 轨迹召回折叠行 / 神经元联想索引） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
 
 三层全息记忆插件，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）补上跨会话长期记忆：
 
