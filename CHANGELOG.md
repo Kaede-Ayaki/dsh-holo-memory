@@ -3,6 +3,32 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.5.1] - 2026-11-19
+
+**主题：修复工作步骤里的召回可视化。**
+
+### Fixed
+
+- **context slot 覆盖注册失败**：
+  - 原生 `conversation.chat.node` 的 `context` 已占用 `priority: 0`；
+  - 替换 renderer 现在使用 `priority: -1`，按 slot 的“低优先级先渲染”规则 shadow；
+  - 注册成功后才设置 `installed = true`，失败时保留原生 renderer 并允许订阅重试；
+  - 不再出现 `keyed slot "conversation.chat.node" already has an entry for key "context"`。
+- **DSH 0.2.x 轨迹面板兼容**：
+  - 当前版本的 context 消息渲染在「轨迹」工作步骤中，该面板没有 per-record 扩展 slot；
+  - 增加只读 DOM 装饰器：识别 `[长期记忆自动召回 | holo-memory]` 原生行，替换为可折叠的
+    「长期记忆自动召回 | holo-memory · N 字符」details 行；
+  - 不修改消息数据、不影响模型上下文、不删除原始文本。
+- **验证**：
+  - 真实测试 profile「轨迹」页出现可折叠召回行；
+  - `details`、`summary`、body 均存在；
+  - 页面不再产生 slot 冲突错误。
+
+### Changed
+
+- 包版本 `0.5.0` → `0.5.1`。
+- 需要通过完整重启/刷新加载新的 client bundle。
+
 ## [0.5.0] - 2026-11-19
 
 **主题：神经元联想索引、P1 联动、控制台子页面与并发写修复。**
