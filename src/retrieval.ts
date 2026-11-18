@@ -309,7 +309,16 @@ export async function recall(
       .sort((a, b) => b.rrf - a.rrf || b.lexical - a.lexical || a.record.id.localeCompare(b.record.id));
 
     const quota = options.counts[layer] ?? 0;
-    items.push(...ranked.slice(0, Math.max(0, quota)));
+    if (quota <= 0) continue;
+    let selected = ranked.slice(0, Math.max(0, quota));
+    // RRF can rank an associative candidate just below a tight per-layer
+    // quota. Reserve one slot per layer for the strongest neuron candidate so
+    // the fourth channel actually reaches the injected context.
+    if (!selected.some((item) => (item.neuron ?? 0) > 0)) {
+      const associative = ranked.find((item) => (item.neuron ?? 0) > 0);
+      if (associative) selected = [associative, ...selected.slice(0, Math.max(0, quota - 1))];
+    }
+    items.push(...selected);
   }
 
   const active = activeWindowCandidates(
@@ -354,10 +363,26 @@ export async function recall(
   const keep = new Set<string>();
   const sectionCost = sections.reduce((sum, section) => sum + section.title.length + 1, 0);
   let remaining = budget - sectionCost;
-  // Active-window rows get first claim on the budget after section headers;
-  // otherwise a long query result can crowd out the resident constraints.
+  // Preserve one neuron candidate per layer before active-window rows: the
+  // fourth channel must be observable, not silently crowded out by resident
+  // constraints when the budget is tight.
+  const neuronPriority = items
+    .filter((item) => (item.neuron ?? 0) > 0 && !item.active)
+    .sort((a, b) => b.score - a.score || b.rrf - a.rrf);
+  const neuronLayers = new Set<string>();
+  for (const item of neuronPriority) {
+    if (neuronLayers.has(item.layer)) continue;
+    const cost = lineFor(item).length + 1;
+    if (cost <= remaining) {
+      keep.add(item.record.id);
+      remaining -= cost;
+      neuronLayers.add(item.layer);
+    }
+  }
+  // Active-window rows claim the remaining budget after neuron reservations.
   const activeOrder = [...active].sort((a, b) => b.score - a.score || b.rrf - a.rrf);
   for (const item of activeOrder) {
+    if (keep.has(item.record.id)) continue;
     const cost = lineFor(item).length + 1;
     if (cost <= remaining) {
       keep.add(item.record.id);
@@ -365,7 +390,7 @@ export async function recall(
     }
   }
   for (const item of order) {
-    if (item.active) continue;
+    if (item.active || keep.has(item.record.id)) continue;
     const cost = lineFor(item).length + 1;
     if (cost <= remaining) {
       keep.add(item.record.id);

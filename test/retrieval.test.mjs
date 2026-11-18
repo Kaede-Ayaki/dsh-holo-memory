@@ -120,11 +120,11 @@ test('neuron candidates join RRF even when lexical relevance is below threshold'
     currentSessionId: 's-new',
     maxChars: 1200,
     minScore: 0.12,
-    counts: { l1: 2, l2: 5, l3: 3 },
+    counts: { l1: 2, l2: 1, l3: 3 },
     neuronHits: [{ id: record.id, activation: 0.8 }],
   });
   assert.ok(result, 'neuron channel can open the gate');
-  assert.ok(result.items.some((item) => item.record.id === record.id));
+  assert.ok(result.items.some((item) => item.record.id === record.id), 'neuron candidate reserves a slot under quota=1');
   assert.ok(result.items.some((item) => item.channels.includes('neuron')));
   await fs.rm(dir, { recursive: true, force: true });
 });
