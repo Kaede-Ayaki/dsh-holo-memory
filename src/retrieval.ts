@@ -23,6 +23,8 @@ export interface RecallItem {
   lexical: number;
   ngram: number;
   vector: number;
+  /** Optional associative activation from dsh-neuron-memory. */
+  neuron?: number;
   /** Raw RRF score before per-layer normalization. */
   rrf: number;
   channels: string[];
@@ -118,6 +120,8 @@ export interface RecallOptions {
   maxChars: number;
   minScore: number;
   counts: { l1: number; l2: number; l3: number };
+  /** Associative candidates from dsh-neuron-memory: only holo ids, no text. */
+  neuronHits?: ReadonlyArray<{ id: string; activation: number }>;
   signal?: AbortSignal;
 }
 
@@ -127,6 +131,7 @@ interface LayerCandidate {
   ngram: number;
   vector: number;
   relevance: number;
+  neuron: number;
 }
 
 /** Rank ids in one channel; equal content hashes share a rank (RRF tie rule). */
@@ -223,6 +228,9 @@ export async function recall(
   const useVectors = embedder.enabled && queryVector !== null;
   const items: RecallItem[] = [];
   const rrfConstant = Math.max(1, Math.round(config.rrfRankConstant || 60));
+  const neuronById = new Map(
+    (options.neuronHits ?? []).map((hit) => [hit.id, Math.max(0, Math.min(1, hit.activation))]),
+  );
 
   for (const layer of LAYER_ORDER) {
     const candidates = store.visible(layer, options.projectKey).filter((record) => {
@@ -245,12 +253,14 @@ export async function recall(
         useVectors && Array.isArray(record.embedding) && record.embedding.length > 0 && record.embeddingModel === config.embeddingModel;
       const rawVec = hasVector && queryVector !== null ? Math.max(0, cosine(queryVector, record.embedding!)) : 0;
       const vector = hasVector ? Math.max(0, (rawVec - baseline) / span) : 0;
+      const neuron = neuronById.get(record.id) ?? 0;
       // L1 summaries are keyword-anchored: without direct term overlap a
-      // semantically close summary is usually the wrong conversation.
-      if (layer === 'l1' && lexical < 0.2) continue;
+      // semantically close summary is usually the wrong conversation. A
+      // neuron hit is an explicit associative signal, so it may bypass that.
+      if (layer === 'l1' && lexical < 0.2 && neuron <= 0) continue;
       const relevance = Math.max(lexical, ngram, vector);
-      if (relevance < options.minScore) continue;
-      scored.push({ record, lexical, ngram, vector, relevance });
+      if (neuron <= 0 && relevance < options.minScore) continue;
+      scored.push({ record, lexical, ngram, vector, relevance, neuron });
     }
     if (scored.length === 0) continue;
 
@@ -272,6 +282,11 @@ export async function recall(
       rrf.set(id, (rrf.get(id) ?? 0) + 1 / (rrfConstant + rank));
       channels.set(id, [...(channels.get(id) ?? []), 'vector']);
     }
+    const neuronRanks = channelRanks(scored, (candidate) => candidate.neuron);
+    for (const [id, rank] of neuronRanks) {
+      rrf.set(id, (rrf.get(id) ?? 0) + 1 / (rrfConstant + rank));
+      channels.set(id, [...(channels.get(id) ?? []), 'neuron']);
+    }
 
     const maxRrf = Math.max(...rrf.values(), 0);
     const ranked = scored
@@ -284,6 +299,7 @@ export async function recall(
           lexical: candidate.lexical,
           ngram: candidate.ngram,
           vector: candidate.vector,
+          neuron: candidate.neuron,
           rrf: raw,
           channels: channels.get(candidate.record.id) ?? [],
           band: 'background',

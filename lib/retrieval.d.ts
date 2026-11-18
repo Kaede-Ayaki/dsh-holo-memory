@@ -16,6 +16,8 @@ export interface RecallItem {
     lexical: number;
     ngram: number;
     vector: number;
+    /** Optional associative activation from dsh-neuron-memory. */
+    neuron?: number;
     /** Raw RRF score before per-layer normalization. */
     rrf: number;
     channels: string[];
@@ -39,6 +41,11 @@ export interface RecallOptions {
         l2: number;
         l3: number;
     };
+    /** Associative candidates from dsh-neuron-memory: only holo ids, no text. */
+    neuronHits?: ReadonlyArray<{
+        id: string;
+        activation: number;
+    }>;
     signal?: AbortSignal;
 }
 /**
