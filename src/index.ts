@@ -94,6 +94,16 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   const embedder = new EmbeddingClient(config);
   const abort = new AbortController();
 
+  // Read-only service consumed by dsh-neuron-memory (and future indexes).
+  // Canonical text remains here; the neuron plugin only stores refs/labels.
+  if (typeof ctx.provide === 'function') {
+    ctx.provide('holoMemory', {
+      listRecords: () => [...store.list('l1'), ...store.list('l2'), ...store.list('l3')],
+      getRecord: (id: string) => store.find(id),
+      stats: () => store.stats(),
+    });
+  }
+
   // Daily L1 archival / maintenance timer (catch-up run shortly after startup
   // when the last recorded run is older than 20h).
   ctx.effect(() => startMaintenanceSchedule(store, config, logger));
@@ -113,6 +123,20 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     embeddingDrain ??= drainEmbeddings().finally(() => {
       embeddingDrain = undefined;
     });
+  };
+
+  const syncNeuron = (): void => {
+    try {
+      const neuron = ctx.get?.('neuronMemory') as { sync?: () => Promise<unknown> | unknown } | undefined;
+      if (neuron?.sync) void neuron.sync();
+    } catch {
+      // The associative index is optional; never break canonical memory.
+    }
+  };
+
+  const onRecords = (records: AnyRecord[]): void => {
+    queueEmbedding(records);
+    syncNeuron();
   };
 
   const drainEmbeddings = async (): Promise<void> => {
@@ -163,7 +187,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
               config,
               llm: ctx.get?.('llm') as LlmLike | undefined,
               route: provider && model ? { provider, model } : undefined,
-              onRecords: queueEmbedding,
+              onRecords,
               signal: abort.signal,
               logger,
             },
@@ -249,6 +273,14 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
             if (config.debug) {
               logger.info?.(`[holo-memory] feedback touched=${feedback.touched} cited=${feedback.cited}`);
             }
+            try {
+              const neuron = ctx.get?.('neuronMemory') as
+                | { feedback?: (event: { injectedIds: string[]; citedIds: string[] }) => void }
+                | undefined;
+              neuron?.feedback?.({ injectedIds: buffer.injectedIds, citedIds: feedback.citedIds });
+            } catch {
+              // Associative feedback must never break canonical memory.
+            }
           } catch (error) {
             if (config.debug) {
               logger.warn(`[holo-memory] feedback failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -315,6 +347,23 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     const cwd: string | undefined = agent?.session?.header?.cwd;
     const project = projectIdFor(cwd);
     const query = textOfMessage(promptMessage);
+    let neuronHits: Array<{ id: string; activation: number }> | undefined;
+    try {
+      const neuron = ctx.get?.('neuronMemory') as
+        | { expand?: (request: unknown) => Promise<{ hits?: Array<{ holoId?: string; activation?: number }> }> }
+        | undefined;
+      if (neuron?.expand && query.trim().length >= 4) {
+        const expansion = await neuron.expand({ query, topK: 8 });
+        neuronHits = (expansion?.hits ?? [])
+          .filter((hit) => typeof hit.holoId === 'string' && typeof hit.activation === 'number')
+          .map((hit) => ({ id: hit.holoId as string, activation: hit.activation as number }))
+          .slice(0, 8);
+      }
+    } catch (error) {
+      if (config.debug) {
+        logger.warn(`[holo-memory] neuron expansion skipped: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     try {
       const result =
         (await recall(store, embedder, config, query, {
@@ -323,6 +372,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
           maxChars: config.injectMaxChars,
           minScore: config.injectMinScore,
           counts: { l1: config.injectL1, l2: config.injectL2, l3: config.injectL3 },
+          neuronHits,
           signal,
         })) ??
         (query.trim().length < 12 ? await recentFallback(store, project.key, config.injectMaxChars) : null);
@@ -423,7 +473,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     store,
     embedder,
     config,
-    onRecords: queueEmbedding,
+    onRecords,
     logger,
   });
 
