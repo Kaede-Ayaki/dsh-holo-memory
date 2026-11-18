@@ -82,8 +82,8 @@ test('recall returns relevant L1/L2/L3 under the budget', async () => {
   assert.match(result.text, /holo-memory/);
   assert.ok(result.text.length <= 1200 + 20);
   assert.ok(result.items.some((item) => item.channels.includes('lexical')), 'lexical channel contributes');
-  assert.ok(result.activeCount >= 1, 'active window adds a resident memory');
-  assert.match(result.text, /主动携带/);
+  assert.equal(result.activeCount, 0, 'active window is a fallback, not a prefix');
+  assert.doesNotMatch(result.text, /主动携带/);
   assert.match(result.text, /\(id:[0-9a-f]{8}\)/);
   await fs.rm(dir, { recursive: true, force: true });
 });
@@ -92,6 +92,67 @@ test('ngram coverage is high for the matching document and low otherwise', () =>
   assert.ok(ngramCoverage('部署 Windows 测试', '这个项目的部署目标是 Windows，测试命令是 pnpm test。') > 0.5);
   assert.ok(ngramCoverage('明天天气', '这个项目的部署目标是 Windows，测试命令是 pnpm test。') < 0.2);
 });
+
+test('unrelated policy facts do not ride along with a task query, but still win their own query', async () => {
+  const { dir, store, config, project } = await seed();
+  const now = Date.now();
+  const base = {
+    projectKey: project.key,
+    projectLabel: 'demo',
+    scope: 'project',
+    createdAt: now,
+    updatedAt: now,
+    embeddingModel: undefined,
+    embedding: undefined,
+  };
+  const task = store.insert({
+    ...base,
+    id: newId('l1'),
+    layer: 'l1',
+    importance: 5,
+    hash: contentHash('ppt-task'),
+    sessionId: 's-ppt',
+    turn: 1,
+    cwd: 'D:\\work\\demo',
+    summary: '重做介绍 PPT，配音示例先把文本和生成脚本做好。',
+    topics: ['PPT', '配音', 'TTS'],
+    intent: '重做介绍材料',
+    outcome: '已给出 PPT 与音频示例',
+  });
+  const policy = store.insert({
+    ...base,
+    id: newId('l2'),
+    layer: 'l2',
+    importance: 10,
+    hash: contentHash('prompt-fence'),
+    text: '交付提示词时必须把成品放进可复制围栏代码块。',
+    kind: 'preference',
+    tags: ['提示词', '围栏', '交付格式'],
+    confidence: 0.95,
+  });
+  const embedder = new EmbeddingClient(config);
+  const taskResult = await recall(store, embedder, config, '重做介绍ppt，给我几段配音示例。', {
+    projectKey: project.key,
+    maxChars: 1200,
+    minScore: 0.12,
+    counts: { l1: 2, l2: 5, l3: 3 },
+  });
+  assert.ok(taskResult);
+  assert.ok(taskResult.items.some((item) => item.record.id === task.id), 'task turn is retrieved');
+  assert.ok(!taskResult.items.some((item) => item.record.id === policy.id), 'prompt policy is not a task hit');
+  assert.equal(taskResult.activeCount, 0);
+
+  const policyResult = await recall(store, embedder, config, '提示词交付时必须带可复制围栏吗？', {
+    projectKey: project.key,
+    maxChars: 1200,
+    minScore: 0.12,
+    counts: { l1: 2, l2: 5, l3: 3 },
+  });
+  assert.ok(policyResult);
+  assert.ok(policyResult.items.some((item) => item.record.id === policy.id), 'explicit policy query still retrieves it');
+  await fs.rm(dir, { recursive: true, force: true });
+});
+
 
 test('citation feedback records access and only counts a real suffix citation', async () => {
   const { dir, store, project } = await seed();

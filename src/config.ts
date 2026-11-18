@@ -11,6 +11,12 @@ export const Config = z.object({
   injectEnabled: z.boolean().default(true),
   injectMaxChars: z.number().default(1400),
   injectMinScore: z.number().default(0.12),
+  /**
+   * Per-record evidence floor after channel fusion. This is deliberately
+   * stricter than injectMinScore: a weak lexical/vector near-match must not
+   * win a quota slot merely because the layer had few candidates.
+   */
+  injectMinEvidence: z.number().default(0.44),
   injectL1: z.number().default(2),
   injectL2: z.number().default(5),
   injectL3: z.number().default(3),
@@ -20,6 +26,11 @@ export const Config = z.object({
   activeWindowMaxItems: z.number().default(2),
   activeWindowMaxChars: z.number().default(420),
   activeWindowMinImportance: z.number().default(7),
+  /**
+   * Resident memories are a fallback, not a per-turn prefix. Keep them out of
+   * turns where a query channel already produced at least one candidate.
+   */
+  activeWindowFallbackOnly: z.boolean().default(true),
   /** Reciprocal-rank-fusion constant; 60 is the standard default. */
   rrfRankConstant: z.number().default(60),
   /** Background extraction at turn end. */
@@ -67,6 +78,7 @@ export type HoloConfig = {
   injectEnabled: boolean;
   injectMaxChars: number;
   injectMinScore: number;
+  injectMinEvidence: number;
   injectL1: number;
   injectL2: number;
   injectL3: number;
@@ -75,6 +87,7 @@ export type HoloConfig = {
   activeWindowMaxItems: number;
   activeWindowMaxChars: number;
   activeWindowMinImportance: number;
+  activeWindowFallbackOnly: boolean;
   rrfRankConstant: number;
   extractEnabled: boolean;
   extractProvider: string;
@@ -111,6 +124,7 @@ export const DEFAULT_CONFIG: HoloConfig = {
   injectEnabled: true,
   injectMaxChars: 1400,
   injectMinScore: 0.12,
+  injectMinEvidence: 0.44,
   injectL1: 2,
   injectL2: 5,
   injectL3: 3,
@@ -119,6 +133,7 @@ export const DEFAULT_CONFIG: HoloConfig = {
   activeWindowMaxItems: 2,
   activeWindowMaxChars: 420,
   activeWindowMinImportance: 7,
+  activeWindowFallbackOnly: true,
   rrfRankConstant: 60,
   extractEnabled: true,
   extractProvider: '',

@@ -1,7 +1,7 @@
 # dsh-holo-memory
 
 > GitHub: <https://github.com/Kaede-Ayaki/dsh-holo-memory>  
-> 版本：`0.5.2`（聊天工作步骤召回块 / 轨迹召回折叠行 / 神经元联想索引） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
+> 版本：`0.5.3`（召回相关性闸门 / 聊天工作步骤召回块 / 神经元联想索引） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
 
 三层全息记忆插件，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）补上跨会话长期记忆：
 
@@ -17,7 +17,7 @@
 4. **可选的神经元联想通道**：安装 `neuron-memory/` 伴侣插件后，用 `memory ↔ entity` 双部图扩散出候选 holo id，作为第四通道进入 RRF；neuron 只提供 id，正文仍由 holo 读取。
 
 RRF 之后还会：
-- 用 **Active Window** 主动补 1–2 条高重要度 L2 / L3（不依赖当前问题，预算单独保留）；
+- 用 **Active Window** 作为兜底：只有当前问题完全没有任何查询命中时，才补 1–2 条高重要度 L2 / L3；有命中时不再附加常驻规则；
 - 按 `IMMEDIATE / WORKING / BACKGROUND` 分配字符预算；
 - 每条注入行带 `(id:xxxxxxxx)`；回答里引用过的 id 会在下一轮回写 `citedCount`，获得轻微加权；
 - 每条注入行带 **证据等级**：`·源` = 有逐字原文片段，`·指针` = 只有 session/turn 指针，`·手写` = 手动写入，无标记 = 仅摘要；
@@ -145,13 +145,15 @@ API Key 推荐放在单独文件（首行），而不是写进 YAML；插件会�
 | `maxL1/maxL2/maxL3` | 2000/3000/300 | 各层记录上限，超出按重要度/时间淘汰 |
 | `injectEnabled` | `true` | 每轮是否自动召回注入 |
 | `injectMaxChars` | `1400` | 注入块字符预算 |
-| `injectMinScore` | `0.12` | 召回阈值，低于不注入 |
-| `injectL1/L2/L3` | 2/5/3 | 每层最多注入条数 |
+| `injectMinScore` | `0.12` | 候选进入 RRF 的弱阈值；低于不参与 |
+| `injectMinEvidence` | `0.44` | 最终逐条证据下限；L1 更高（0.50），无标签命中的 L2 事实/偏好更高（0.55） |
+| `injectL1/L2/L3` | 2/5/3 | 每层最多注入条数（是上限，不再强填） |
 | `injectSubagents` | `false` | 是否为子代理会话注入 |
-| `activeWindowEnabled` | `true` | 是否主动补位高重要度 L2/L3 |
-| `activeWindowMaxItems` | `2` | 主动补位最多几条 |
-| `activeWindowMaxChars` | `420` | 主动补位的字符上限（优先保留） |
-| `activeWindowMinImportance` | `7` | 进入主动补位的最低重要度（≥8 的事实不受 kind 限制） |
+| `activeWindowEnabled` | `true` | 是否允许兜底补位高重要度 L2/L3 |
+| `activeWindowFallbackOnly` | `true` | 有查询命中时不补位；设为 false 才恢复旧的全量常驻行为 |
+| `activeWindowMaxItems` | `2` | 兜底补位最多几条 |
+| `activeWindowMaxChars` | `420` | 兜底补位的字符上限 |
+| `activeWindowMinImportance` | `7` | 进入兜底补位的最低重要度（≥8 的事实不受 kind 限制） |
 | `rrfRankConstant` | `60` | RRF 的 k 值 |
 | `extractEnabled` | `true` | 回合结束是否蒸馏 |
 | `extractProvider/extractModel` | `''` | 蒸馏用模型；留空跟随当前会话的 provider/model |
@@ -274,7 +276,7 @@ $DSH_HOME/holo-memory/
 1. **记录**：监听 `session/event` 的 `turn/start`、`user/message`、`assistant/message`、`turn/end`，把当前回合的对话文本收集到内存缓冲区（有长度上限）。
 2. **蒸馏**：`turn/end` 后异步调用一次模型（复用当前会话的 provider/model，或配置覆盖），要求输出严格 JSON：`l1`、`l2[]`、`l3[]`。解析失败/没有模型时退化为确定性的 L1 摘要，所以“记录对话”永远不会因为模型不可用而丢失。
 3. **合并**：L2 做近似去重（同 scope 内相近事实更新而非追加）；L3 按 id/标题更新已有胶囊或新建；所有写入带 `source`（session/turn/seq + 逐字片段 + 哈希）和 `revision`，更新时保留旧快照。
-4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量 / neuron 四通道排名，RRF 融合；命中后额外补 1–2 条高重要度 resident 记忆（Active Window），并按字符预算和 band 裁剪。若 query 完全没有命中，只要 Active Window 有高重要度记忆，也会注入这些背景；两者都空时不产生 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
+4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量 / neuron 四通道排名，RRF 融合；每条候选先过 `injectMinEvidence` 与分层证据下限，L2 事实只有在标签命中或证据足够强时才进入。Active Window 只在 query 完全没有命中时兜底，不再作为每轮前缀。若 query 完全没有命中且 Active Window 有高重要度记忆，才会注入这些背景；两者都空时不产生 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
 5. **注入**：作为一条 user-role snapshot 消息插入本步，带 `source.kind = "holo-memory"`，并在后续回合作为普通历史保留；不会被再次计入 L1 捕获。每行带证据标记，需要核对时用 `memory_open`。
 
 ---

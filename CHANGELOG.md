@@ -3,6 +3,53 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.5.3] - 2026-11-19
+
+**主题：召回相关性闸门。修掉“每轮塞一堆高重要度但和本轮任务无关的记忆”。**
+
+### Root Cause
+
+- Active Window 无条件把高重要度 L2/L3 追加到每轮，和 query 无关；
+- RRF 分数按层内最大值归一化，层里只有弱匹配时，弱匹配也会显示成 `1.000`；
+- 配额 `2/5/3` 是“必须填满”的语义，5,000 字符预算进一步放大了噪声；
+- L2 偏好/规则/事实只靠词面或向量近邻，缺少 tag/证据闸门；泛词（任务、目标、内容、风格）会把无关规则顶上来；
+- L1 只做 `lexical < 0.2` 过滤，宽问题仍能带进不相关 L1。
+
+### Added
+
+- `injectMinEvidence`（默认 `0.44`）：候选进入 RRF 前必须达到的逐条证据下限；
+- 分层证据下限：
+  - L1：`0.50`（摘要必须有直接词面/向量证据）；
+  - L2 的 decision / task / entity：`0.50`；
+  - L2 的 fact / preference / correction：`0.55`，除非 query 里出现了该记录的 curated tag（此时回落到 `injectMinEvidence`）；
+  - L3：`injectMinEvidence`。
+- `activeWindowFallbackOnly`（默认 `true`）：有任意 query 命中时不再追加 Active Window；只有完全无命中时才用它兜底。设为 `false` 可恢复旧行为。
+- 新增回归测试：任务 query 不再携带无关提示词偏好；显式提示词 query 仍能召回；Active Window 只在无命中时补位。
+
+### Changed
+
+- 配额现在是上限，不再“为了填满”注入弱匹配；
+- 版本 `0.5.2` → `0.5.3`。
+
+### Evidence
+
+同一套生产库、同一个问题：
+
+```text
+修复前：907/767/1ec/62f/... + 3 条 resident，4,921 字符
+修复后：仅 8acbbcab、5106ddbd 两条当前任务 L1，810 字符
+```
+
+显式问“提示词交付必须带围栏吗？”仍召回 62f / 1ec / ddf 等；问 ComfyUI 确认仍召回 91ec；项目状态仍召回 8d7 / 097。
+
+### Verification
+
+```text
+holo: 35/35 PASS
+```
+
+需要重启 Host 才加载新 `lib`。
+
 ## [0.5.2] - 2026-11-19
 
 **主题：聊天工作步骤里的召回块。**
