@@ -3,6 +3,69 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.5.0] - 2026-11-19
+
+**主题：神经元联想索引、P1 联动、控制台子页面与并发写修复。**
+
+### Added
+
+- **P1 神经元联动**：
+  - holo 暴露只读 `holoMemory` 服务；
+  - `agent/pre-step` 调 `neuronMemory.expand()`，把候选 holo id 作为
+    **第四 RRF 通道**；
+  - neuron 只提供 id/activation，不复制正文、不自己注入；
+  - holo 仍是唯一权威源。
+- **neuron 候选保护**：
+  - 每个 layer 保留一个 neuron 候选名额；
+  - neuron 候选在字符预算中优先于 Active Window；
+  - 修复了“候选已命中但在 quota/预算处被裁掉”的触发丢失。
+- **引用反馈**：
+  - 被引用记录 `citedCount++`；
+  - neuron 被引用边加强、未引用边轻微衰减；
+  - neuron sync 15 秒节流。
+- **控制台「神经元记忆」子页面**：
+  - 记忆总览 / 神经元记忆两个视图；
+  - 节点/边/平均度数/最大度数、L1/L2/L3 分布、Top 实体、sample memory；
+  - 新增 `GET /holo-memory/neuron`；未安装 neuron 时显示“未检测到”。
+- **同仓库伴侣插件 `neuron-memory/`（dsh-neuron-memory 0.1.0）**：
+  - `memory ↔ entity` 双部图；
+  - 扩散激活 `depth 2` / `damping 0.62` / `minSignal 0.025` / `topK 8`；
+  - 增量 sync、度数剪枝、级联删除、引用反馈；
+  - `neuron_ingest` / `neuron_expand` / `neuron_stats`；
+  - `neuronMemory` 服务。
+
+### Fixed
+
+- **neuron graph 并发写导致 host 崩溃**：
+  - 崩溃栈：`ENOENT: rename 'graph.json.tmp' -> 'graph.json'`；
+  - 根因：固定 `.tmp` 文件名 + 并发 sync；
+  - 修复：唯一临时文件名、串行 `writeChain`、mutation 锁、失败清理；
+  - holo 侧对可选 `sync/feedback` promise 加 catch，neuron 异常不再拖垮 host。
+- **neuron 触发率**：从 80% 提升到 9/10（真实 GUI 复测；剩余 1 次为模型 180s 超时）。
+- **旧 L1/L2 长文本挤占预算**：neuron 候选优先保留，避免被 Active Window 挤掉。
+
+### Changed
+
+- 包版本 `0.4.1` → `0.5.0`。
+- README：四通道召回、神经元子页面、伴侣插件、测试 34 + 7。
+- 推荐生产配置 `injectMaxChars: 5000`；实际注入上限以 profile 配置为准。
+- neuron 图默认上限：`maxNodes 5000`、`maxEdges 30000`、`maxDegree 12`。
+
+### Tests
+
+```text
+dsh-holo-memory: 34/34 PASS
+dsh-neuron-memory: 7/7 PASS
+```
+
+### Upgrade notes
+
+- **必须重启 DSH**，新 holo 代码与可选 neuron 插件只在启动时加载。
+- 安装 neuron 伴侣插件后，执行一次 `neuron_ingest(rebuild=true)`（或让 holo 自动 sync）建图。
+- 未安装 neuron 时，holo 四通道自动退化为三通道，功能不受影响。
+- 生产 profile 的 neuron 图可预建；删除记录会级联清理节点/边。
+- 回滚：移除 profile 中 `dsh-neuron-memory` dependency/bundle 并重启；holo 原有三通道仍可工作。
+
 ## [0.4.1] - 2026-11-06
 
 **主题：每日维护与 L1 归档。**

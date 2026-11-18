@@ -1,0 +1,5 @@
+# P0 associative-index plugin. It reads holo-memory records read-only and
+# never writes canonical memory. Tools are explicit; no automatic injection.
+- insert:
+    - id: neuron-memory
+      name: dsh-neuron-memory

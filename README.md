@@ -1,7 +1,7 @@
 # dsh-holo-memory
 
 > GitHub: <https://github.com/Kaede-Ayaki/dsh-holo-memory>  
-> 版本：`0.4.1`（每日维护 / L1 归档） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
+> 版本：`0.5.0`（神经元联想索引 / P1 联动 / 控制台子页面 / 并发写修复） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
 
 三层全息记忆插件，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）补上跨会话长期记忆：
 
@@ -9,11 +9,12 @@
 - **L2 事实层**：从对话里抽出原子事实（偏好、决策、约定、关键实体、待办、纠正），带 scope / tags / confidence / 出处。
 - **L3 全息记忆层**：把多轮对话压缩成“部分包含整体”的整体胶囊（用户画像、项目状态、长期线索、未闭环事项）。一条 L3 就能让新会话回忆起整段关系的轮廓。
 
-每个新的用户回合，插件会按当前问题从 L1/L2/L3 混合召回最相关的记忆，压缩进一个受预算约束的 `holo-memory` 上下文块，自动注入到该回合。检索使用三条独立排名通道做 RRF 融合：
+每个新的用户回合，插件会按当前问题从 L1/L2/L3 混合召回最相关的记忆，压缩进一个受预算约束的 `holo-memory` 上下文块，自动注入到该回合。检索使用四条独立排名通道做 RRF 融合：
 
 1. **BM25 + 中文 bigram**：零依赖、永远可用；
 2. **字符 2/3-gram**：中文子串、错字、中英混合时补位；
-3. **可选的向量模型**：任何 OpenAI 兼容的 `/embeddings` 端点（OpenAI、Ollama、火山方舟等），开启后按校准后的余弦排名参与 RRF。
+3. **可选的向量模型**：任何 OpenAI 兼容的 `/embeddings` 端点（OpenAI、Ollama、火山方舟等），开启后按校准后的余弦排名参与 RRF；
+4. **可选的神经元联想通道**：安装 `neuron-memory/` 伴侣插件后，用 `memory ↔ entity` 双部图扩散出候选 holo id，作为第四通道进入 RRF；neuron 只提供 id，正文仍由 holo 读取。
 
 RRF 之后还会：
 - 用 **Active Window** 主动补 1–2 条高重要度 L2 / L3（不依赖当前问题，预算单独保留）；
@@ -97,6 +98,25 @@ dsh plugin --profile web add link:/absolute/path/to/dsh-holo-memory
 > client 半是这次新增的；如果侧边栏暂时看不到「全息记忆」或工作步骤里没有召回行，**刷新一次页面**；仍没有就重启 dsh。
 
 ---
+
+## 神经元记忆（0.5.0 伴侣插件）
+
+`neuron-memory/` 是同一仓库里的可选伴侣插件 `dsh-neuron-memory`：
+
+- 双部图：`memory` 节点 ↔ `entity` 节点，记忆之间不直接连边；
+- 只读 holo 记录，不复制 canonical 正文；
+- 扩散激活：`depth 2` / `damping 0.62` / `minSignal 0.025` / `topK 8`；
+- 增量 sync、度数剪枝、引用反馈；
+- 工具：`neuron_ingest` / `neuron_expand` / `neuron_stats`；
+- 服务：`neuronMemory`。
+
+全息控制台新增 **神经元记忆** 子页面：
+
+- memory/entity/边数量、平均度数、最大度数；
+- L1/L2/L3 分布；
+- Top 实体与 sample memory。
+
+安装与边界见 [`neuron-memory/README.md`](neuron-memory/README.md)。neuron 不自己注入上下文；holo 仍是唯一权威源。
 
 ## 配置
 
@@ -254,7 +274,7 @@ $DSH_HOME/holo-memory/
 1. **记录**：监听 `session/event` 的 `turn/start`、`user/message`、`assistant/message`、`turn/end`，把当前回合的对话文本收集到内存缓冲区（有长度上限）。
 2. **蒸馏**：`turn/end` 后异步调用一次模型（复用当前会话的 provider/model，或配置覆盖），要求输出严格 JSON：`l1`、`l2[]`、`l3[]`。解析失败/没有模型时退化为确定性的 L1 摘要，所以“记录对话”永远不会因为模型不可用而丢失。
 3. **合并**：L2 做近似去重（同 scope 内相近事实更新而非追加）；L3 按 id/标题更新已有胶囊或新建；所有写入带 `source`（session/turn/seq + 逐字片段 + 哈希）和 `revision`，更新时保留旧快照。
-4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量三通道排名，RRF 融合；命中后额外补 1–2 条高重要度 resident 记忆（Active Window），并按字符预算和 band 裁剪。若 query 完全没有命中，只要 Active Window 有高重要度记忆，也会注入这些背景；两者都空时不产生 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
+4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量 / neuron 四通道排名，RRF 融合；命中后额外补 1–2 条高重要度 resident 记忆（Active Window），并按字符预算和 band 裁剪。若 query 完全没有命中，只要 Active Window 有高重要度记忆，也会注入这些背景；两者都空时不产生 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
 5. **注入**：作为一条 user-role snapshot 消息插入本步，带 `source.kind = "holo-memory"`，并在后续回合作为普通历史保留；不会被再次计入 L1 捕获。每行带证据标记，需要核对时用 `memory_open`。
 
 ---
@@ -272,7 +292,7 @@ $DSH_HOME/holo-memory/
 - 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（14 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项；含“不依赖 MCP 服务”“来源链与体检”说明页）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 生成脚本与背景素材：[docs/ppt/](docs/ppt/)
-- 测试：`npm test`（32 项）
+- 测试：`npm test`（holo 34 项；neuron `neuron-memory/npm test` 7 项）
 
 ## License
 
