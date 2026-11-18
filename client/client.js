@@ -172,6 +172,10 @@
           ".hm-native-recall>summary{cursor:pointer;list-style:none;color:var(--dsw-alias-brand-primary,#5b7cfa);font-size:12.5px;line-height:20px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
           ".hm-native-recall>summary::-webkit-details-marker{display:none}",
           ".hm-native-recall-body{margin-top:5px;padding:8px 10px;border:.5px solid var(--dsw-alias-border-l3,#263450);border-radius:8px;background:var(--dsw-alias-bg-layer-2,#0f182b);color:var(--dsw-alias-label-secondary,#a8b4cf);font-size:11px;line-height:17px;white-space:pre-wrap;max-height:280px;overflow:auto}",
+          ".hm-workstep-recall{margin:2px 0 5px}",
+          ".hm-workstep-recall>summary{cursor:pointer;list-style:none;color:var(--dsw-alias-brand-primary,#5b7cfa);font-size:11.5px;line-height:18px;font-weight:550}",
+          ".hm-workstep-recall>summary::-webkit-details-marker{display:none}",
+          ".hm-workstep-recall-body{margin-top:4px;padding:6px 8px;border-left:2px solid rgba(91,124,250,.5);color:var(--dsw-alias-label-tertiary,#8996b3);font-size:10.5px;line-height:16px;white-space:pre-wrap}",
           ".hm-recall-body{margin:4px 0 5px 21px;padding:8px 10px;border-radius:7px;border:.5px solid var(--dsw-alias-border-l3,#263450);background:var(--dsw-alias-markdown-code-block,rgba(255,255,255,.04));color:var(--dsw-alias-label-secondary,#a8b4cf);max-height:220px;overflow:auto}",
           ".hm-recall-query{margin-bottom:4px;font:10px/15px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);color:var(--dsw-alias-label-tertiary,#8996b3);white-space:pre-wrap;word-break:break-word}",
           ".hm-recall-text{margin:0;font:11px/16px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-secondary,#a8b4cf)}",
@@ -524,6 +528,64 @@
           decorate();
           if (typeof ctx.effect === "function") {
             ctx.effect(function () { return function () { observer.disconnect(); }; }, "holo-memory: recall decorator");
+          }
+        }
+
+        function installWorkStepRecall(ctx) {
+          if (typeof document === "undefined" || typeof MutationObserver === "undefined") return;
+          var latest = null;
+          var fetchedAt = 0;
+          var fetching = false;
+          var scheduled = false;
+          var decorate = function () {
+            scheduled = false;
+            if (!latest || Date.now() - fetchedAt > 3000) {
+              if (fetching) return;
+              fetching = true;
+              fetchJson("/holo-memory/injections?limit=5")
+                .then(function (data) {
+                  var events = Array.isArray(data && data.injections) ? data.injections : [];
+                  latest = events.find(function (event) { return event && Array.isArray(event.selected) && event.selected.length > 0; }) || null;
+                  fetchedAt = Date.now();
+                })
+                .catch(function () {})
+                .finally(function () { fetching = false; schedule(); });
+              return;
+            }
+            var contents = document.querySelectorAll("[data-step-process-content]");
+            var target = contents[contents.length - 1];
+            if (!target || target.getAttribute("data-hm-workstep") === "1") return;
+            var event = latest;
+            var details = document.createElement("details");
+            details.className = "hm-workstep-recall";
+            var summary = document.createElement("summary");
+            summary.textContent = "长期记忆自动召回 | holo-memory · " + event.chars + " 字符";
+            var body = document.createElement("div");
+            body.className = "hm-workstep-recall-body";
+            var lines = [
+              "query: " + (event.query || ""),
+              "chars: " + event.chars + " · layers: L1×" + ((event.layers && event.layers.l1) || 0) + " L2×" + ((event.layers && event.layers.l2) || 0) + " L3×" + ((event.layers && event.layers.l3) || 0),
+              "selected:",
+            ];
+            (event.selected || []).forEach(function (item) {
+              lines.push("- " + String(item.id || "").slice(-8) + " · " + item.layer + " · " + ((item.channels || []).join("/") || "unknown") + " · " + item.score);
+            });
+            body.textContent = lines.join("\n");
+            details.appendChild(summary);
+            details.appendChild(body);
+            target.insertBefore(details, target.firstChild);
+            target.setAttribute("data-hm-workstep", "1");
+          };
+          var schedule = function () {
+            if (scheduled) return;
+            scheduled = true;
+            setTimeout(decorate, 60);
+          };
+          var observer = new MutationObserver(schedule);
+          observer.observe(document.body, { childList: true, subtree: true });
+          schedule();
+          if (typeof ctx.effect === "function") {
+            ctx.effect(function () { return function () { observer.disconnect(); }; }, "holo-memory: work-step recall");
           }
         }
 
@@ -1143,6 +1205,7 @@
           ensureStyleSheet();
           installContextStep(ctx);
           installRecallDecorator(ctx);
+          installWorkStepRecall(ctx);
           ctx.slots.inject("main", function () {
             return ctx.slots.register({ name: "main", key: "holo-memory" }, HoloMemoryPane);
           });
