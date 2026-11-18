@@ -10,11 +10,13 @@ function fakeCtx() {
   const registered = [];
   const sections = [];
   const variables = [];
+  const provided = {};
   const ctx = {
     listeners,
     registered,
     sections,
     variables,
+    provided,
     on(event, fn) {
       const list = listeners.get(event) ?? [];
       list.push(fn);
@@ -22,6 +24,10 @@ function fakeCtx() {
     },
     get() {
       return undefined;
+    },
+    provide(name, value) {
+      provided[name] = value;
+      return () => {};
     },
     effect(fn) {
       fn();
@@ -97,12 +103,66 @@ test('apply registers tools, guidance section and lifecycle listeners', async ()
   );
   assert.equal(ctx.sections.length, 1);
   assert.equal(ctx.sections[0].name, 'holo-memory:guidance');
+  assert.ok(ctx.provided.holoMemory, 'provides read-only holoMemory service');
+  assert.equal(typeof ctx.provided.holoMemory.listRecords, 'function');
   const cwdVariable = ctx.variables.find((variable) => variable.name === 'cwd');
   assert.ok(cwdVariable, 'registers a cwd compatibility variable for legacy presets');
   assert.equal(cwdVariable.provider({ agent: { session: { header: { cwd: 'D:\\work\\demo' } } } }), 'D:\\work\\demo');
   for (const event of ['session/event', 'agent/created', 'agent/disposed', 'session/disposed', 'agent/pre-step']) {
     assert.ok((ctx.listeners.get(event) ?? []).length > 0, `${event} listener registered`);
   }
+  await fs.rm(dir, { recursive: true, force: true });
+});
+
+test('holo pre-step consumes neuronMemory.expand as an associative channel', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-neuron-'));
+  const ctx = fakeCtx();
+  apply(ctx, {
+    storageDir: dir,
+    extractMinTurnChars: 1,
+    extractEnabled: true,
+    injectEnabled: true,
+    activeWindowEnabled: false,
+    injectMaxChars: 800,
+  });
+  const session = { id: 's-neuron', header: { cwd: 'D:\\work\\demo', delegationDepth: 0 } };
+  const user = message('user', '记住：这个项目用 pnpm，测试命令是 pnpm test。');
+  const assistant = message('assistant', '好的，已记住。这个项目使用 pnpm，测试命令是 pnpm test。');
+  await emit(ctx, 'session/event', session, { type: 'turn/start', data: { turn: 1 } });
+  await emit(ctx, 'session/event', session, { type: 'user/message', data: user });
+  await emit(ctx, 'session/event', session, { type: 'assistant/message', data: { message: assistant } });
+  await emit(ctx, 'session/event', session, { type: 'turn/end', data: { turn: 1, reason: { kind: 'complete' } } });
+  const l1 = await waitForFile(path.join(dir, 'l1.json'));
+  assert.ok(l1);
+
+  const feedbackCalls = [];
+  ctx.get = (name) =>
+    name === 'neuronMemory'
+      ? {
+          expand: async () => ({ hits: [{ holoId: l1[0].id, activation: 0.9, layer: 'l1' }] }),
+          feedback: (event) => {
+            feedbackCalls.push(event);
+          },
+        }
+      : undefined;
+  await emit(ctx, 'session/event', session, { type: 'turn/start', data: { turn: 2 } });
+  const nextUser = message('user', '完全不相关的天气问题请随便回答一下');
+  const decision = { kind: 'enter', messages: [nextUser] };
+  const results = [];
+  for (const listener of ctx.listeners.get('agent/pre-step') ?? []) {
+    results.push(await listener({ agent: { session }, messages: [nextUser], signal: undefined }, async () => decision));
+  }
+  const injected = results.at(-1).messages.at(-1);
+  assert.equal(injected.source.kind, 'holo-memory');
+  assert.ok(injected.source.selected.some((item) => item.channels.includes('neuron')));
+  assert.match(injected.content[0].text, /pnpm/);
+
+  await emit(ctx, 'session/event', session, {
+    type: 'assistant/message',
+    data: { message: message('assistant', `已记录，引用记忆 ${l1[0].id.slice(-8)}。`) },
+  });
+  await emit(ctx, 'session/event', session, { type: 'turn/end', data: { turn: 2, reason: { kind: 'complete' } } });
+  assert.ok(feedbackCalls.some((event) => event.citedIds.includes(l1[0].id)), 'neuron feedback receives cited holo id');
   await fs.rm(dir, { recursive: true, force: true });
 });
 
