@@ -128,7 +128,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   const syncNeuron = (): void => {
     try {
       const neuron = ctx.get?.('neuronMemory') as { sync?: () => Promise<unknown> | unknown } | undefined;
-      if (neuron?.sync) void neuron.sync();
+      if (neuron?.sync) void Promise.resolve(neuron.sync()).catch(() => undefined);
     } catch {
       // The associative index is optional; never break canonical memory.
     }
@@ -277,7 +277,9 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
               const neuron = ctx.get?.('neuronMemory') as
                 | { feedback?: (event: { injectedIds: string[]; citedIds: string[] }) => void }
                 | undefined;
-              neuron?.feedback?.({ injectedIds: buffer.injectedIds, citedIds: feedback.citedIds });
+              void Promise.resolve(
+                neuron?.feedback?.({ injectedIds: buffer.injectedIds, citedIds: feedback.citedIds }),
+              ).catch(() => undefined);
             } catch {
               // Associative feedback must never break canonical memory.
             }
