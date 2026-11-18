@@ -168,6 +168,10 @@
           ".hm-recall-meta{font-size:10.5px;line-height:20px;color:var(--dsw-alias-label-tertiary,#8996b3);white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums}",
           ".hm-recall-chevron{display:inline-flex;margin-left:auto;color:var(--dsw-alias-label-tertiary,#8996b3);transition:transform .15s;flex:0 0 auto}",
           ".hm-recall-chevron.hm-open{transform:rotate(180deg)}",
+          ".hm-native-recall{margin:0}",
+          ".hm-native-recall>summary{cursor:pointer;list-style:none;color:var(--dsw-alias-brand-primary,#5b7cfa);font-size:12.5px;line-height:20px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+          ".hm-native-recall>summary::-webkit-details-marker{display:none}",
+          ".hm-native-recall-body{margin-top:5px;padding:8px 10px;border:.5px solid var(--dsw-alias-border-l3,#263450);border-radius:8px;background:var(--dsw-alias-bg-layer-2,#0f182b);color:var(--dsw-alias-label-secondary,#a8b4cf);font-size:11px;line-height:17px;white-space:pre-wrap;max-height:280px;overflow:auto}",
           ".hm-recall-body{margin:4px 0 5px 21px;padding:8px 10px;border-radius:7px;border:.5px solid var(--dsw-alias-border-l3,#263450);background:var(--dsw-alias-markdown-code-block,rgba(255,255,255,.04));color:var(--dsw-alias-label-secondary,#a8b4cf);max-height:220px;overflow:auto}",
           ".hm-recall-query{margin-bottom:4px;font:10px/15px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);color:var(--dsw-alias-label-tertiary,#8996b3);white-space:pre-wrap;word-break:break-word}",
           ".hm-recall-text{margin:0;font:11px/16px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-secondary,#a8b4cf)}",
@@ -388,8 +392,7 @@
         /** Replaces the shipped `context` row only for holo-memory messages. */
         function MemoryContextNode(props) {
           var data = props && props.node && props.node.data ? props.node.data : {};
-          var source = data.source || {};
-          if (source.kind === "holo-memory") {
+          var source = data.source || {};          if (source.kind === "holo-memory") {
             var text = contentText(data.content);
             return h(MemoryRecallStep, {
               data: {
@@ -419,8 +422,7 @@
               ? ctx.slots.entries("conversation.chat.node")
               : typeof ctx.slots.entriesOfSlot === "function"
                 ? ctx.slots.entriesOfSlot("conversation.chat.node")
-                : [];
-            var entry = null;
+                : [];            var entry = null;
             for (var i = 0; i < entries.length; i += 1) {
               var candidate = entries[i];
               if (candidate && candidate.options && candidate.options.key === "context" && candidate.component !== MemoryContextNode) {
@@ -429,14 +431,36 @@
               }
             }
             if (entry === null) return;
-            originalContext = entry.component;
-            installed = true;
-            ctx.slots.inject("conversation.chat.node", function () {
-              return ctx.slots.register(
-                { name: "conversation.chat.node", key: "context" },
-                MemoryContextNode,
-              );
-            });
+            var previous = entry.component;            // The shipped `context` entry is registered at priority 0. A
+            // same-key registration at the same priority is rejected by the
+            // keyed slot; a lower priority shadows it and is rendered.
+            try {
+              ctx.slots.inject("conversation.chat.node", function () {
+                try {
+                  var registration = ctx.slots.register(
+                    { name: "conversation.chat.node", key: "context", priority: -1 },
+                    MemoryContextNode,
+                  );
+                  originalContext = previous;
+                  installed = true;                  return registration;
+                } catch (error) {
+                  originalContext = null;
+                  installed = false;
+                  if (typeof console !== "undefined" && console.warn) {
+                    console.warn("[dsh-holo-memory] recall step registration failed:", error);
+                  }
+                  return undefined;
+                }
+              });
+            } catch (error) {
+              // Keep the shipped renderer and allow the slot subscription to
+              // retry on the next registration change.
+              originalContext = null;
+              installed = false;
+              if (typeof console !== "undefined" && console.warn) {
+                console.warn("[dsh-holo-memory] recall step registration failed:", error);
+              }
+            }
           };
           install();
           if (!installed && typeof ctx.slots.subscribe === "function") {
@@ -444,6 +468,62 @@
             if (typeof ctx.effect === "function") {
               ctx.effect(function () { return dispose; }, "holo-memory: context node");
             }
+          }
+        }
+
+        /**
+         * DSH 0.2.x renders context messages in the Trajectory surface, which
+         * has no per-record extension slot. Fall back to decorating the
+         * native context row in-place, without touching React's message data.
+         */
+        function installRecallDecorator(ctx) {
+          if (typeof document === "undefined" || typeof MutationObserver === "undefined") return;
+          var scheduled = false;
+          var decorate = function () {
+            scheduled = false;
+            var tags = document.querySelectorAll('[data-role-kind="context"]');
+            for (var i = 0; i < tags.length; i += 1) {
+              var row = tags[i].closest("tr") || tags[i].parentElement;
+              if (!row || row.getAttribute("data-hm-recall-decorated") === "1") continue;
+              var nodes = row.querySelectorAll("*");
+              var target = null;
+              for (var j = 0; j < nodes.length; j += 1) {
+                var node = nodes[j];
+                if (node.children.length === 0 && node.textContent && node.textContent.indexOf(RECALL_LABEL) === 0) {
+                  target = node;
+                  break;
+                }
+              }
+              if (!target) {
+                if (row.textContent && row.textContent.indexOf(RECALL_LABEL) >= 0) target = row;
+                else continue;
+              }
+              var text = target.textContent || "";
+              var body = text.replace(/^\[[^\n]*holo-memory[^\n]*\]\s*\n?/i, "").trim();
+              target.style.display = "none";
+              var details = document.createElement("details");
+              details.className = "hm-native-recall";
+              var summary = document.createElement("summary");
+              summary.textContent = "长期记忆自动召回 | holo-memory · " + text.length + " 字符";
+              var pre = document.createElement("div");
+              pre.className = "hm-native-recall-body";
+              pre.textContent = body;
+              details.appendChild(summary);
+              details.appendChild(pre);
+              target.parentNode.insertBefore(details, target.nextSibling);
+              row.setAttribute("data-hm-recall-decorated", "1");
+            }
+          };
+          var schedule = function () {
+            if (scheduled) return;
+            scheduled = true;
+            setTimeout(decorate, 40);
+          };
+          var observer = new MutationObserver(schedule);
+          observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+          decorate();
+          if (typeof ctx.effect === "function") {
+            ctx.effect(function () { return function () { observer.disconnect(); }; }, "holo-memory: recall decorator");
           }
         }
 
@@ -1062,6 +1142,7 @@
         function apply(ctx) {
           ensureStyleSheet();
           installContextStep(ctx);
+          installRecallDecorator(ctx);
           ctx.slots.inject("main", function () {
             return ctx.slots.register({ name: "main", key: "holo-memory" }, HoloMemoryPane);
           });
@@ -1083,4 +1164,7 @@
     console.warn("[dsh-holo-memory] client runtime error:", err);
   }
 })();
+
+
+
 
