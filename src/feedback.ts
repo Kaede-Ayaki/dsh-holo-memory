@@ -12,6 +12,8 @@ import type { HoloStore } from './store.js';
 export interface CitationFeedbackResult {
   touched: number;
   cited: number;
+  /** Ids whose suffix or full id appeared in the assistant answer. */
+  citedIds: string[];
 }
 
 export function applyCitationFeedback(
@@ -20,9 +22,10 @@ export function applyCitationFeedback(
   assistantText: string,
 ): CitationFeedbackResult {
   const text = assistantText ?? '';
-  if (text.length === 0 || injectedIds.length === 0) return { touched: 0, cited: 0 };
+  if (text.length === 0 || injectedIds.length === 0) return { touched: 0, cited: 0, citedIds: [] };
   let touched = 0;
   let cited = 0;
+  const citedIds: string[] = [];
   const seen = new Set<string>();
   for (const id of injectedIds) {
     if (seen.has(id)) continue;
@@ -42,7 +45,10 @@ export function applyCitationFeedback(
       false,
     );
     touched += 1;
-    if (isCited) cited += 1;
+    if (isCited) {
+      cited += 1;
+      citedIds.push(record.id);
+    }
   }
-  return { touched, cited };
+  return { touched, cited, citedIds };
 }
