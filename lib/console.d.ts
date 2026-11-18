@@ -11,6 +11,34 @@ export interface ConsoleDeps {
     logger: LoggerLike;
     /** Queue all records for re-embedding after the model changed. */
     onConfigSaved?: () => void;
+    /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
+    getNeuron?: () => NeuronConsoleService | undefined;
+}
+export interface NeuronConsoleService {
+    summary(limit?: number): Promise<{
+        stats: {
+            memoryNodes: number;
+            entityNodes: number;
+            edges: number;
+            averageDegree: number;
+            updatedAt: number;
+        };
+        byLayer: {
+            l1: number;
+            l2: number;
+            l3: number;
+        };
+        topEntities: Array<{
+            label: string;
+            degree: number;
+        }>;
+        maxDegree: number;
+        sampleMemories: Array<{
+            holoId: string;
+            layer: string;
+            label: string;
+        }>;
+    }>;
 }
 /** Mount the console API on the host web server; returns its disposer. */
 export declare function registerConsole(ctx: any, deps: ConsoleDeps): () => void;
