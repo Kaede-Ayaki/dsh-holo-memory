@@ -44,6 +44,24 @@ export interface ConsoleDeps {
   logger: LoggerLike;
   /** Queue all records for re-embedding after the model changed. */
   onConfigSaved?: () => void;
+  /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
+  getNeuron?: () => NeuronConsoleService | undefined;
+}
+
+export interface NeuronConsoleService {
+  summary(limit?: number): Promise<{
+    stats: {
+      memoryNodes: number;
+      entityNodes: number;
+      edges: number;
+      averageDegree: number;
+      updatedAt: number;
+    };
+    byLayer: { l1: number; l2: number; l3: number };
+    topEntities: Array<{ label: string; degree: number }>;
+    maxDegree: number;
+    sampleMemories: Array<{ holoId: string; layer: string; label: string }>;
+  }>;
 }
 
 function sendJson(res: ServerResponse, status: number, payload: unknown): void {
@@ -297,6 +315,24 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
     }
     if (req.method === 'GET' && path === '/holo-memory/list') {
       sendJson(res, 200, await list(deps, layerOf(url.searchParams.get('layer')), limitOf(url.searchParams.get('limit'))));
+      return;
+    }
+    if (req.method === 'GET' && path === '/holo-memory/neuron') {
+      const service = deps.getNeuron?.();
+      if (!service?.summary) {
+        sendJson(res, 200, { ok: true, available: false, reason: 'dsh-neuron-memory is not loaded' });
+        return;
+      }
+      try {
+        const summary = await service.summary(12);
+        sendJson(res, 200, { ok: true, available: true, ...summary });
+      } catch (error) {
+        sendJson(res, 200, {
+          ok: true,
+          available: false,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
       return;
     }
     if (req.method === 'GET' && path === '/holo-memory/injections') {
