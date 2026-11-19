@@ -1,7 +1,7 @@
 {
   "name": "dsh-holo-memory",
   "version": "0.5.3",
-  "description": "Three-layer holographic memory for DeepSeek Harness: L1 dialogue summaries, L2 atomic facts, L3 holographic capsules, with RRF recall, source pointers, revision history and a memory doctor.",
+  "description": "Auditable three-layer long-term memory for DeepSeek Harness: L1 dialogue summaries, L2 atomic facts, L3 holographic capsules, hybrid recall, neuron graph, source pointers and web console.",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
