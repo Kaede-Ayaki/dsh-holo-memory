@@ -32,6 +32,10 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     activeWindowFallbackOnly: z<boolean, boolean, "defined">;
     /** Reciprocal-rank-fusion constant; 60 is the standard default. */
     rrfRankConstant: z<number, number, "defined">;
+    /** A series: distilled user preferences, habits and personality. */
+    aSeriesEnabled: z<boolean, boolean, "defined">;
+    aSeriesMaxChars: z<number, number, "defined">;
+    aSeriesRefreshOnExtract: z<boolean, boolean, "defined">;
     /** Background extraction at turn end. */
     extractEnabled: z<boolean, boolean, "defined">;
     extractProvider: z<string, string, "defined">;
@@ -99,6 +103,10 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     activeWindowFallbackOnly: z<boolean, boolean, "defined">;
     /** Reciprocal-rank-fusion constant; 60 is the standard default. */
     rrfRankConstant: z<number, number, "defined">;
+    /** A series: distilled user preferences, habits and personality. */
+    aSeriesEnabled: z<boolean, boolean, "defined">;
+    aSeriesMaxChars: z<number, number, "defined">;
+    aSeriesRefreshOnExtract: z<boolean, boolean, "defined">;
     /** Background extraction at turn end. */
     extractEnabled: z<boolean, boolean, "defined">;
     extractProvider: z<string, string, "defined">;
@@ -154,6 +162,9 @@ export type HoloConfig = {
     activeWindowMinImportance: number;
     activeWindowFallbackOnly: boolean;
     rrfRankConstant: number;
+    aSeriesEnabled: boolean;
+    aSeriesMaxChars: number;
+    aSeriesRefreshOnExtract: boolean;
     extractEnabled: boolean;
     extractProvider: string;
     extractModel: string;

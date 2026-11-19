@@ -2,6 +2,7 @@ import type { HoloConfig } from './config.js';
 import { HoloStore } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import type { RuntimeToggles } from './runtime.js';
+import { type ProfileStore } from './profile.js';
 interface LoggerLike {
     warn(message: string): void;
 }
@@ -11,6 +12,7 @@ export interface ConsoleDeps {
     config: HoloConfig;
     logger: LoggerLike;
     runtime: RuntimeToggles;
+    profileStore: ProfileStore;
     /** Queue all records for re-embedding after the model changed. */
     onConfigSaved?: () => void;
     /** Optional associative index; absent when dsh-neuron-memory is not loaded. */

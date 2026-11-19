@@ -88,7 +88,7 @@ test('apply registers tools, guidance section and lifecycle listeners', async ()
     extractEnabled: true,
     injectEnabled: true,
   });
-  assert.equal(ctx.registered.length, 9, 'nine model-facing tools are registered');
+  assert.equal(ctx.registered.length, 10, 'ten model-facing tools are registered');
   assert.deepEqual(
     ctx.registered.map((tool) => tool.name).sort(),
     [
@@ -99,6 +99,7 @@ test('apply registers tools, guidance section and lifecycle listeners', async ()
       'memory_maintenance',
       'memory_note',
       'memory_open',
+      'memory_profile',
       'memory_recall',
       'memory_stats',
     ],
@@ -165,6 +166,53 @@ test('holo pre-step consumes neuronMemory.expand as an associative channel', asy
   });
   await emit(ctx, 'session/event', session, { type: 'turn/end', data: { turn: 2, reason: { kind: 'complete' } } });
   assert.ok(feedbackCalls.some((event) => event.citedIds.includes(l1[0].id)), 'neuron feedback receives cited holo id');
+  await fs.rm(dir, { recursive: true, force: true });
+});
+
+test('A-series profile is injected even when query recall is empty', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-profile-inject-'));
+  await fs.writeFile(
+    path.join(dir, 'a.json'),
+    JSON.stringify({
+      profile: {
+        id: 'a_user_profile',
+        title: 'A · 用户偏好与人格',
+        summary: '用户偏好先给结论，再给细节。',
+        preferences: ['先给结论', '中文回答'],
+        habits: ['动手前先确认代码现状'],
+        personality: ['直接、务实'],
+        workingStyle: ['简洁'],
+        confirmFor: ['公开发布', '付费'],
+        autoApply: true,
+        evidenceIds: [],
+        importance: 9,
+        createdAt: 1,
+        updatedAt: 1,
+        revision: 1,
+      },
+    }),
+    'utf8',
+  );
+  const ctx = fakeCtx();
+  apply(ctx, {
+    storageDir: dir,
+    extractEnabled: false,
+    injectEnabled: true,
+    activeWindowEnabled: false,
+  });
+  const session = { id: 's-profile', header: { cwd: 'D:\\work\\demo', delegationDepth: 0 } };
+  const user = message('user', '帮我搭一个完全新的小型工具。');
+  const decision = { kind: 'enter', messages: [user] };
+  const results = [];
+  for (const listener of ctx.listeners.get('agent/pre-step') ?? []) {
+    results.push(await listener({ agent: { session }, messages: [user], signal: undefined }, async () => decision));
+  }
+  const injected = results.at(-1).messages.at(-1);
+  assert.equal(injected.source.kind, 'holo-memory');
+  assert.match(injected.content[0].text, /\[A · 用户偏好与人格\]/);
+  assert.match(injected.content[0].text, /先给结论/);
+  assert.match(injected.content[0].text, /重要.*询问|必须先询问/);
+  assert.equal(injected.source.a, 1);
   await fs.rm(dir, { recursive: true, force: true });
 });
 

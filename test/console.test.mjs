@@ -10,6 +10,7 @@ import { EmbeddingClient } from '../lib/embeddings.js';
 import { sourceFromTurn } from '../lib/source.js';
 import { registerConsole } from '../lib/console.js';
 import { RuntimeToggles } from '../lib/runtime.js';
+import { ProfileStore } from '../lib/profile.js';
 
 function capture() {
   const project = projectIdFor('D:\\work\\demo');
@@ -70,6 +71,7 @@ test('console exposes stats, doctor and open routes', async () => {
     embedder: new EmbeddingClient(config),
     config,
     runtime: new RuntimeToggles(dir),
+    profileStore: new ProfileStore(dir),
     logger: { warn() {} },
   });
   assert.equal(typeof handler, 'function');
@@ -109,6 +111,18 @@ test('console exposes stats, doctor and open routes', async () => {
     assert.equal(opened.ok, true);
     assert.match(opened.text, /pnpm test/);
     assert.match(opened.text, /hash verified/);
+
+    const profileEmpty = await (await fetch(`${base}/holo-memory/profile`)).json();
+    assert.equal(profileEmpty.ok, true);
+    assert.equal(profileEmpty.profile, null);
+    const profileRefreshed = await (await fetch(`${base}/holo-memory/profile/refresh`, {
+      method: 'POST',
+      headers: { 'x-holo-memory': '1' },
+    })).json();
+    assert.equal(profileRefreshed.ok, true);
+    assert.equal(profileRefreshed.profile.title, 'A · 用户偏好与人格');
+    assert.ok(profileRefreshed.profile.preferences.length > 0);
+    assert.match(profileRefreshed.text, /执行边界/);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await fs.rm(dir, { recursive: true, force: true });

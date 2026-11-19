@@ -3,6 +3,46 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.6.0] - 2026-11-19
+
+**主题：A 系列 —— 从 L1-L3 蒸馏用户偏好、行为习惯与人格。**
+
+### Added
+
+- **A 系列画像**：独立 `a.json`，从现有 L1/L2/L3 记录蒸馏：
+  - `preferences` 喜好偏向；
+  - `habits` 行为习惯；
+  - `personality` 人格与工作方式；
+  - `workingStyle` 高频工作流关键词；
+  - `confirmFor` 必须咨询用户的抉择类型；
+  - `evidenceIds` 指回原 L1/L2/L3 记录。
+- **自动注入**：每轮 L1-L3 召回后追加紧凑的
+  `[A · 用户偏好与人格]` 块；即使没有 query 命中，A 画像也可单独注入。
+- **决策边界**：A 块与系统提示词同时声明：
+  - 低风险、可逆、日常事项默认按偏好执行；
+  - 重要、不可逆、付费、公开发布、安全隐私、关系边界等抉择必须先咨询用户。
+- **控制台 A 系列页**：查看偏好/习惯/人格/工作方式/边界，支持“重新蒸馏”。
+- **工具 `memory_profile(refresh?)`**：读取 A 画像；`refresh=true` 从当前 L1-L3 重建。
+- **配置**：`aSeriesEnabled`、`aSeriesMaxChars`、`aSeriesRefreshOnExtract`。
+- **画像去重**：按 facet（交付、MOSS、tag 流、肢体、查证、LoRA、语言等）聚类，
+  避免同一规则的多种复述占满 A 块。
+
+### Changed
+
+- 控制台视图增加「A 系列」；召回工作步骤 meta 增加 `A×1` 标记。
+- 工具数从 9 增至 10。
+
+### Verification
+
+```text
+holo:   43/43 PASS
+neuron: 10/10 PASS
+client: node --check PASS
+```
+
+生产数据预览：L1/L2/L3 全库可蒸馏出偏好 2-5 条、习惯 2-5 条、
+人格 1 条与工作风格关键词；证据 id 可逐条 `memory_open` 回源。
+
 ## [0.5.6] - 2026-11-19
 
 **主题：修复 0.5.5 引入的工具注册回归，恢复会话与 Agent 预设加载。**

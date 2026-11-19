@@ -1,17 +1,17 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-0.5.6-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.6.0-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-35%2F35-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
 
 > **Auditable three-layer long-term memory for DeepSeek Harness.**  
-> L1 dialogue summaries · L2 atomic facts · L3 holographic capsules · hybrid recall · neuron index · source pointers · local-first JSON.
+> L1 dialogue summaries · L2 atomic facts · L3 holographic capsules · A-series preferences/habits/personality · hybrid recall · neuron index · source pointers · local-first JSON.
 
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`0.5.6`（2026-11-19）
+- 当前版本：`0.6.0`（2026-11-19）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 介绍 PPT：[docs/dsh-holo-memory-intro-v2.pptx](docs/dsh-holo-memory-intro-v2.pptx)
@@ -22,6 +22,7 @@
 
 - [为什么需要它](#为什么需要它)
 - [核心特性](#核心特性)
+- [A 系列：偏好、习惯与人格](#a-系列偏好习惯与人格)
 - [架构](#架构)
 - [安装](#安装)
 - [快速验证](#快速验证)
@@ -66,6 +67,26 @@ dsh-holo-memory 把“记住”拆成三个动作：
 | **L1 对话层** | 每轮对话的紧凑摘要：用户要什么、做了什么、结果 | 找回“上次聊到哪了” |
 | **L2 事实层** | 原子事实：偏好、决策、约定、实体、待办、纠正 | 跨会话复用确定事实 |
 | **L3 全息层** | 多轮压缩的整体胶囊：用户画像、项目状态、长期线索、未闭环事项 | 新会话快速恢复关系轮廓 |
+
+### A 系列：偏好、习惯与人格
+
+A 不是第四层事实库，而是从 L1/L2/L3 中**蒸馏出来的用户侧画像**，保存在独立的 `a.json`，证据仍指回原记录。
+
+| 字段 | 内容 |
+|---|---|
+| `preferences` | 稳定喜好偏向（交付形态、语言、风格、工具选择等） |
+| `habits` | 行为习惯（先给结论、先确认现状、围栏交付等） |
+| `personality` | 人格与工作方式（直接/务实、重视可验证结果等） |
+| `workingStyle` | 高频工作流关键词 |
+| `confirmFor` | 必须咨询用户的抉择类型：不可逆、公开发布、付费、安全/隐私、关系边界等 |
+
+每轮注入会在 L1-L3 召回块后追加一个紧凑的 `[A · 用户偏好与人格]` 块：
+
+- **低风险、可逆、日常事项**：默认按 A 的偏好和习惯直接执行，不再反复问；
+- **重要、不可逆、涉及付费/公开发布/安全隐私/关系边界**：必须先咨询用户，不能拿 A 代替确认；
+- 该边界同时写进系统提示词和 A 块，代码层不伪造“强制拦截”。
+
+控制台新增「A 系列」页，可查看各类画像与 `memory_profile(refresh=true)` 重新蒸馏。
 
 ### 四通道混合召回
 
@@ -277,6 +298,9 @@ API Key 推荐放在单独文件（首行），不要写进 YAML；也可以使�
 | `activeWindowMaxChars` | `420` | 兜底字符上限 |
 | `activeWindowMinImportance` | `7` | 进入兜底的最低重要度 |
 | `rrfRankConstant` | `60` | RRF 的 k 值 |
+| `aSeriesEnabled` | `true` | 是否启用 A 系列蒸馏与注入 |
+| `aSeriesMaxChars` | `800` | A 块字符预算 |
+| `aSeriesRefreshOnExtract` | `true` | 每轮蒸馏后刷新 A 画像 |
 
 ### 存储与容量
 
@@ -540,6 +564,7 @@ POST /holo-memory/delete   { "id": "..." }
 | `memory_stats()` | 数量、覆盖率、存储路径、蒸馏状态、阈值 |
 | `memory_doctor(deep?)` | 记忆体检；deep 会真打开原文并跑召回探针 |
 | `memory_maintenance(olderThanDays?, dryRun?)` | 手动运行维护/归档预览 |
+| `memory_profile(refresh?)` | 读取 A 系列；refresh=true 时从当前 L1/L2/L3 重新蒸馏 |
 
 ### neuron 工具
 
@@ -664,7 +689,7 @@ npm test
 当前：
 
 ```text
-holo:   39/39 PASS
+holo:   43/43 PASS
 neuron: 10/10 PASS
 ```
 
@@ -707,6 +732,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 ## 版本与路线
 
+- **0.6.0**：A 系列偏好/习惯/人格蒸馏；读取 A 块；控制台 A 页；高风险抉择先咨询边界。
 - **0.5.6**：移除全局 tools.register monkey-patch，修复工具 disposer 契约和预加载失败；保留自动读取/写入闸门。
 - **0.5.5**：输入框读取/写入双开关；Host 持久化。
 - **0.5.4**：神经元图项目隔离、查询词重叠过滤、种子去泛化、配置校验与 maxNodes 清理。

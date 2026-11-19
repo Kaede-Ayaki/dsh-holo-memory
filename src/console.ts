@@ -29,6 +29,7 @@ import {
 } from './embedding-config.js';
 import { probeEmbedding } from './embedding-probe.js';
 import type { RuntimeToggles } from './runtime.js';
+import { type ProfileStore, renderAProfile } from './profile.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const DEFAULT_LIMIT = 200;
@@ -44,6 +45,7 @@ export interface ConsoleDeps {
   config: HoloConfig;
   logger: LoggerLike;
   runtime: RuntimeToggles;
+  profileStore: ProfileStore;
   /** Queue all records for re-embedding after the model changed. */
   onConfigSaved?: () => void;
   /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
@@ -343,6 +345,25 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
     }
     if (req.method === 'GET' && path === '/holo-memory/list') {
       sendJson(res, 200, await list(deps, layerOf(url.searchParams.get('layer')), limitOf(url.searchParams.get('limit'))));
+      return;
+    }
+    if (req.method === 'GET' && path === '/holo-memory/profile') {
+      await deps.profileStore.whenReady().catch(() => undefined);
+      const profile = deps.profileStore.get();
+      sendJson(res, 200, {
+        ok: true,
+        profile,
+        text: renderAProfile(profile, deps.config.aSeriesMaxChars),
+      });
+      return;
+    }
+    if (req.method === 'POST' && path === '/holo-memory/profile/refresh') {
+      if (req.headers['x-holo-memory'] !== '1') {
+        sendJson(res, 403, { ok: false, error: 'missing x-holo-memory header' });
+        return;
+      }
+      const profile = await deps.profileStore.refresh(deps.store);
+      sendJson(res, 200, { ok: true, profile, text: renderAProfile(profile, deps.config.aSeriesMaxChars) });
       return;
     }
     if (req.method === 'GET' && path === '/holo-memory/neuron') {
