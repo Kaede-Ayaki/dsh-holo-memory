@@ -176,6 +176,17 @@
           ".hm-workstep-recall>summary{cursor:pointer;list-style:none;color:var(--dsw-alias-brand-primary,#5b7cfa);font-size:11.5px;line-height:18px;font-weight:550}",
           ".hm-workstep-recall>summary::-webkit-details-marker{display:none}",
           ".hm-workstep-recall-body{margin-top:4px;padding:6px 8px;border-left:2px solid rgba(91,124,250,.5);color:var(--dsw-alias-label-tertiary,#8996b3);font-size:10.5px;line-height:16px;white-space:pre-wrap}",
+          /* input toolbar read/write toggles, next to the JSON clipboard pill */
+          ".hm-tgl-group{display:inline-flex;align-items:center;gap:4px;flex:none}",
+          ".hm-tgl-btn{display:inline-flex;align-items:center;gap:4px;flex:none;height:26px;padding:0 8px;border-radius:999px;border:1px solid rgba(128,128,128,.30);background:transparent;color:inherit;font:inherit;font-size:11px;line-height:1;letter-spacing:.02em;cursor:pointer;opacity:.72;transition:background-color .12s,border-color .12s,opacity .12s}",
+          ".hm-tgl-btn:hover{opacity:1;background:rgba(127,140,160,.14)}",
+          ".hm-tgl-btn[data-on=\"1\"]{opacity:1;border-color:rgba(96,146,255,.60);background:rgba(96,146,255,.14)}",
+          ".hm-tgl-btn[data-busy=\"1\"]{opacity:.5;cursor:wait}",
+          ".hm-tgl-btn[data-flash=\"fail\"]{border-color:rgba(220,92,92,.72);background:rgba(220,92,92,.18)}",
+          ".hm-tgl-btn[data-flash=\"ok\"]{border-color:rgba(64,180,110,.78);background:rgba(64,180,110,.22)}",
+          ".hm-tgl-dot{width:6px;height:6px;border-radius:50%;background:rgba(128,128,128,.60);flex:none}",
+          ".hm-tgl-btn[data-on=\"1\"] .hm-tgl-dot{background:rgb(86,196,140)}",
+          ".hm-tgl-btn[data-error=\"1\"] .hm-tgl-dot{background:rgb(220,92,92)}",
           ".hm-recall-body{margin:4px 0 5px 21px;padding:8px 10px;border-radius:7px;border:.5px solid var(--dsw-alias-border-l3,#263450);background:var(--dsw-alias-markdown-code-block,rgba(255,255,255,.04));color:var(--dsw-alias-label-secondary,#a8b4cf);max-height:220px;overflow:auto}",
           ".hm-recall-query{margin-bottom:4px;font:10px/15px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);color:var(--dsw-alias-label-tertiary,#8996b3);white-space:pre-wrap;word-break:break-word}",
           ".hm-recall-text{margin:0;font:11px/16px var(--dsw-font-markdown-code-block-small,ui-monospace,Menlo,Consolas,monospace);white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-secondary,#a8b4cf)}",
@@ -587,6 +598,128 @@
           if (typeof ctx.effect === "function") {
             ctx.effect(function () { return function () { observer.disconnect(); }; }, "holo-memory: work-step recall");
           }
+        }
+
+        /**
+         * Two compact pills in `conversation.input.left`, right after the
+         * JSON-clipboard pill (order 40). They own no state in localStorage:
+         * the Host runtime switch is the authority, because injection and
+         * extraction happen in the Host process.
+         */
+        function MemoryToggles() {
+          var state = react.useState({ read: true, write: true });
+          var toggles = state[0];
+          var setToggles = state[1];
+          var busyState = react.useState("");
+          var busy = busyState[0];
+          var setBusy = busyState[1];
+          var flashState = react.useState("");
+          var flash = flashState[0];
+          var setFlash = flashState[1];
+          var errorState = react.useState(false);
+          var error = errorState[0];
+          var setError = errorState[1];
+          var busyRef = react.useRef("");
+          var flashTimer = react.useRef(0);
+          var pollTimer = react.useRef(0);
+
+          var load = react.useCallback(function () {
+            fetchJson("/holo-memory/toggles")
+              .then(function (data) {
+                var value = data && data.toggles;
+                if (!value) return;
+                setToggles({ read: value.read !== false, write: value.write !== false });
+                setError(false);
+              })
+              .catch(function () { setError(true); });
+          }, []);
+
+          react.useEffect(function () {
+            load();
+            pollTimer.current = window.setInterval(function () {
+              if (busyRef.current === "") load();
+            }, 6000);
+            return function () {
+              window.clearInterval(pollTimer.current);
+              window.clearTimeout(flashTimer.current);
+            };
+          }, [load]);
+
+          var toggle = react.useCallback(function (kind) {
+            if (busyRef.current !== "") return;
+            var next = !toggles[kind];
+            var requestBody = {};
+            requestBody[kind] = next;
+            busyRef.current = kind;
+            setBusy(kind);
+            setToggles(function (prev) {
+              var copy = { read: prev.read, write: prev.write };
+              copy[kind] = next;
+              return copy;
+            });
+            fetch("/holo-memory/toggles", {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-holo-memory": "1" },
+              body: JSON.stringify(requestBody),
+            })
+              .then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                  if (!response.ok || !data || data.ok !== true) throw new Error((data && data.error) || ("HTTP " + response.status));
+                  return data;
+                });
+              })
+              .then(function (data) {
+                if (data.toggles) setToggles({ read: data.toggles.read !== false, write: data.toggles.write !== false });
+                setError(false);
+                setFlash("ok");
+                window.clearTimeout(flashTimer.current);
+                flashTimer.current = window.setTimeout(function () { setFlash(""); }, 900);
+              })
+              .catch(function () {
+                setToggles(function (prev) {
+                  var copy = { read: prev.read, write: prev.write };
+                  copy[kind] = !next;
+                  return copy;
+                });
+                setError(true);
+                setFlash("fail");
+                window.clearTimeout(flashTimer.current);
+                flashTimer.current = window.setTimeout(function () { setFlash(""); }, 1400);
+              })
+              .finally(function () {
+                busyRef.current = "";
+                setBusy("");
+              });
+          }, [toggles]);
+
+          function button(kind, label, title, icon) {
+            var on = toggles[kind] !== false;
+            return h("button", {
+              type: "button",
+              className: "hm-tgl-btn",
+              "data-on": on ? "1" : "0",
+              "data-busy": busy === kind ? "1" : "0",
+              "data-flash": flash,
+              "data-error": error ? "1" : "0",
+              title: title,
+              "aria-label": title,
+              "aria-pressed": on ? "true" : "false",
+              onClick: function () { toggle(kind); },
+            },
+              icon,
+              h("span", null, label),
+              h("span", { className: "hm-tgl-dot" }));
+          }
+
+          return h("span", { className: "hm-tgl-group" },
+            button("read", "读", "自动召回读取全息记忆：开（点击关闭，关闭后上下文不注入记忆）",
+              h("svg", { width: 12, height: 12, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" },
+                h("path", { d: "M3.5 5.5A8.5 8.5 0 0 1 12 2.5a8.5 8.5 0 0 1 8.5 3v13a8.5 8.5 0 0 0-8.5-3 8.5 8.5 0 0 0-8.5 3z" }),
+                h("path", { d: "M12 2.5v16" }))),
+            button("write", "写", "自动写入全息记忆：开（点击关闭，关闭后不捕获、不蒸馏、不写入）",
+              h("svg", { width: 12, height: 12, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" },
+                h("path", { d: "M12 20h9" }),
+                h("path", { d: "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" }))));
         }
 
         function HoloMemoryPane() {
@@ -1213,6 +1346,12 @@
             return ctx.slots.register(
               { name: "sidebar.panellist", id: "holo-memory", order: 10, label: "全息记忆" },
               HoloMemoryIcon,
+            );
+          });
+          ctx.slots.inject("conversation.input.left", function () {
+            return ctx.slots.register(
+              { name: "conversation.input.left", id: "holo-memory-toggles", order: 41, label: "全息记忆读取/写入开关" },
+              MemoryToggles,
             );
           });
         }

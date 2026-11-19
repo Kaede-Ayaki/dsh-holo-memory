@@ -1,6 +1,6 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-0.5.4-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.5.5-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-35%2F35-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,7 +11,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`0.5.4`（2026-11-19）
+- 当前版本：`0.5.5`（2026-11-19）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 介绍 PPT：[docs/dsh-holo-memory-intro-v2.pptx](docs/dsh-holo-memory-intro-v2.pptx)
@@ -30,6 +30,7 @@
 - [召回机制](#召回机制)
 - [来源、证据与修订](#来源证据与修订)
 - [工作步骤可视化](#工作步骤可视化)
+- [输入框双开关（读取 / 写入）](#输入框双开关读取--写入)
 - [控制台](#控制台)
 - [模型工具](#模型工具)
 - [神经元记忆](#神经元记忆)
@@ -348,6 +349,7 @@ $DSH_HOME/holo-memory/
 ├── embedding.json          # 向量端点配置（不含 Key）
 ├── embedding.key           # 可选：本地 Key 文件
 ├── injections.jsonl        # 最近自动召回审计
+├── runtime-toggles.json    # 读取/写入双开关状态
 ├── maintenance.json        # 上次维护时间与归档数
 ├── archive/
 │   └── l1-YYYY-MM.jsonl    # 已归档 L1，只追加
@@ -452,6 +454,37 @@ memory_open(id, maxChars?, history?)
 
 ---
 
+## 输入框双开关（读取 / 写入）
+
+![输入框里的读取与写入开关](docs/toggle-buttons.png)
+
+输入框工具行、JSON 复制按钮旁边有两个默认打开的开关：
+
+| 按钮 | 默认 | 关闭后的效果 |
+|---|---|---|
+| **读** | 开 | 不自动召回、不注入记忆；`memory_recall` / `memory_open` / `memory_list` / `memory_stats` 等读取工具也返回禁用提示；模型只看到普通上下文 |
+| **写** | 开 | 不捕获回合、不蒸馏、不新增/修改/删除记忆、不写 embedding/neuron 反馈；`memory_note` / `memory_forget` / 非 dry-run `memory_maintenance` 也返回禁用提示 |
+
+状态由 Host 持有并持久化到：
+
+```text
+$DSH_HOME/holo-memory/runtime-toggles.json
+```
+
+默认 `{ "read": true, "write": true }`；按钮点击后立即生效，不需要重启。  
+刷页面或重开窗口会从 Host 重新读取；多个窗口以 Host 状态为准。
+
+对应 API：
+
+```text
+GET  /holo-memory/toggles
+POST /holo-memory/toggles   { "read": false } 或 { "write": false }
+```
+
+POST 需要 `x-holo-memory: 1` 请求头。
+
+---
+
 ## 控制台
 
 ![全息记忆控制台](docs/console.png)
@@ -482,6 +515,8 @@ GET  /holo-memory/doctor?deep=1
 GET  /holo-memory/open?id=<id>&limit=N&history=1
 GET  /holo-memory/config
 POST /holo-memory/config
+GET  /holo-memory/toggles
+POST /holo-memory/toggles
 POST /holo-memory/test-embedding
 POST /holo-memory/delete   { "id": "..." }
 ```
@@ -629,7 +664,7 @@ npm test
 当前：
 
 ```text
-holo:   35/35 PASS
+holo:   39/39 PASS
 neuron: 10/10 PASS
 ```
 
@@ -672,7 +707,9 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 ## 版本与路线
 
-- **# 神经元伴侣**：召回相关性闸门；Active Window 兜底化；L2 标签/证据门控；回归测试。
+- **0.5.5**：输入框读取/写入双开关；Host 持久化；读取/写入工具统一受控。
+- **0.5.4**：神经元图项目隔离、查询词重叠过滤、种子去泛化、配置校验与 maxNodes 清理。
+- **0.5.3**：召回相关性闸门；Active Window 兜底化；L2 标签/证据门控；回归测试。
 - **0.5.2**：聊天工作步骤召回块；保持轨迹召回折叠行。
 - **0.5.1**：工作步骤召回可视化修复；context renderer priority；轨迹兼容。
 - **0.5.0**：神经元四通道、控制台神经元页、并发 graph 写修复。
@@ -680,7 +717,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 近期路线：
 
-- 继续观察 # 神经元伴侣 的证据闸门在长任务中的召回率/精确率；
+- 继续观察 0.5.3 的证据闸门在长任务中的召回率/精确率；
 - 增加 HMR 演练与 reload-safe 生命周期检查；
 - 评估把可热更新检索逻辑拆到 sidecar 的可行性；
 - 完善介绍 PPT / 演示材料。
@@ -700,4 +737,5 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 ## License
 
 MIT
+
 

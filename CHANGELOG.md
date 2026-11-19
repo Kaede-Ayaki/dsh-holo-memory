@@ -3,6 +3,33 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.5.5] - 2026-11-19
+
+**主题：输入框读取/写入双开关。**
+
+### Added
+
+- 在输入框工具行、JSON 剪贴板按钮旁边新增两个按钮：
+  - **读**：自动召回读取，默认开；
+  - **写**：自动捕获/蒸馏写入，默认开。
+- 开关状态由 Host 持有并持久化到 `$DSH_HOME/holo-memory/runtime-toggles.json`；默认
+  `{read:true, write:true}`，刷新/重开窗口不丢。
+- 新增 `GET/POST /holo-memory/toggles`；POST 需要 `x-holo-memory: 1`。
+- 读取关闭：`agent/pre-step` 直接跳过召回；`memory_recall` / `memory_open` /
+  `memory_list` / `memory_stats` / `memory_injections` / `memory_doctor` 返回禁用提示；
+  模型只看到普通上下文。
+- 写入关闭：`HoloStore.insert/update/remove` 统一拒绝；自动捕获、蒸馏、feedback、
+  embedding 回填、neuron sync 全部停止；`memory_note` / `memory_forget` /
+  非 dry-run `memory_maintenance` 返回禁用提示。
+- `dryRun` 维护在写关闭时仍可预览。
+
+### Tests
+
+```text
+holo:   39/39 PASS
+neuron: 10/10 PASS
+```
+
 ## [0.5.4] - 2026-11-19
 
 **主题：按全息记忆踩过的坑审计神经元模块，修掉同一类问题。**

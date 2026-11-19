@@ -28,6 +28,7 @@ import {
   saveEmbeddingConfig,
 } from './embedding-config.js';
 import { probeEmbedding } from './embedding-probe.js';
+import type { RuntimeToggles } from './runtime.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const DEFAULT_LIMIT = 200;
@@ -42,6 +43,7 @@ export interface ConsoleDeps {
   embedder: EmbeddingClient;
   config: HoloConfig;
   logger: LoggerLike;
+  runtime: RuntimeToggles;
   /** Queue all records for re-embedding after the model changed. */
   onConfigSaved?: () => void;
   /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
@@ -311,6 +313,32 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
   try {
     if (req.method === 'GET' && path === '/holo-memory/stats') {
       sendJson(res, 200, await stats(deps));
+      return;
+    }
+    if (req.method === 'GET' && path === '/holo-memory/toggles') {
+      sendJson(res, 200, { ok: true, toggles: deps.runtime.get() });
+      return;
+    }
+    if (req.method === 'POST' && path === '/holo-memory/toggles') {
+      if (req.headers['x-holo-memory'] !== '1') {
+        sendJson(res, 403, { ok: false, error: 'missing x-holo-memory header' });
+        return;
+      }
+      let payload: { read?: unknown; write?: unknown };
+      try {
+        payload = JSON.parse(await readBody(req)) as { read?: unknown; write?: unknown };
+      } catch {
+        sendJson(res, 400, { ok: false, error: 'invalid JSON body' });
+        return;
+      }
+      const patch: { read?: boolean; write?: boolean } = {};
+      if (typeof payload.read === 'boolean') patch.read = payload.read;
+      if (typeof payload.write === 'boolean') patch.write = payload.write;
+      if (patch.read === undefined && patch.write === undefined) {
+        sendJson(res, 400, { ok: false, error: 'read or write boolean is required' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, toggles: await deps.runtime.set(patch) });
       return;
     }
     if (req.method === 'GET' && path === '/holo-memory/list') {

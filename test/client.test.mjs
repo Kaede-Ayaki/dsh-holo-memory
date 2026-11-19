@@ -55,11 +55,12 @@ test('client half registers side panel, sidebar entry and context renderer', () 
     },
   };
   mod.apply(ctx);
-  assert.equal(injectedSlots.length, 3);
+  assert.equal(injectedSlots.length, 4);
   assert.equal(injectedSlots[0], 'conversation.chat.node');
   assert.equal(injectedSlots[1], 'main');
   assert.equal(injectedSlots[2], 'sidebar.panellist');
-  assert.equal(registrations.length, 3);
+  assert.equal(injectedSlots[3], 'conversation.input.left');
+  assert.equal(registrations.length, 4);
 
   const main = registrations.find((item) => item.definition.name === 'main');
   assert.ok(main);
@@ -72,6 +73,12 @@ test('client half registers side panel, sidebar entry and context renderer', () 
   assert.equal(sidebar.definition.label, '全息记忆');
   assert.equal(sidebar.definition.order, 10);
   assert.equal(typeof sidebar.component, 'function');
+
+  const toggles = registrations.find((item) => item.definition.name === 'conversation.input.left');
+  assert.ok(toggles);
+  assert.equal(toggles.definition.id, 'holo-memory-toggles');
+  assert.equal(toggles.definition.order, 41);
+  assert.equal(typeof toggles.component, 'function');
 
   const node = registrations.find((item) => item.definition.name === 'conversation.chat.node');
   assert.ok(node);
