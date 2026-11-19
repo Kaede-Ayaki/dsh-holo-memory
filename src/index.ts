@@ -33,6 +33,7 @@ import { applyCitationFeedback } from './feedback.js';
 import { AUTHORITY_NOTE, EVIDENCE_NOTE } from './authority.js';
 import { startMaintenanceSchedule } from './maintenance.js';
 import { RuntimeToggles } from './runtime.js';
+import { ProfileStore, renderAProfile } from './profile.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
 export const name = 'holo-memory';
@@ -94,8 +95,12 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   const store = new HoloStore(storageDir, config);
   const runtime = new RuntimeToggles(storageDir);
   store.setWriteGuard(() => runtime.get().write);
+  const profileStore = new ProfileStore(storageDir);
+  profileStore.setWriteGuard(() => runtime.get().write);
   const embedder = new EmbeddingClient(config);
   const abort = new AbortController();
+
+  void profileStore.whenReady().catch(() => undefined);
 
   // Read-only service consumed by dsh-neuron-memory (and future indexes).
   // Canonical text remains here; the neuron plugin only stores refs/labels.
@@ -141,6 +146,9 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   const onRecords = (records: AnyRecord[]): void => {
     queueEmbedding(records);
     syncNeuron();
+    if (config.aSeriesEnabled && config.aSeriesRefreshOnExtract && store.writesAllowed()) {
+      void profileStore.refresh(store).catch(() => undefined);
+    }
   };
 
   const drainEmbeddings = async (): Promise<void> => {
@@ -374,7 +382,11 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       }
     }
     try {
-      const result =
+      await profileStore.whenReady().catch(() => undefined);
+      const profileText = config.aSeriesEnabled
+        ? renderAProfile(profileStore.get(), config.aSeriesMaxChars)
+        : '';
+      const recalled =
         (await recall(store, embedder, config, query, {
           projectKey: project.key,
           currentSessionId: sessionId,
@@ -385,20 +397,24 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
           signal,
         })) ??
         (query.trim().length < 12 ? await recentFallback(store, project.key, config.injectMaxChars) : null);
-      if (!result || (typeof result === 'string' && result.trim().length === 0)) return decision;
-      const text = typeof result === 'string' ? result : result.text;
-      const activeCount = typeof result === 'string' ? 0 : result.activeCount;
-      const selected = typeof result === 'string' ? [] : result.items.map((item) => ({
+      const recalledText = recalled ? (typeof recalled === 'string' ? recalled : recalled.text) : '';
+      if (!recalledText.trim() && !profileText) return decision;
+      const text = [recalledText.trim(), profileText].filter((part) => part.length > 0).join('\n\n');
+      const activeCount = recalled && typeof recalled !== 'string' ? recalled.activeCount : 0;
+      const selected = recalled && typeof recalled !== 'string' ? recalled.items.map((item) => ({
         id: item.record.id,
         layer: item.layer,
         score: Math.round(item.score * 1000) / 1000,
         channels: item.channels,
-      }));
+      })) : [];
       const layers = { l1: 0, l2: 0, l3: 0 };
       for (const item of selected) layers[item.layer as 'l1' | 'l2' | 'l3'] += 1;
+      const mode = recalledText
+        ? (profileText ? 'recall+profile' : 'recall')
+        : 'profile';
       const buffer = buffers.get(sessionId);
-      if (buffer && typeof result !== 'string') {
-        buffer.injectedIds = [...new Set([...(buffer.injectedIds ?? []), ...result.items.map((item) => item.record.id)])];
+      if (buffer && recalled && typeof recalled !== 'string') {
+        buffer.injectedIds = [...new Set([...(buffer.injectedIds ?? []), ...recalled.items.map((item) => item.record.id)])];
       }
       void appendInjection(store.dir, {
         ts: Date.now(),
@@ -406,9 +422,10 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         cwd: cwd ?? '',
         query,
         chars: text.length,
-        mode: typeof result === 'string' ? 'recent-fallback' : 'recall',
+        mode,
         layers,
         active: activeCount,
+        a: profileText ? 1 : 0,
         selected,
       });
       // The client projects this user-role context message into a collapsible
@@ -423,13 +440,17 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
             source: {
               kind: 'holo-memory',
               form: 'snapshot',
-              sections: [{ name: 'holo-memory', text }],
+              sections: [
+                ...(recalledText ? [{ name: 'holo-memory', text: recalledText }] : []),
+                ...(profileText ? [{ name: 'a-profile', text: profileText }] : []),
+              ],
               // Presentation metadata for the client's context-node renderer.
               query: redactSecrets(query).slice(0, 300),
               chars: text.length,
-              mode: typeof result === 'string' ? 'recent-fallback' : 'recall',
+              mode,
               layers,
               active: activeCount,
+              a: profileText ? 1 : 0,
               selected,
             } as any,
           }),
@@ -451,8 +472,10 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       name: 'holo-memory:guidance',
       order: 5000,
       text:
-        'You have a three-layer holographic long-term memory (L1 dialogue summaries, L2 atomic facts, L3 holistic capsules). ' +
+        'You have a three-layer holographic long-term memory (L1 dialogue summaries, L2 atomic facts, L3 holistic capsules) and an A-series profile distilled from them. ' +
         'Relevant memories may be injected automatically as a user-role "holo-memory" block; treat it as background facts and verify against current state. ' +
+        'When an "[A · 用户偏好与人格]" block is present, treat it as the user\'s stable preferences, habits and working style: follow it by default for low-risk, reversible, everyday decisions. ' +
+        'For important, irreversible, expensive, public-posting, safety/privacy, or relationship-affecting decisions, ask the user first instead of deciding from the profile. ' +
         'Rows labelled with (id:xxxxxxxx) may be cited by that id when you actually use them. ' +
         'Use memory_recall for more context, memory_note to persist durable facts, memory_forget to correct stale ones. ' +
         'Before relying on a source-sensitive fact, call memory_open(id) to inspect the verbatim excerpt or session pointer. ' +
@@ -482,6 +505,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     store,
     embedder,
     config,
+    profileStore,
     onRecords,
     logger,
   });
@@ -496,6 +520,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
             embedder,
             config,
             runtime,
+            profileStore,
             logger,
             onConfigSaved: () => queueEmbedding([...store.list('l1'), ...store.list('l2'), ...store.list('l3')]),
             getNeuron: () => {

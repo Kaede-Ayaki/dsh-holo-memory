@@ -14,6 +14,7 @@ import { runDoctor } from './doctor.js';
 import { maintainMemory } from './maintenance.js';
 import { AUTHORITY_NOTE, EVIDENCE_NOTE, MEMORY_AUTHORITY } from './authority.js';
 import { thresholdAudit } from './thresholds.js';
+import { ProfileStore, renderAProfile } from './profile.js';
 
 const LAYERS: Layer[] = ['l1', 'l2', 'l3'];
 
@@ -21,6 +22,7 @@ interface ToolDeps {
   store: HoloStore;
   embedder: EmbeddingClient;
   config: HoloConfig;
+  profileStore: ProfileStore;
   onRecords?: (records: AnyRecord[]) => void;
   logger?: { warn(message: string): void };
 }
@@ -102,6 +104,27 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
           blocks.push(`## ${layer.toUpperCase()}\n${group.map((record) => formatRecord(record)).join('\n\n')}`);
         }
         return blocks.join('\n\n');
+      },
+    }),
+  );
+
+  ctx.tools.register(
+    defineTool({
+      name: 'memory_profile',
+      description:
+        'Read the A-series profile distilled from L1-L3: stable user preferences, habits, personality and working style, plus the decision boundary. ' +
+        'Pass refresh=true to re-distill it from the current L1-L3 records.',
+      parameters: {
+        refresh: { type: 'boolean', description: 'Re-distill from current L1-L3 records before returning (default false).' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
+      async execute(args) {
+        await deps.profileStore.whenReady().catch(() => undefined);
+        if (args.refresh === true) await deps.profileStore.refresh(deps.store);
+        const profile = deps.profileStore.get();
+        if (!profile) return 'A-series profile is empty. Turn on writing and let a few turns accumulate, or call memory_profile(refresh=true).';
+        const text = renderAProfile(profile, 2400);
+        return `${text}\n\nEvidence ids: ${profile.evidenceIds.slice(0, 20).join(', ')}`;
       },
     }),
   );

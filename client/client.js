@@ -362,10 +362,12 @@
           var layers = data.layers || {};
           var selected = Array.isArray(data.selected) ? data.selected : [];
           var active = Number.isFinite(data.active) ? data.active : 0;
+          var aProfile = Number.isFinite(data.a) ? data.a : 0;
           // The host text starts with the same label line the header already shows.
           var body = text.replace(/^\[[^\n]*holo-memory[^\n]*\]\s*\n?/i, "").trim();
           var meta = (data.mode === "recent-fallback" ? "兜底 · " : "") +
             (active > 0 ? "主动×" + active + " · " : "") +
+            (aProfile > 0 ? "A×" + aProfile + " · " : "") +
             "L1×" + (layers.l1 || 0) + " L2×" + (layers.l2 || 0) + " L3×" + (layers.l3 || 0) +
             " · " + chars + " 字符";
           return h(
@@ -416,6 +418,7 @@
                 chars: Number.isFinite(source.chars) ? source.chars : text.length,
                 mode: source.mode === "recent-fallback" ? "recent-fallback" : "recall",
                 active: Number.isFinite(source.active) ? source.active : 0,
+                a: Number.isFinite(source.a) ? source.a : 0,
                 layers: source.layers && typeof source.layers === "object" ? source.layers : { l1: 0, l2: 0, l3: 0 },
                 selected: Array.isArray(source.selected) ? source.selected : [],
               },
@@ -732,6 +735,9 @@
           var neuronState = react.useState(null);
           var neuron = neuronState[0];
           var setNeuron = neuronState[1];
+          var profileState = react.useState(null);
+          var profile = profileState[0];
+          var setProfile = profileState[1];
           var viewState = react.useState("memory");
           var view = viewState[0];
           var setView = viewState[1];
@@ -794,6 +800,7 @@
               fetchJson("/holo-memory/injections?limit=50").catch(function () { return { injections: [] }; }),
               fetchJson("/holo-memory/config").catch(function () { return { config: null }; }),
               fetchJson("/holo-memory/neuron").catch(function () { return { ok: false, available: false }; }),
+              fetchJson("/holo-memory/profile").catch(function () { return { ok: false, profile: null }; }),
             ])
               .then(function (values) {
                 setStats(values[0]);
@@ -802,6 +809,7 @@
                 var cfg = values[3].config || null;
                 setConfig(cfg);
                 setNeuron(values[4] || { ok: false, available: false });
+                setProfile(values[5] || { ok: false, profile: null });
                 if (cfg && !cfgLoaded.current) {
                   cfgLoaded.current = true;
                   setBaseUrl(cfg.baseUrl || "");
@@ -1260,6 +1268,47 @@
               : null,
           );
 
+          var aProfile = profile && profile.profile ? profile.profile : null;
+          var refreshProfile = function () {
+            fetchJson("/holo-memory/profile/refresh", {
+              method: "POST",
+              headers: { "x-holo-memory": "1" },
+            }).then(function (value) { setProfile(value); }).catch(function (err) {
+              setError(String(err && err.message ? err.message : err));
+            });
+          };
+          var aSection = function (title, items) {
+            if (!items || items.length === 0) return null;
+            return h("div", { style: { marginTop: "12px" } },
+              h("div", { className: "hm-panel-title" }, icon("sparkles", 13), title),
+              items.map(function (item, index) {
+                return h("div", { className: "hm-neuron-sample", key: title + "-" + index },
+                  h("span", { style: { flex: "1 1 auto", whiteSpace: "normal" } }, item));
+              }));
+          };
+          var profilePanel = h("div", { className: "hm-neuron-page" },
+            h("div", { className: "hm-neuron-panel" },
+              h("div", { className: "hm-neuron-panel-title" },
+                h("span", { className: "hm-neuron-badge" }, "A SERIES"),
+                "A · 用户偏好与人格"),
+              h("div", { className: "hm-neuron-note" },
+                "从 L1-L3 蒸馏出的稳定偏好、行为习惯、人格与工作方式。低风险、可逆事项可默认照此执行；重要抉择仍会先咨询你。"),
+              !aProfile
+                ? h("div", { className: "hm-neuron-note", style: { marginTop: "10px" } },
+                    "A 系列还没有内容。先正常对话几轮让它自动蒸馏，或点击下面按钮从现有 L1-L3 重建。")
+                : h("div", null,
+                    h("div", { className: "hm-neuron-note", style: { marginTop: "10px" } }, aProfile.summary || ""),
+                    aSection("偏好偏向", aProfile.preferences),
+                    aSection("行为习惯", aProfile.habits),
+                    aSection("人格 / 工作方式", aProfile.personality),
+                    aSection("工作风格关键词", aProfile.workingStyle),
+                    aSection("重要抉择：先询问", aProfile.confirmFor),
+                    h("div", { className: "hm-neuron-note", style: { marginTop: "12px" } },
+                      "证据记录 " + ((aProfile.evidenceIds || []).length) + " 条 · revision " + (aProfile.revision || 0))),
+              h("div", { style: { marginTop: "14px", display: "flex", gap: "8px" } },
+                h("button", { className: "hm-btn", onClick: refreshProfile }, "重新蒸馏 A 系列"),
+                h("button", { className: "hm-btn", onClick: load, disabled: loading }, "刷新"))));
+
           return h(
             "div",
             { className: "hm-pane" },
@@ -1285,6 +1334,11 @@
                     ),
                     h(
                       "button",
+                      { className: "hm-view-tab" + (view === "profile" ? " hm-view-tab-on" : ""), onClick: function () { setView("profile"); } },
+                      "A 系列",
+                    ),
+                    h(
+                      "button",
                       { className: "hm-view-tab" + (view === "neuron" ? " hm-view-tab-on" : ""), onClick: function () { setView("neuron"); } },
                       "神经元记忆",
                     ),
@@ -1307,7 +1361,9 @@
                   ),
                 ),
               ),
-              view === "neuron"
+              view === "profile"
+                ? profilePanel
+                : view === "neuron"
                 ? neuronPanel
                 : [
                     h(

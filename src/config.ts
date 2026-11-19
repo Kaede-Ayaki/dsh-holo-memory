@@ -33,6 +33,10 @@ export const Config = z.object({
   activeWindowFallbackOnly: z.boolean().default(true),
   /** Reciprocal-rank-fusion constant; 60 is the standard default. */
   rrfRankConstant: z.number().default(60),
+  /** A series: distilled user preferences, habits and personality. */
+  aSeriesEnabled: z.boolean().default(true),
+  aSeriesMaxChars: z.number().default(800),
+  aSeriesRefreshOnExtract: z.boolean().default(true),
   /** Background extraction at turn end. */
   extractEnabled: z.boolean().default(true),
   extractProvider: z.string().default(''),
@@ -89,6 +93,9 @@ export type HoloConfig = {
   activeWindowMinImportance: number;
   activeWindowFallbackOnly: boolean;
   rrfRankConstant: number;
+  aSeriesEnabled: boolean;
+  aSeriesMaxChars: number;
+  aSeriesRefreshOnExtract: boolean;
   extractEnabled: boolean;
   extractProvider: string;
   extractModel: string;
@@ -135,6 +142,9 @@ export const DEFAULT_CONFIG: HoloConfig = {
   activeWindowMinImportance: 7,
   activeWindowFallbackOnly: true,
   rrfRankConstant: 60,
+  aSeriesEnabled: true,
+  aSeriesMaxChars: 800,
+  aSeriesRefreshOnExtract: true,
   extractEnabled: true,
   extractProvider: '',
   extractModel: '',
