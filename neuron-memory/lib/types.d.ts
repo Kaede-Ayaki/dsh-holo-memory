@@ -11,6 +11,8 @@ export interface MemoryNode {
     tags: string[];
     importance: number;
     updatedAt: number;
+    /** holo project scope; '' means user-scoped/global. Optional for legacy graphs. */
+    projectKey?: string;
 }
 export interface EntityNode {
     id: string;
@@ -49,6 +51,8 @@ export interface HoloRecord {
     kind?: string;
     importance?: number;
     updatedAt?: number;
+    /** holo project scope; '' means user-scoped/global. */
+    projectKey?: string;
 }
 export interface IngestRequest {
     records: HoloRecord[];
@@ -72,6 +76,13 @@ export interface ExpandRequest {
     minSignal?: number;
     topK?: number;
     excludeSeed?: boolean;
+    /** Only return memory nodes from this holo project ('' = user-scoped). */
+    projectKey?: string;
+    /**
+     * Query-seeded expansions must share at least one salient query term with
+     * the candidate label/tags. Explicit seedIds bypass this check.
+     */
+    requireQueryOverlap?: boolean;
 }
 export interface ExpansionHit {
     holoId: string;
@@ -83,6 +94,7 @@ export interface ExpansionHit {
 export interface ExpandResult {
     query: string;
     seeds: string[];
+    seedLabels?: string[];
     hits: ExpansionHit[];
     depth: number;
     damping: number;

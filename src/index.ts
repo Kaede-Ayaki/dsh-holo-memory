@@ -355,7 +355,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         | { expand?: (request: unknown) => Promise<{ hits?: Array<{ holoId?: string; activation?: number }> }> }
         | undefined;
       if (neuron?.expand && query.trim().length >= 4) {
-        const expansion = await neuron.expand({ query, topK: 8 });
+        const expansion = await neuron.expand({ query, topK: 8, projectKey: project.key });
         neuronHits = (expansion?.hits ?? [])
           .filter((hit) => typeof hit.holoId === 'string' && typeof hit.activation === 'number')
           .map((hit) => ({ id: hit.holoId as string, activation: hit.activation as number }))

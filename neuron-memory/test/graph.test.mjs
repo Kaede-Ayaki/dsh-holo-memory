@@ -171,6 +171,91 @@ test('concurrent syncs serialize writes and do not race graph temp files', async
   await fs.rm(dir, { recursive: true, force: true });
 });
 
+test('query-seeded expansion is filtered to the requested project and query topic', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'neuron-scope-'));
+  const config = normalizeConfig({ graphDir: path.join(dir, 'graph'), holoStoreDir: dir });
+  const graph = new NeuronGraph(config.graphDir, config);
+  const records = [
+    {
+      id: 'l2_scope_a',
+      layer: 'l2',
+      text: 'alpha 部署在 Windows 上。',
+      tags: ['alpha', 'shared'],
+      projectKey: 'project-a',
+      importance: 7,
+      updatedAt: 1,
+    },
+    {
+      id: 'l2_scope_b',
+      layer: 'l2',
+      text: 'beta 的内容。',
+      tags: ['beta', 'shared'],
+      projectKey: 'project-b',
+      importance: 7,
+      updatedAt: 2,
+    },
+    {
+      id: 'l2_scope_user',
+      layer: 'l2',
+      text: 'alpha 是全局偏好。',
+      tags: ['alpha', 'user'],
+      projectKey: '',
+      importance: 8,
+      updatedAt: 3,
+    },
+  ];
+  await graph.ingest(records, { rebuild: true });
+  const result = await graph.expand({ query: 'alpha', projectKey: 'project-a', excludeSeed: false });
+  const ids = result.hits.map((hit) => hit.holoId);
+  assert.ok(ids.includes('l2_scope_a'));
+  assert.ok(ids.includes('l2_scope_user'), 'user-scoped records remain visible');
+  assert.ok(!ids.includes('l2_scope_b'), 'other project is filtered');
+
+  const broad = await graph.expand({
+    query: 'alpha',
+    excludeSeed: false,
+    requireQueryOverlap: false,
+    minSignal: 0.001,
+    depth: 3,
+  });
+  assert.ok(broad.hits.some((hit) => hit.holoId === 'l2_scope_b'), 'project/topic filters are opt-out');
+  await fs.rm(dir, { recursive: true, force: true });
+});
+
+test('query overlap drops an associative bridge that shares only generic structure', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'neuron-overlap-'));
+  const config = normalizeConfig({ graphDir: path.join(dir, 'graph'), holoStoreDir: dir });
+  const graph = new NeuronGraph(config.graphDir, config);
+  await graph.ingest(
+    [
+      { id: 'l2_overlap_a', layer: 'l2', text: 'alpha 记录', tags: ['alpha', 'shared'], importance: 7, updatedAt: 1 },
+      { id: 'l2_overlap_b', layer: 'l2', text: 'beta 记录', tags: ['beta', 'shared'], importance: 7, updatedAt: 2 },
+    ],
+    { rebuild: true },
+  );
+  const result = await graph.expand({ query: 'alpha', excludeSeed: false });
+  const ids = result.hits.map((hit) => hit.holoId);
+  assert.deepEqual(ids, ['l2_overlap_a']);
+  await fs.rm(dir, { recursive: true, force: true });
+});
+
+test('config normalizes booleans and clamps unsafe numeric values', async () => {
+  const config = normalizeConfig({
+    requireQueryOverlap: false,
+    defaultDepth: 99,
+    damping: -1,
+    topK: 0,
+    maxDegree: 0,
+    maxSeedEntities: 999,
+  });
+  assert.equal(config.requireQueryOverlap, false);
+  assert.equal(config.defaultDepth, 3);
+  assert.equal(config.damping, 0.1);
+  assert.equal(config.topK, 1);
+  assert.equal(config.maxDegree, 1);
+  assert.equal(config.maxSeedEntities, 32);
+});
+
 test('plugin registers P0 tools and provides neuronMemory service', async () => {
   const { dir, config } = await seed();
   const registered = [];

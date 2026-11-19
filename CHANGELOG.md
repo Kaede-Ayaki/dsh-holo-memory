@@ -3,6 +3,37 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.5.4] - 2026-11-19
+
+**主题：按全息记忆踩过的坑审计神经元模块，修掉同一类问题。**
+
+### Fixed
+
+- **项目隔离**：memory 节点新增 `projectKey`；holo 自动扩展传入当前 project；
+  `expand` 只返回该 project + user-scoped (`''`) 的候选，避免跨项目联想泄漏。
+- **查询词重叠过滤**：query 自动扩展的命中必须与候选 label/tags 共享至少一个
+  salient query term；显式 `seedIds` 不受此限制。
+- **URL 污染**：先从 query 中剥离 URL，再取种子词；避免 `https/com/id/api`
+  这类域名片段把 ComfyUI 等无关实体点亮。
+- **泛实体种子**：过滤 `--- / 1girl / 2d / thinking / 提示词 / 主人令 / 当前`
+  等全局桥词；中文实体最短 3 字符；自动种子上限从 12 降到 8（可配）。
+- **配置校验**：`normalizeConfig` 支持 boolean，并 clamp depth/damping/topK/
+  maxNodes/maxEdges/maxDegree/maxTags/maxSeedEntities；非法值不再穿透到图算法。
+- **maxNodes 清理**：裁掉 memory 节点后重新计算 entity degree 并删除孤儿实体。
+- **feedback 清理**：边固定为 memory→entity，移除无效的 `edge.to` memory 判断。
+- 新增 `requireQueryOverlap`（默认 `true`）、`maxSeedEntities`（默认 `8`）配置。
+- 新增回归测试：项目过滤、query overlap、seed 去泛化、配置 clamp。
+
+### Verification
+
+```text
+holo:   35/35 PASS
+neuron: 10/10 PASS
+```
+
+生产图需要一次增量 sync 或 `neuron_ingest` 写入 `projectKey`；旧图仍兼容，
+缺失 projectKey 的节点按 legacy 处理。
+
 ## [0.5.3] - 2026-11-19
 
 **主题：召回相关性闸门。修掉“每轮塞一堆高重要度但和本轮任务无关的记忆”。**

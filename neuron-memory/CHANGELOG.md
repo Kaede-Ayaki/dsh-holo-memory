@@ -2,6 +2,30 @@
 
 All notable changes to `dsh-neuron-memory`.
 
+## [0.1.1] - 2026-11-19
+
+**主题：按 holo-memory 的召回翻车点审计神经元模块。**
+
+### Fixed
+
+- **project scope**：memory 节点保存 `projectKey`；`expand({projectKey})` 只返回
+  当前 project 与 user-scoped 记录；holo 自动扩展已传 project。
+- **query overlap 闸门**：query 自动扩展的命中必须与候选 label/tags 共享 salient
+  query term；显式 seedIds 不受限制。
+- **URL 污染**：query 先剥离 URL 再取词，避免 `https/com/id/api` 点亮无关实体。
+- **泛实体种子**：过滤 `---/1girl/2d/thinking/提示词/主人令/当前` 等全局桥词；
+  自动种子上限 `maxSeedEntities=8`。
+- **config 校验**：boolean 字段生效；depth/damping/topK/max* 全部 clamp。
+- **maxNodes 清理**：裁掉 memory 节点后重算 entity degree、删孤儿实体。
+- **feedback 清理**：移除无效的 `edge.to` memory 判断。
+- 新增 `requireQueryOverlap` 配置（默认 true）。
+
+### Tests
+
+```text
+neuron: 10/10 PASS
+```
+
 ## [0.1.0] - 2026-11-19
 
 **首个随 `dsh-holo-memory` 0.5.0 发布的伴侣版本。**

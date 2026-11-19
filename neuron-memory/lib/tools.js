@@ -35,6 +35,7 @@ export function registerTools(ctx, deps) {
         parameters: {
             query: { type: 'string', description: 'Natural-language query used to seed entity/memory nodes.' },
             seedIds: { type: 'string', description: 'Optional comma-separated holo ids or 8-char suffixes.' },
+            projectKey: { type: 'string', description: 'Optional holo project key; filters hits to that project plus user-scoped memories.' },
             depth: { type: 'number', description: 'Activation depth, 1-3 (default 2).' },
             topK: { type: 'number', description: 'Max candidate memories (default 8).' },
         },
@@ -47,6 +48,7 @@ export function registerTools(ctx, deps) {
             const result = await deps.graph.expand({
                 query: args.query ?? '',
                 seedIds: raw,
+                projectKey: args.projectKey ?? '',
                 depth: args.depth,
                 topK: args.topK,
             });
@@ -54,7 +56,7 @@ export function registerTools(ctx, deps) {
                 return 'No associative candidates. Run neuron_ingest first, or use a clearer query/seed.';
             return [
                 `Neuron expansion · depth ${result.depth} · damping ${result.damping} · visited ${result.nodesVisited}`,
-                `seeds: ${result.seeds.length > 0 ? result.seeds.map((id) => id.slice(-12)).join(', ') : '(none)'}`,
+                `seeds: ${result.seedLabels?.length ? result.seedLabels.join(', ') : '(none)'}`,
                 'Candidates (canonical content is still in holo-memory):',
                 ...result.hits.map((hit, index) => `${index + 1}. ${hit.holoId} · ${hit.layer.toUpperCase()} · activation ${hit.activation} · ${hit.label}`),
                 'Use memory_recall/memory_open with these ids before citing.',

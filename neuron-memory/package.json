@@ -1,6 +1,6 @@
 {
   "name": "dsh-neuron-memory",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Associative neuron index for dsh-holo-memory: a bipartite entity/memory graph that expands holo candidates without owning canonical facts.",
   "type": "module",
   "main": "lib/index.js",
@@ -34,10 +34,18 @@
     "@deepseek-ai/schemastery": ">=3.18.5"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-tools": { "optional": true },
-    "@deepseek-ai/dsh-home-paths": { "optional": true },
-    "@deepseek-ai/schemastery": { "optional": true }
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-home-paths": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
@@ -53,4 +61,3 @@
     }
   }
 }
-
