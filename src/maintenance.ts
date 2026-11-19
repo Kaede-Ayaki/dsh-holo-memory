@@ -90,6 +90,9 @@ async function runMaintenance(
   options: MaintenanceOptions,
 ): Promise<MaintenanceResult> {
   await store.whenReady();
+  if (!store.writesAllowed() && options.dryRun !== true) {
+    throw new Error('holo-memory writes are disabled by the runtime switch');
+  }
   const now = options.now ?? Date.now();
   const olderThanDays = options.olderThanDays ?? config.l1ArchiveAfterDays;
   const selected = selectL1ForArchive(store.list('l1') as L1Record[], config, now, olderThanDays);

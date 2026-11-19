@@ -76,11 +76,28 @@ export class HoloStore {
   private readonly saveChains = new Map<Layer, Promise<void>>();
   private readonly ready: Promise<void>;
   private loaded = false;
+  /** Runtime write switch; canonical writes are refused while it is false. */
+  private writeGuard: () => boolean = () => true;
 
   constructor(dir: string, config: HoloConfig) {
     this.dir = path.resolve(dir);
     this.config = config;
     this.ready = this.init();
+  }
+
+  /** Install the runtime write switch. */
+  setWriteGuard(guard: () => boolean): void {
+    this.writeGuard = guard;
+  }
+
+  writesAllowed(): boolean {
+    return this.writeGuard();
+  }
+
+  private assertWritable(): void {
+    if (!this.writeGuard()) {
+      throw new Error('holo-memory writes are disabled by the runtime switch');
+    }
   }
 
   private async init(): Promise<void> {
@@ -140,6 +157,7 @@ export class HoloStore {
   }
 
   insert<T extends AnyRecord>(record: T): T {
+    this.assertWritable();
     if (record.layer === 'l1') this.data.l1.push(record as L1Record);
     else if (record.layer === 'l2') this.data.l2.push(record as L2Record);
     else this.data.l3.push(record as L3Record);
@@ -149,6 +167,7 @@ export class HoloStore {
   }
 
   update(layer: Layer, id: string, patch: Partial<AnyRecord>, touch = true): AnyRecord | undefined {
+    this.assertWritable();
     const records = this.data[layer] as AnyRecord[];
     const index = records.findIndex((record) => record.id === id);
     if (index < 0) return undefined;
@@ -165,6 +184,7 @@ export class HoloStore {
   }
 
   remove(id: string): boolean {
+    this.assertWritable();
     for (const layer of ['l1', 'l2', 'l3'] as const) {
       const records = this.data[layer] as AnyRecord[];
       const index = records.findIndex((record) => record.id === id);

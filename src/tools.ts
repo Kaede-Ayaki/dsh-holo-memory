@@ -14,6 +14,7 @@ import { runDoctor } from './doctor.js';
 import { maintainMemory } from './maintenance.js';
 import { AUTHORITY_NOTE, EVIDENCE_NOTE, MEMORY_AUTHORITY } from './authority.js';
 import { thresholdAudit } from './thresholds.js';
+import type { RuntimeToggles } from './runtime.js';
 
 const LAYERS: Layer[] = ['l1', 'l2', 'l3'];
 
@@ -21,6 +22,7 @@ interface ToolDeps {
   store: HoloStore;
   embedder: EmbeddingClient;
   config: HoloConfig;
+  runtime?: RuntimeToggles;
   onRecords?: (records: AnyRecord[]) => void;
   logger?: { warn(message: string): void };
 }
@@ -57,6 +59,44 @@ function findBySuffix(store: HoloStore, raw: string): AnyRecord | undefined {
 
 export function registerTools(ctx: { tools: { register(tool: unknown): void } }, deps: ToolDeps): void {
   const stringOutput = (text: string) => [{ type: 'text' as const, text }];
+  const READ_TOOLS = new Set([
+    'memory_recall',
+    'memory_list',
+    'memory_open',
+    'memory_injections',
+    'memory_doctor',
+    'memory_stats',
+  ]);
+  const WRITE_TOOLS = new Set(['memory_note', 'memory_forget', 'memory_maintenance']);
+
+  // The input-toolbar switches are the runtime authority. Wrap registration
+  // so the model cannot bypass a disabled read with an explicit tool call.
+  if (deps.runtime) {
+    const rawRegister = ctx.tools.register.bind(ctx.tools);
+    ctx.tools.register = (tool: unknown) => {
+      const candidate = tool as { name?: string; execute?: (...args: any[]) => unknown };
+      if (typeof candidate.name !== 'string' || typeof candidate.execute !== 'function') {
+        rawRegister(tool);
+        return;
+      }
+      const name = candidate.name;
+      const original = candidate.execute.bind(tool);
+      rawRegister({
+        ...(tool as Record<string, unknown>),
+        execute: async (args: Record<string, unknown>, exec: unknown) => {
+          const toggles = deps.runtime!.get();
+          if (READ_TOOLS.has(name) && !toggles.read) {
+            return stringOutput('Holo-memory reading is disabled by the runtime switch.');
+          }
+          if (WRITE_TOOLS.has(name) && !toggles.write) {
+            const dryRun = name === 'memory_maintenance' && args?.dryRun === true;
+            if (!dryRun) return stringOutput('Holo-memory writing is disabled by the runtime switch.');
+          }
+          return original(args, exec);
+        },
+      });
+    };
+  }
 
   ctx.tools.register(
     defineTool({

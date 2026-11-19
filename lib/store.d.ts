@@ -37,7 +37,13 @@ export declare class HoloStore {
     private readonly saveChains;
     private readonly ready;
     private loaded;
+    /** Runtime write switch; canonical writes are refused while it is false. */
+    private writeGuard;
     constructor(dir: string, config: HoloConfig);
+    /** Install the runtime write switch. */
+    setWriteGuard(guard: () => boolean): void;
+    writesAllowed(): boolean;
+    private assertWritable;
     private init;
     private fileFor;
     private loadLayer;

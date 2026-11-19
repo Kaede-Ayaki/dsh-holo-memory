@@ -9,6 +9,7 @@ import { HoloStore, contentHash, newId, projectIdFor } from '../lib/store.js';
 import { EmbeddingClient } from '../lib/embeddings.js';
 import { sourceFromTurn } from '../lib/source.js';
 import { registerConsole } from '../lib/console.js';
+import { RuntimeToggles } from '../lib/runtime.js';
 
 function capture() {
   const project = projectIdFor('D:\\work\\demo');
@@ -64,7 +65,13 @@ test('console exposes stats, doctor and open routes', async () => {
       },
     },
   };
-  registerConsole(fakeCtx, { store, embedder: new EmbeddingClient(config), config, logger: { warn() {} } });
+  registerConsole(fakeCtx, {
+    store,
+    embedder: new EmbeddingClient(config),
+    config,
+    runtime: new RuntimeToggles(dir),
+    logger: { warn() {} },
+  });
   assert.equal(typeof handler, 'function');
   const server = createServer((req, res) => handler(req, res));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -75,6 +82,22 @@ test('console exposes stats, doctor and open routes', async () => {
     assert.equal(stats.authority, 'dsh-holo-memory');
     assert.equal(stats.source.backed, 1);
     assert.ok(Array.isArray(stats.thresholds));
+
+    const toggles = await (await fetch(`${base}/holo-memory/toggles`)).json();
+    assert.equal(toggles.ok, true);
+    assert.equal(toggles.toggles.read, true);
+    assert.equal(toggles.toggles.write, true);
+    const patched = await (await fetch(`${base}/holo-memory/toggles`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-holo-memory': '1' },
+      body: JSON.stringify({ read: false, write: false }),
+    })).json();
+    assert.equal(patched.ok, true);
+    assert.equal(patched.toggles.read, false);
+    assert.equal(patched.toggles.write, false);
+    const persisted = await (await fetch(`${base}/holo-memory/toggles`)).json();
+    assert.equal(persisted.toggles.read, false);
+    assert.equal(persisted.toggles.write, false);
 
     const doctor = await (await fetch(`${base}/holo-memory/doctor?deep=1`)).json();
     assert.equal(doctor.ok, true);

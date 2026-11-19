@@ -4,6 +4,8 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { apply, name, inject, Config } from '../lib/index.js';
+import { HoloStore, contentHash, newId, projectIdFor } from '../lib/store.js';
+import { normalizeConfig } from '../lib/config.js';
 
 function fakeCtx() {
   const listeners = new Map();
@@ -164,6 +166,87 @@ test('holo pre-step consumes neuronMemory.expand as an associative channel', asy
   await emit(ctx, 'session/event', session, { type: 'turn/end', data: { turn: 2, reason: { kind: 'complete' } } });
   assert.ok(feedbackCalls.some((event) => event.citedIds.includes(l1[0].id)), 'neuron feedback receives cited holo id');
   await fs.rm(dir, { recursive: true, force: true });
+});
+
+test('runtime switches block automatic read and write independently', async () => {
+  const seedReadMemory = async (dir) => {
+    const store = new HoloStore(dir, normalizeConfig({}));
+    await store.whenReady();
+    const project = projectIdFor('D:\\work\\demo');
+    const now = Date.now();
+    const record = {
+      id: newId('l1'),
+      layer: 'l1',
+      scope: 'project',
+      projectKey: project.key,
+      projectLabel: project.label,
+      importance: 5,
+      createdAt: now,
+      updatedAt: now,
+      hash: contentHash('deploy'),
+      sessionId: 's-seed',
+      turn: 1,
+      cwd: 'D:\\work\\demo',
+      summary: '这个项目部署到 Windows 的测试命令是 pnpm test。',
+      topics: ['deploy', 'test'],
+    };
+    store.insert(record);
+    await store.flush();
+    return record;
+  };
+
+  const readDir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-toggle-read-'));
+  await seedReadMemory(readDir);
+  await fs.writeFile(
+    path.join(readDir, 'runtime-toggles.json'),
+    JSON.stringify({ read: false, write: true, updatedAt: Date.now() }),
+    'utf8',
+  );
+  const readCtx = fakeCtx();
+  apply(readCtx, { storageDir: readDir, extractMinTurnChars: 1, injectEnabled: true, injectMaxChars: 800 });
+  const readSession = { id: 's-read-off', header: { cwd: 'D:\\work\\demo', delegationDepth: 0 } };
+  const readUser = message('user', '这个项目部署到 Windows 的测试命令是什么？');
+  const readDecision = { kind: 'enter', messages: [readUser] };
+  const readResults = [];
+  for (const listener of readCtx.listeners.get('agent/pre-step') ?? []) {
+    readResults.push(await listener({ agent: { session: readSession }, messages: [readUser], signal: undefined }, async () => readDecision));
+  }
+  assert.equal(readResults.at(-1).messages.length, readDecision.messages.length, 'read switch off: no memory message');
+  await fs.rm(readDir, { recursive: true, force: true });
+
+  const readOnDir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-toggle-read-on-'));
+  await seedReadMemory(readOnDir);
+  const readOnCtx = fakeCtx();
+  apply(readOnCtx, { storageDir: readOnDir, extractMinTurnChars: 1, injectEnabled: true, injectMaxChars: 800 });
+  const readOnUser = message('user', '这个项目部署到 Windows 的测试命令是什么？');
+  const readOnDecision = { kind: 'enter', messages: [readOnUser] };
+  const readOnResults = [];
+  for (const listener of readOnCtx.listeners.get('agent/pre-step') ?? []) {
+    readOnResults.push(await listener({ agent: { session: { id: 's-read-on', header: { cwd: 'D:\\work\\demo', delegationDepth: 0 } } }, messages: [readOnUser], signal: undefined }, async () => readOnDecision));
+  }
+  assert.equal(readOnResults.at(-1).messages.at(-1).source.kind, 'holo-memory', 'read switch on: memory injected');
+  await fs.rm(readOnDir, { recursive: true, force: true });
+
+  const writeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-toggle-write-'));
+  await fs.writeFile(
+    path.join(writeDir, 'runtime-toggles.json'),
+    JSON.stringify({ read: true, write: false, updatedAt: Date.now() }),
+    'utf8',
+  );
+  const writeCtx = fakeCtx();
+  apply(writeCtx, { storageDir: writeDir, extractMinTurnChars: 1, extractEnabled: true, injectEnabled: true });
+  const writeSession = { id: 's-write-off', header: { cwd: 'D:\\work\\demo', delegationDepth: 0 } };
+  await emit(writeCtx, 'session/event', writeSession, { type: 'turn/start', data: { turn: 1 } });
+  await emit(writeCtx, 'session/event', writeSession, { type: 'user/message', data: message('user', '记住：这个项目用 pnpm。') });
+  await emit(writeCtx, 'session/event', writeSession, {
+    type: 'assistant/message',
+    data: { message: message('assistant', '好的。') },
+  });
+  await emit(writeCtx, 'session/event', writeSession, { type: 'turn/end', data: { turn: 1, reason: { kind: 'complete' } } });
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  const writeL1 = await fs.readFile(path.join(writeDir, 'l1.json'), 'utf8').catch(() => null);
+  assert.equal(writeL1, null, 'write switch off: no L1 persisted');
+  await fs.rm(writeDir, { recursive: true, force: true });
 });
 
 test('a completed turn is distilled into L1 and injected on the next turn', async () => {

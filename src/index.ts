@@ -32,6 +32,7 @@ import { redactSecrets } from './sanitize.js';
 import { applyCitationFeedback } from './feedback.js';
 import { AUTHORITY_NOTE, EVIDENCE_NOTE } from './authority.js';
 import { startMaintenanceSchedule } from './maintenance.js';
+import { RuntimeToggles } from './runtime.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
 export const name = 'holo-memory';
@@ -91,6 +92,8 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   const logger: LoggerLike = ctx.logger ?? { warn: () => undefined };
   applySavedEmbeddingConfig(config, storageDir);
   const store = new HoloStore(storageDir, config);
+  const runtime = new RuntimeToggles(storageDir);
+  store.setWriteGuard(() => runtime.get().write);
   const embedder = new EmbeddingClient(config);
   const abort = new AbortController();
 
@@ -115,7 +118,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   let embeddingDrain: Promise<void> | undefined;
 
   const queueEmbedding = (records: AnyRecord[]): void => {
-    if (!embedder.enabled) return;
+    if (!embedder.enabled || !store.writesAllowed()) return;
     for (const record of records) {
       if (!record.embedding || record.embeddingModel !== config.embeddingModel) pendingEmbeddings.set(record.id, record);
     }
@@ -126,6 +129,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
   };
 
   const syncNeuron = (): void => {
+    if (!store.writesAllowed()) return;
     try {
       const neuron = ctx.get?.('neuronMemory') as { sync?: () => Promise<unknown> | unknown } | undefined;
       if (neuron?.sync) void Promise.resolve(neuron.sync()).catch(() => undefined);
@@ -145,7 +149,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       for (const record of batch) pendingEmbeddings.delete(record.id);
       const texts = batch.map((record) => embeddingText(record));
       const vectors = await embedder.embed(texts, abort.signal);
-      if (!vectors) return; // endpoint unavailable: keep lexical retrieval working
+      if (!vectors || !store.writesAllowed()) return; // endpoint/switch unavailable: lexical retrieval still works
       for (let i = 0; i < batch.length; i++) {
         const record = batch[i];
         const vector = vectors[i];
@@ -181,6 +185,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
         const provider = config.extractProvider.trim() || route.provider;
         const model = config.extractModel.trim() || route.model;
         try {
+          if (!store.writesAllowed()) continue;
           await extractTurn(
             {
               store,
@@ -215,6 +220,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     buffers.delete(sessionId);
     if (config.debug) logger.info?.(`[holo-memory] flush ${sessionId}: ${capture ? `${capture.userTexts.length}u/${capture.assistantTexts.length}a` : 'no buffer'}`);
     if (!capture) return;
+    if (!store.writesAllowed()) return;
     if (!config.extractEnabled) return;
     if (capture.userTexts.length === 0) return;
     if (reason?.kind === 'aborted' && capture.assistantTexts.length === 0) return;
@@ -267,7 +273,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       case 'turn/end': {
         const buffer = buffers.get(sessionId);
         if (buffer) buffer.seqEnd = Number(event.seq ?? buffer.seqEnd ?? 0);
-        if (buffer?.injectedIds && buffer.injectedIds.length > 0) {
+        if (buffer?.injectedIds && buffer.injectedIds.length > 0 && store.writesAllowed()) {
           try {
             const feedback = applyCitationFeedback(store, buffer.injectedIds, buffer.assistantTexts.join('\n'));
             if (config.debug) {
@@ -329,6 +335,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     if (!sessionId) return decision;
     const depth = Number(agent?.session?.header?.delegationDepth ?? 0);
     if (depth > 0 && !config.injectSubagents) return decision;
+    if (!runtime.get().read) return decision;
 
     const promptMessage = Array.isArray(messages)
       ? [...messages].reverse().find((message: unknown) => isHumanUserMessage(message))
@@ -475,6 +482,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     store,
     embedder,
     config,
+    runtime,
     onRecords,
     logger,
   });
@@ -488,6 +496,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
             store,
             embedder,
             config,
+            runtime,
             logger,
             onConfigSaved: () => queueEmbedding([...store.list('l1'), ...store.list('l2'), ...store.list('l3')]),
             getNeuron: () => {
