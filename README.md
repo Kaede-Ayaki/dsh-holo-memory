@@ -1,133 +1,256 @@
 # dsh-holo-memory
 
-> GitHub: <https://github.com/Kaede-Ayaki/dsh-holo-memory>  
-> 版本：`0.5.3`（召回相关性闸门 / 聊天工作步骤召回块 / 神经元联想索引） · 更新日志：[CHANGELOG.md](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.5.3-2f6f63)](CHANGELOG.md)
+[![tests](https://img.shields.io/badge/tests-35%2F35-brightgreen)](test/)
+[![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
+[![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
 
-三层全息记忆插件，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）补上跨会话长期记忆：
+> **Auditable three-layer long-term memory for DeepSeek Harness.**  
+> L1 dialogue summaries · L2 atomic facts · L3 holographic capsules · hybrid recall · neuron index · source pointers · local-first JSON.
 
-- **L1 对话层**：每次对话结束，把这一轮蒸馏成一条紧凑摘要（用户要什么、做了什么、结果）。
-- **L2 事实层**：从对话里抽出原子事实（偏好、决策、约定、关键实体、待办、纠正），带 scope / tags / confidence / 出处。
-- **L3 全息记忆层**：把多轮对话压缩成“部分包含整体”的整体胶囊（用户画像、项目状态、长期线索、未闭环事项）。一条 L3 就能让新会话回忆起整段关系的轮廓。
+`dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
-每个新的用户回合，插件会按当前问题从 L1/L2/L3 混合召回最相关的记忆，压缩进一个受预算约束的 `holo-memory` 上下文块，自动注入到该回合。检索使用四条独立排名通道做 RRF 融合：
-
-1. **BM25 + 中文 bigram**：零依赖、永远可用；
-2. **字符 2/3-gram**：中文子串、错字、中英混合时补位；
-3. **可选的向量模型**：任何 OpenAI 兼容的 `/embeddings` 端点（OpenAI、Ollama、火山方舟等），开启后按校准后的余弦排名参与 RRF；
-4. **可选的神经元联想通道**：安装 `neuron-memory/` 伴侣插件后，用 `memory ↔ entity` 双部图扩散出候选 holo id，作为第四通道进入 RRF；neuron 只提供 id，正文仍由 holo 读取。
-
-RRF 之后还会：
-- 用 **Active Window** 作为兜底：只有当前问题完全没有任何查询命中时，才补 1–2 条高重要度 L2 / L3；有命中时不再附加常驻规则；
-- 按 `IMMEDIATE / WORKING / BACKGROUND` 分配字符预算；
-- 每条注入行带 `(id:xxxxxxxx)`；回答里引用过的 id 会在下一轮回写 `citedCount`，获得轻微加权；
-- 每条注入行带 **证据等级**：`·源` = 有逐字原文片段，`·指针` = 只有 session/turn 指针，`·手写` = 手动写入，无标记 = 仅摘要；
-- 可用 `memory_open(id)` 回取原文片段、来源指针和修订历史。
-
-**权威源**：`dsh-holo-memory` 是自动 L1/L2/L3 记忆的唯一权威源；ALTM、内置记忆、笔记等只作只读参考，不要把同一条事实同时写进两个库（两处都写 = 双重记账）。
-
-纯本地存储，无服务端、无账号、无遥测。
+- 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
+- 当前版本：`0.5.3`（2026-11-19）
+- 更新日志：[CHANGELOG.md](CHANGELOG.md)
+- 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
+- 介绍 PPT：[docs/dsh-holo-memory-intro-v2.pptx](docs/dsh-holo-memory-intro-v2.pptx)
 
 ---
 
-## 安装（桌面版 / 本地开发）
+## 目录
 
-本仓库是插件源码。先 build：
+- [为什么需要它](#为什么需要它)
+- [核心特性](#核心特性)
+- [架构](#架构)
+- [安装](#安装)
+- [快速验证](#快速验证)
+- [配置](#配置)
+- [记忆模型与存储](#记忆模型与存储)
+- [召回机制](#召回机制)
+- [来源、证据与修订](#来源证据与修订)
+- [工作步骤可视化](#工作步骤可视化)
+- [控制台](#控制台)
+- [模型工具](#模型工具)
+- [神经元记忆](#神经元记忆)
+- [每日维护](#每日维护)
+- [热更新与 HMR](#热更新与-hmr)
+- [测试](#测试)
+- [边界与安全](#边界与安全)
+- [版本与路线](#版本与路线)
+- [License](#license)
 
-```sh
-npm install
-npm run build     # tsc -> lib/
+---
+
+## 为什么需要它
+
+模型的权重是静态的，上下文窗口是有限的；跨会话的事实、偏好、项目状态和未闭环事项，需要一个外部账本。
+
+dsh-holo-memory 把“记住”拆成三个动作：
+
+1. **分层收纳**——过程、事实、整体印象分开存；
+2. **按需召回**——每一轮只取当前问题相关的一小段；
+3. **可回取原文**——需要核对时，回到 source 指针，而不是靠模型补一个像样的答案。
+
+它不追求“记得越多越好”。默认策略是**精度优先**：弱相关宁可不注入，也不拿一堆高重要度但离题的记忆污染上下文。
+
+---
+
+## 核心特性
+
+### 三层记忆
+
+| 层 | 内容 | 典型用途 |
+|---|---|---|
+| **L1 对话层** | 每轮对话的紧凑摘要：用户要什么、做了什么、结果 | 找回“上次聊到哪了” |
+| **L2 事实层** | 原子事实：偏好、决策、约定、实体、待办、纠正 | 跨会话复用确定事实 |
+| **L3 全息层** | 多轮压缩的整体胶囊：用户画像、项目状态、长期线索、未闭环事项 | 新会话快速恢复关系轮廓 |
+
+### 四通道混合召回
+
+1. **BM25 + 中文 bigram**：零依赖，永远可用；
+2. **字符 2/3-gram**：中文子串、错字、中英混合时补位；
+3. **向量检索**（可选）：任何 OpenAI 兼容 `/embeddings` 端点；
+4. **神经元联想**（可选）：`memory ↔ entity` 双部图扩散候选，只给 holo id，不复制正文。
+
+四路排名用 RRF 融合；融合后还有逐条证据闸门，避免“层里只有弱匹配时，弱匹配也被顶成第一名”。
+
+### 本地、可读、可核对
+
+- 纯本地 JSON，无服务端、无账号、无遥测；
+- 每条记录带 `scope`、`projectKey`、重要度、`source`、`revision`；
+- `·源` / `·指针` / `·手写` 证据等级；
+- `memory_open(id)` 可回取原文片段、session/turn 指针、哈希校验与修订历史；
+- 原子写入，不会写坏半截文件。
+
+### 召回结果看得见
+
+- 聊天「已完成」工作步骤里显示可折叠召回行；
+- 轨迹页保留完整召回正文；
+- 控制台有「最近自动召回」审计；
+- `injections.jsonl` 可证明“别的会话真的收到了哪些 id”。
+
+---
+
+## 架构
+
+```mermaid
+flowchart LR
+    A[User message] --> B[agent/pre-step]
+    B --> C1[BM25 + bigram]
+    B --> C2[Character n-gram]
+    B --> C3[Optional embeddings]
+    B --> C4[Optional neuron expand]
+    C1 --> D[RRF fusion]
+    C2 --> D
+    C3 --> D
+    C4 --> D
+    D --> E[Evidence gate<br/>injectMinEvidence + layer floors]
+    E --> F[Quotas / budget]
+    F --> G[holo-memory context block]
+    G --> H[Model]
+
+    I[turn/end] --> J[LLM distill]
+    J --> K[L1 / L2 / L3 merge]
+    K --> L[(local JSON store)]
+    L --> C1
+    L --> C3
+    L --> C4
 ```
 
-桌面版（Electron）的 profile 由应用独占管理，命令行 `dsh plugin --profile desktop add …` 会被拒绝。请走应用内入口：
+### 写入路径
+
+```text
+turn/end
+  → collect turn transcript
+  → distill strict JSON (L1, L2[], L3[])
+  → validate / dedupe / redact secrets
+  → append or revise records
+  → atomic JSON write
+  → optional embedding backfill
+  → optional neuron incremental sync
+```
+
+### 读取路径
+
+```text
+user message
+  → tokenize / optional query embedding
+  → four ranking channels
+  → RRF fusion
+  → per-record evidence gate
+  → layer quotas
+  → character budget trimming
+  → user-role snapshot with source tags
+```
+
+---
+
+## 安装
+
+### 前置条件
+
+- DSH 桌面版或兼容的 DSH profile；
+- Node.js `>= 22.19`（构建时）；
+- 可选：一个 OpenAI 兼容的 embedding 端点（不开启也能用词法召回）。
+
+### 1. 构建
+
+```sh
+git clone https://github.com/Kaede-Ayaki/dsh-holo-memory.git
+cd dsh-holo-memory
+npm install
+npm run build
+npm test
+```
+
+构建产物在 `lib/`；客户端入口在 `client/client.js`。
+
+### 2. 安装到桌面版
+
+DSH 桌面版的 profile 由应用独占管理；推荐走应用内入口：
 
 1. 打开 **设置 → 插件 → 添加插件**；
-2. 「包名或地址」填本地目录：`D:\path\to\dsh-holo-memory`；
-3. 安装完成后重启 dsh（工具只在启动时注册）；重启后开新会话，说「记住：这个项目用 pnpm」验证。
+2. 「包名或地址」填本地目录，例如 `D:\path\to\dsh-holo-memory`；
+3. 安装完成后**重启 DSH**（未启用 HMR 时工具只在启动时注册）；
+4. 新开一个会话，说“记住：这个项目用 pnpm”验证写入。
 
 非桌面 profile 也可以用 CLI：
 
 ```sh
-dsh plugin --profile web add link:/absolute/path/to/dsh-holo-memory
+dsh plugin --profile <profile> add link:/absolute/path/to/dsh-holo-memory
 ```
 
-卸载 / 回滚：在设置 → 插件里卸载，或从 profile 的 `package.json` 的 `dsh.profile.bundles` 和 `dependencies` 里删除 `dsh-holo-memory`，再 `pnpm install` 并重启。
+### 3. 可选：安装神经元伴侣
+
+```sh
+cd neuron-memory
+npm install
+npm run build
+npm test
+```
+
+然后在同一个 DSH profile 里安装 `neuron-memory` 目录。  
+边界：neuron 只提供联想候选 id，**不自己注入上下文**；正文仍由 holo 读取。
+
+### 卸载 / 回滚
+
+在 **设置 → 插件** 里卸载，或从 profile 的 `package.json` 中移除：
+
+- `dsh.profile.bundles` 里的 `dsh-holo-memory`；
+- `dependencies` 里的 `dsh-holo-memory`。
+
+再执行 `pnpm install` 并重启。记忆数据在 `$DSH_HOME/holo-memory`，卸载插件不会自动删除数据。
 
 ---
 
-## 全息记忆页面（新）
+## 快速验证
 
-![全息记忆控制台](docs/console.png)
+### 1. 工具是否注册
 
-安装/重载后，侧边栏会出现 **全息记忆** 一级入口（在设置上方，和「插件」并列）。点击后进入独立的记忆页面，不再是设置里的一段：
+新会话里让 agent 调：
 
-- 顶部总记忆数 + L1/L2/L3/已向量化/占用空间；
-- **向量模型配置**：供应商 / 接口地址、模型、API Key、可选维度；
-  - 「检测可用性」只发一次 `/embeddings` 探测：判断是否可达、是不是 embedding 模型、返回维度与延迟，**不保存**；
-  - 「保存配置」写入 `embedding.json` + `embedding.key`，立即生效，并后台按新模型重新回填已有记录；
-- 存储路径、embedding 模型与状态、蒸馏开关；
-- **证据链覆盖率**：有逐字原文 / 仅指针 / 无来源的条数，以及最近修订数；
-- **记忆体检**：快速检查存储、来源覆盖、哈希、向量、重复、召回审计、阈值合法性；深检会真的打开一条原文并跑一次词法召回探针；
-- 搜索框、按层筛选（全部 / L1 / L2 / L3）；
-- 每条记忆的层、scope、项目、重要度、向量状态、证据等级、revision/历史、时间、正文（可展开），以及删除按钮；
-- **最近自动召回**：每次注入的时间、session id、查询、L1/L2/L3 条数、注入字符数和命中的记录 id；
-- 删除立即落盘，并刷新统计。
+```text
+memory_stats()
+```
 
-其他用户不需要改 YAML：打开控制台填自己的接口、模型、Key，点「检测可用性」确认是向量模型，再保存即可。API Key 永远不通过 GET 返回，也不会写进 `embedding.json`。
+应返回 L1/L2/L3 数量、来源覆盖、向量覆盖、存储路径和阈值。
 
-控制台由 host 半的读写路由提供，数据来自 `$DSH_HOME/holo-memory/*.json`，不依赖外部 HTML 或网络资源。修改类请求需要 `x-holo-memory: 1` 请求头，防止跨站触发。
+### 2. 跨会话是否真的召回
 
-### 怎么确认“别的会话”真的用了记忆
+1. 在会话 A 说一个明确事实，例如“以后这个项目用 pnpm test”；
+2. 等回合结束后开会话 B，问“这个项目跑测试用什么命令？”；
+3. 工作步骤里应出现：
 
-1. 新开一个会话，问一个只有记忆里才有答案的问题（例如“使用 ComfyUI 出图前必须先做什么？”）；
-2. 工作步骤里会出现 `[长期记忆自动召回 | holo-memory]` 行，展开可以看到问题、召回正文和命中的记录 id；
-3. 打开侧边栏 **全息记忆 → 最近自动召回**，刷新，应该出现一条 **session id 与当前会话不同** 的记录，包含 query、L1/L2/L3 数量、命中的 id；
-4. 也可以直接让 agent 调用 `memory_injections`，返回同样的审计列表。
+```text
+长期记忆自动召回 | holo-memory · N 字符
+```
 
-审计写入 `$DSH_HOME/holo-memory/injections.jsonl`（只保留最近 1000 条 / 1 MB）。它记录的是“注入事实”，不是“记忆库存”；所以它能证明别的会话确实收到了记忆。
+4. 打开侧边栏 **全息记忆 → 最近自动召回**，应看到一条 session id 与当前会话不同的审计记录；
+5. 也可以调 `memory_injections(limit=10)` 查看审计。
 
-## 工作步骤里的召回可视化
+### 3. 召回不对怎么办
 
-![工作步骤里的长期记忆自动召回](docs/recall-step.png)
-
-每次自动召回都会带一条 `kind: "holo-memory"` 的上下文消息；Web 客户端用一个 context 节点渲染器把它投影成聊天气泡工作步骤里的一行，和「思考 / 运行命令 / 读取」同一层级：
-
-- 折叠：显示 `[长期记忆自动召回 | holo-memory]` + `L1×n L2×n L3×n · 字符数`；
-- 展开：显示触发问题、去掉了标题行的召回正文、命中记录 id；
-- 原生的其他 context 行（skill catalog、instructions 等）仍交给 DSH 原来的渲染器，不改变行为。
-
-> client 半是这次新增的；如果侧边栏暂时看不到「全息记忆」或工作步骤里没有召回行，**刷新一次页面**；仍没有就重启 dsh。
+- 先看 `memory_injections`：是 query 错了、记录错了，还是根本没召回；
+- 用 `memory_recall(query)` 手动检查候选；
+- 用 `memory_open(id)` 核对原文和 source；
+- 用 `memory_forget(id)` 删掉错误/过期记录；
+- 用 `memory_doctor(deep=true)` 检查存储、来源、向量、审计和阈值。
 
 ---
-
-## 神经元记忆（0.5.0 伴侣插件）
-
-`neuron-memory/` 是同一仓库里的可选伴侣插件 `dsh-neuron-memory`：
-
-- 双部图：`memory` 节点 ↔ `entity` 节点，记忆之间不直接连边；
-- 只读 holo 记录，不复制 canonical 正文；
-- 扩散激活：`depth 2` / `damping 0.62` / `minSignal 0.025` / `topK 8`；
-- 增量 sync、度数剪枝、引用反馈；
-- 工具：`neuron_ingest` / `neuron_expand` / `neuron_stats`；
-- 服务：`neuronMemory`。
-
-全息控制台新增 **神经元记忆** 子页面：
-
-- memory/entity/边数量、平均度数、最大度数；
-- L1/L2/L3 分布；
-- Top 实体与 sample memory。
-
-安装与边界见 [`neuron-memory/README.md`](neuron-memory/README.md)。neuron 不自己注入上下文；holo 仍是唯一权威源。
 
 ## 配置
 
-默认配置全部可用。需要覆盖时，在你的 profile patch（`~/.dsh/profiles/desktop/cordis.patch.yml`）里按 id 覆盖：
+默认配置开箱可用。需要覆盖时，在 profile 的 `cordis.patch.yml` 里按 id 覆盖：
 
 ```yaml
 - id: holo-memory
   config:
-    injectMaxChars: 1200
-    extractMaxTokens: 1400
-    # 可选：开启向量检索（OpenAI 兼容 /embeddings）
+    injectEnabled: true
+    injectMaxChars: 5000
+    injectMinEvidence: 0.44
+    activeWindowFallbackOnly: true
+    # 可选：向量召回
     embeddingEnabled: true
     embeddingBaseUrl: https://api.siliconflow.cn/v1
     embeddingModel: Qwen/Qwen3-Embedding-8B
@@ -135,166 +258,442 @@ dsh plugin --profile web add link:/absolute/path/to/dsh-holo-memory
     embeddingBaseline: 0.22
 ```
 
-API Key 推荐放在单独文件（首行），而不是写进 YAML；插件会优先读环境变量，再读 `embeddingApiKeyFile`。SiliconFlow 的 Qwen3-Embedding-8B 输出 4096 维，查询耗时约 200–400ms。
+API Key 推荐放在单独文件（首行），不要写进 YAML；也可以使用环境变量 `DSH_HOLO_EMBEDDING_API_KEY`。
 
-### 常用字段
+### 召回与注入
 
 | 字段 | 默认 | 说明 |
-|---|---|---|
-| `storageDir` | `$DSH_HOME/holo-memory` | 记忆根目录 |
-| `maxL1/maxL2/maxL3` | 2000/3000/300 | 各层记录上限，超出按重要度/时间淘汰 |
-| `injectEnabled` | `true` | 每轮是否自动召回注入 |
-| `injectMaxChars` | `1400` | 注入块字符预算 |
-| `injectMinScore` | `0.12` | 候选进入 RRF 的弱阈值；低于不参与 |
-| `injectMinEvidence` | `0.44` | 最终逐条证据下限；L1 更高（0.50），无标签命中的 L2 事实/偏好更高（0.55） |
-| `injectL1/L2/L3` | 2/5/3 | 每层最多注入条数（是上限，不再强填） |
-| `injectSubagents` | `false` | 是否为子代理会话注入 |
-| `activeWindowEnabled` | `true` | 是否允许兜底补位高重要度 L2/L3 |
-| `activeWindowFallbackOnly` | `true` | 有查询命中时不补位；设为 false 才恢复旧的全量常驻行为 |
-| `activeWindowMaxItems` | `2` | 兜底补位最多几条 |
-| `activeWindowMaxChars` | `420` | 兜底补位的字符上限 |
-| `activeWindowMinImportance` | `7` | 进入兜底补位的最低重要度（≥8 的事实不受 kind 限制） |
+|---|---:|---|
+| `injectEnabled` | `true` | 是否每轮自动召回注入 |
+| `injectMaxChars` | `1400` | 注入块字符预算；生产环境可按需提高，但不要把它当目标 |
+| `injectMinScore` | `0.12` | 候选进入 RRF 的弱阈值 |
+| `injectMinEvidence` | `0.44` | 逐条证据下限；低于它的候选不进入 RRF |
+| `injectL1/L2/L3` | `2/5/3` | 每层最多注入条数；是上限，不再强行填满 |
+| `injectSubagents` | `false` | 是否给子代理会话注入 |
+| `activeWindowEnabled` | `true` | 是否允许 Active Window 兜底 |
+| `activeWindowFallbackOnly` | `true` | 有 query 命中时不追加常驻记忆；`false` 恢复旧行为 |
+| `activeWindowMaxItems` | `2` | 兜底最多几条 |
+| `activeWindowMaxChars` | `420` | 兜底字符上限 |
+| `activeWindowMinImportance` | `7` | 进入兜底的最低重要度 |
 | `rrfRankConstant` | `60` | RRF 的 k 值 |
-| `extractEnabled` | `true` | 回合结束是否蒸馏 |
-| `extractProvider/extractModel` | `''` | 蒸馏用模型；留空跟随当前会话的 provider/model |
+
+### 存储与容量
+
+| 字段 | 默认 | 说明 |
+|---|---:|---|
+| `storageDir` | `$DSH_HOME/holo-memory` | 记忆根目录 |
+| `maxL1/maxL2/maxL3` | `2000/3000/300` | 各层活跃记录上限 |
+| `sourceExcerptMaxChars` | `1600` | 每条来源指针保存的逐字片段上限 |
+
+### 蒸馏
+
+| 字段 | 默认 | 说明 |
+|---|---:|---|
+| `extractEnabled` | `true` | `turn/end` 后是否蒸馏 |
+| `extractProvider/extractModel` | `''` | 留空跟随当前会话的 provider/model |
 | `extractMaxTokens` | `1400` | 蒸馏输出上限 |
 | `extractMinTurnChars` | `60` | 太短的回合不蒸馏 |
 | `extractMaxTranscriptChars` | `12000` | 喂给蒸馏模型的对话上限 |
-| `sourceExcerptMaxChars` | `1600` | 每条来源指针保存的逐字片段上限（不是摘要） |
+| `extractTemperature` | `0.2` | 蒸馏温度 |
+
+### 向量
+
+| 字段 | 默认 | 说明 |
+|---|---:|---|
+| `embeddingEnabled` | `false` | 是否启用向量召回 |
+| `embeddingBaseUrl` | `''` | OpenAI 兼容端点，例如 `http://127.0.0.1:11434/v1` |
+| `embeddingModel` | `''` | 例如 `nomic-embed-text`、`Qwen/Qwen3-Embedding-8B` |
+| `embeddingApiKeyEnv` | `DSH_HOLO_EMBEDDING_API_KEY` | 环境变量形式的 Key |
+| `embeddingApiKeyFile` | `''` | 文件首行读取 Key，权限建议 0600 |
+| `embeddingDimensions` | `0` | 0 = 使用端点默认维度 |
+| `embeddingBaseline` | `0.22` | 无关文本的余弦基线；换模型可重新校准 |
+| `embeddingBatchSize` | `8` | 后台回填批大小 |
+| `queryEmbeddingTimeoutMs` | `1200` | 查询向量预算；超时退回词法召回 |
+
+### 维护与诊断
+
+| 字段 | 默认 | 说明 |
+|---|---:|---|
 | `maintenanceEnabled` | `true` | 是否启用每日维护 |
-| `maintenanceHour/maintenanceMinute` | `4/30` | 每日维护的本地时间（默认凌晨 4:30） |
-| `l1ArchiveAfterDays` | `14` | L1 超过这个天数且重要度低于保留阈值时归档 |
-| `l1ArchiveKeepImportance` | `8` | 达到这个重要度的 L1 保留到硬上限 |
-| `l1ArchiveMaxDays` | `60` | 无论重要度，L1 超过这个天数一律归档 |
-| `embeddingEnabled` | `false` | 是否启用向量检索 |
-| `embeddingBaseUrl` | `''` | 例：`http://127.0.0.1:11434/v1`、`https://ark.cn-beijing.volces.com/api/v3` |
-| `embeddingModel` | `''` | 例：`nomic-embed-text`、`doubao-embedding-*` |
-| `embeddingApiKeyEnv` | `DSH_HOLO_EMBEDDING_API_KEY` | 从这个环境变量读取 API Key；本地 Ollama 可留空 |
-| `embeddingApiKeyFile` | `''` | 从文件首行读取 API Key（优先于环境变量之后的回退；建议 0600 权限） |
-| `embeddingDimensions` | `0` | 0 = 用端点默认维度 |
-| `embeddingBaseline` | `0.22` | 向量模型的“无关文本”余弦基线，低于它按噪声处理；换模型可微调 |
-| `queryEmbeddingTimeoutMs` | `1200` | 查询向量预算，超时退回词法 |
+| `maintenanceHour/maintenanceMinute` | `4/30` | 本地维护时间 |
+| `l1ArchiveAfterDays` | `14` | L1 超过此天数且重要度低于保留阈值时归档 |
+| `l1ArchiveKeepImportance` | `8` | 达到此重要度的 L1 保留到硬上限 |
+| `l1ArchiveMaxDays` | `60` | 超过此天数的 L1 无论重要度都归档 |
 | `debug` | `false` | 输出插件诊断日志 |
 
-> 向量模型是可选项：不开启时插件完全靠 BM25+中文 bigram 工作，零网络依赖。开启后新写入记录会在后台分批补齐向量，查询时实时算一次问题向量。
-
-### 阈值不是拍脑袋：每条都挂一个具体失败
-
-| 阈值 | 默认 | 它防的是哪次失败 |
-|---|---|---|
-| `injectMinScore` | 0.12 | 无关问题因轻微词面重合被注入，制造噪声 |
-| `injectMaxChars` | 1400 | 长记忆挤占对话上下文、拉高首 token 延迟 |
-| `activeWindowMaxChars` | 420 | 主动补位变成常驻大段背景，压过本轮问题 |
-| `activeWindowMinImportance` | 7 | 低价值记忆每轮都被主动携带 |
-| `extractMinTurnChars` | 60 | 寒暄、单字回合生成无意义 L1 |
-| `extractMaxTranscriptChars` | 12000 | 超长回合把蒸馏 prompt 撑爆、超时 |
-| `sourceExcerptMaxChars` | 1600 | 原文片段把记忆文件撑大、挤占注入预算 |
-| `rrfRankConstant` | 60 | 单一通道靠前几名垄断融合排名 |
-| `embeddingBaseline` | 0.22 | 无关文本的余弦相似度伪装成相关 |
-| `queryEmbeddingTimeoutMs` | 1200 | embedding 抖动拖慢 pre-step、阻塞对话 |
-
-`memory_doctor` 会检查这些阈值是否合法；`memory_stats` 会列出当前值。改默认值前请先写下它防的是哪次失败，否则下一次误伤没人解释得清。
+> 向量是可选项。不开启时插件完全靠 BM25 + 中文 bigram 工作，零网络依赖。
 
 ---
 
-## 数据布局
+## 记忆模型与存储
 
-```
+### 记录字段
+
+所有记录共享：
+
+- `scope`：`user`（跨项目）或 `project`（当前工作区）；
+- `projectKey` / `projectLabel`；
+- `importance`（0–10）；
+- `source`：session / turn / seq / 逐字片段 / 哈希；
+- `revision` + `history`：更新时保留旧快照；
+- `createdAt` / `updatedAt` / `hash` / 可选 `embedding`。
+
+### 目录布局
+
+```text
 $DSH_HOME/holo-memory/
-├── l1.json   # 每轮对话摘要（活跃集）
-├── l2.json   # 原子事实
-├── l3.json   # 全息记忆胶囊
-├── maintenance.json  # 上次维护时间与归档数
-└── archive/
-    └── l1-YYYY-MM.jsonl  # 已归档的 L1（只追加，不自动删除）
+├── l1.json                 # 对话摘要（活跃集）
+├── l2.json                 # 原子事实
+├── l3.json                 # 全息胶囊
+├── embedding.json          # 向量端点配置（不含 Key）
+├── embedding.key           # 可选：本地 Key 文件
+├── injections.jsonl        # 最近自动召回审计
+├── maintenance.json        # 上次维护时间与归档数
+├── archive/
+│   └── l1-YYYY-MM.jsonl    # 已归档 L1，只追加
+└── backups/                # 关键操作前备份
 ```
 
-全部是普通 JSON，可读、可 diff、可手工编辑；每条记录都带 `scope`（`user` 跨项目 / `project` 当前工作区）、`projectKey`、时间戳、重要度、`source`（session/turn/seq + 逐字片段 + 哈希）、`revision` 与可选的 `history`。写入是原子的（临时文件 + rename），不会写坏半截文件。
+全部是普通 JSON/JSONL：可读、可 diff、可备份、可人工修复。写入使用临时文件 + rename，避免半截文件。
 
 ---
 
-## 每日维护与 L1 归档
+## 召回机制
 
-插件宿主启动后会读 `maintenance.json`：
+### 1. 四通道候选
 
-- 每天本地 **04:30** 运行一次；
-- 如果上次维护超过 20 小时（或从未运行），启动后约 30 秒补跑一次；
-- 归档条件：
-  - L1 超过 `l1ArchiveAfterDays`（默认 14 天）且重要度低于 `l1ArchiveKeepImportance`（默认 8）；
-  - 或超过 `l1ArchiveMaxDays`（默认 60 天），无论重要度；
-- 归档是**先追加到 `archive/l1-YYYY-MM.jsonl`，再从活跃 L1 移除**；归档文件不自动删除；
-- L1 是一手历史，默认只做“过期归档”，不做无差别删除；L2/L3 不在此流程中删除；
-- 可手动执行 `memory_maintenance(olderThanDays?, dryRun?)` 预览或立即归档；
-- `memory_doctor` 会检查最近一次维护是否在 48 小时内。
+- **BM25**：词项匹配，零依赖；
+- **字符 n-gram**：中文子串、错字、中英混合；
+- **向量**：开启后按 baseline 校准的 cosine；
+- **neuron**：双部图扩散得到的 holo id。
 
-> 归档记录仍保留在 `archive/*.jsonl` 里；需要找回时按 `record.id` 搜索该文件。
+### 2. RRF 融合
+
+每个通道内部排名，RRF 融合；相同内容哈希共享 rank，避免重复记录刷榜。
+
+### 3. 证据闸门（0.5.3）
+
+层内相对分不能单独决定注入。每条候选还要过绝对证据下限：
+
+| 层 / 类型 | 默认下限 |
+|---|---:|
+| L1 对话摘要 | `0.50` |
+| L2 decision / task / entity | `0.50` |
+| L2 fact / preference / correction | `0.55` |
+| L2 的 curated tag 命中 query | 回落到 `0.44` |
+| L3 全息胶囊 | `0.44` |
+
+这解决的是：
+
+- 高重要度规则每轮无条件出现；
+- 层内只有弱匹配时，弱匹配被归一化成 `1.000`；
+- 泛词（任务、目标、内容、风格、给我）把提示词/交付规则误召回。
+
+### 4. Active Window 只做兜底
+
+- 有任意 query 命中 → 不追加常驻记忆；
+- 完全无命中 → 才补 1–2 条高重要度 L2/L3；
+- 可在配置里设 `activeWindowFallbackOnly: false` 恢复旧的全量常驻行为。
+
+### 5. 预算与配额
+
+候选先按层配额，再按 `IMMEDIATE / WORKING / BACKGROUND` 和字符预算裁剪。  
+配额是**上限**，不是必须填满；没有足够强的候选时宁可少注入。
+
+---
+
+## 来源、证据与修订
+
+### 证据等级
+
+- `·源`：有逐字原文片段；`memory_open` 可看，哈希可校验；
+- `·指针`：只有 session / turn / seq 指针，没有保存原文；
+- `·手写`：`memory_note` 手动写入；
+- 无标记：只有摘要，不要在没有 `memory_open` 校验时当原文引用。
+
+### memory_open
+
+```text
+memory_open(id, maxChars?, history?)
+```
+
+返回：
+
+- 记录正文；
+- source 指针与逐字 excerpt；
+- `excerptHash`；
+- revision / history；
+- 若没有原文，明确说明 `source unavailable`，绝不编造位置。
+
+### 修订
+
+更新记录会递增 `revision`，旧快照进入 `history`（最多 20 条）。  
+“修正”不是静默覆盖；你能看到改过什么。
+
+---
+
+## 工作步骤可视化
+
+![工作步骤里的长期记忆自动召回](docs/recall-step.png)
+
+当前版本在聊天「已完成」工作步骤里显示折叠行：
+
+![聊天工作步骤里的召回块](docs/workstep.png)
+
+当前 DSH 会把 context 消息投影到工作步骤/轨迹：
+
+- 聊天「已完成」工作步骤里出现可折叠召回行：
+  `长期记忆自动召回 | holo-memory · N 字符`
+- 轨迹页保留完整召回正文；
+- 展开后可看 query、L1/L2/L3 数量、selected id、channels、score；
+- 原生的其他 context 行（skill catalog、instructions 等）仍交给 DSH 原来的渲染器。
+
+> 如果侧边栏看不到「全息记忆」，或工作步骤没有召回行：先**刷新页面**；仍没有再重启 DSH。
+
+---
+
+## 控制台
+
+![全息记忆控制台](docs/console.png)
+
+安装后侧边栏会出现 **全息记忆** 一级入口：
+
+- 总记忆数、L1/L2/L3 数量、向量覆盖率、占用空间；
+- **向量模型配置**：
+  - 供应商 / 接口地址、模型、API Key、可选维度；
+  - 「检测可用性」发一次 `/embeddings` 探测，不保存；
+  - 「保存配置」写入 `embedding.json` + `embedding.key`，后台回填已有记录；
+- 证据链覆盖率、最近修订数；
+- **记忆体检**：来源覆盖、哈希、向量、重复、审计、阈值；深检会真打开原文并跑召回探针；
+- 搜索、按层筛选、查看正文、删除；
+- **最近自动召回**：时间、session id、query、L1/L2/L3 数量、注入字符数、命中 id；
+- 删除立即落盘并刷新统计。
+
+控制台数据来自 host 侧路由，不需要外部 HTML 或 CDN。API Key 永远不会通过 GET 返回，也不会写进 `embedding.json`。
+
+### 控制台 API
+
+```text
+GET  /holo-memory/stats
+GET  /holo-memory/list?layer=l1|l2|l3|all&limit=N
+GET  /holo-memory/neuron
+GET  /holo-memory/injections?limit=N
+GET  /holo-memory/doctor?deep=1
+GET  /holo-memory/open?id=<id>&limit=N&history=1
+GET  /holo-memory/config
+POST /holo-memory/config
+POST /holo-memory/test-embedding
+POST /holo-memory/delete   { "id": "..." }
+```
+
+修改类请求需要 `x-holo-memory: 1` 请求头，防止跨站触发。
 
 ---
 
 ## 模型工具
 
+### holo 工具
+
 | 工具 | 用途 |
 |---|---|
-| `memory_recall(query, layers?, limit?)` | 混合检索三层记忆，返回带 id、证据标记的记录 |
-| `memory_open(id, maxChars?, history?)` | 回取一条记忆的逐字原文片段、session/turn/seq 指针、哈希校验和修订历史 |
+| `memory_recall(query, layers?, limit?)` | 混合检索三层记忆，返回 id、证据标记和 score |
+| `memory_open(id, maxChars?, history?)` | 回取原文片段、source 指针、哈希与修订历史 |
 | `memory_note(text, layer?, scope?, title?, tags?, importance?)` | 主动写入 L2 事实或 L3 胶囊 |
-| `memory_list(layer?, limit?)` | 按时间列出某一层记忆 |
-| `memory_forget(id)` | 按 id（或 8 位后缀）删除过时/错误的记忆 |
-| `memory_injections(limit?)` | 最近自动召回审计：session id、query、层条数、命中 id |
-| `memory_stats()` | 各层数量、来源覆盖、向量覆盖、存储路径、蒸馏状态、阈值 |
-| `memory_doctor(deep?)` | 记忆体检：来源覆盖/哈希/向量/重复/审计/阈值；deep 会真打开原文并跑召回探针 |
-| `memory_maintenance(olderThanDays?, dryRun?)` | 立即运行每日维护：归档过期/低重要度 L1，返回归档数与文件路径；dryRun 只预览 |
+| `memory_list(layer?, limit?)` | 按时间列出某一层 |
+| `memory_forget(id)` | 删除过时/错误记录 |
+| `memory_injections(limit?)` | 最近自动召回审计 |
+| `memory_stats()` | 数量、覆盖率、存储路径、蒸馏状态、阈值 |
+| `memory_doctor(deep?)` | 记忆体检；deep 会真打开原文并跑召回探针 |
+| `memory_maintenance(olderThanDays?, dryRun?)` | 手动运行维护/归档预览 |
 
-另外插件会注册一段很短的静态 guidance，告诉模型“你有三层长期记忆，可以主动 recall/open/note/forget”。
+### neuron 工具
 
-### 权威源与证据等级
+| 工具 | 用途 |
+|---|---|
+| `neuron_ingest(rebuild?)` | 从 holo 服务或只读 JSON 增量同步图 |
+| `neuron_expand(query?, seedIds?, depth?, topK?)` | 扩散激活，返回候选 holo id |
+| `neuron_stats()` | 节点/边/度数统计 |
 
-- **唯一权威源**：`dsh-holo-memory` 自动 L1/L2/L3；ALTM、内置记忆、笔记只作只读参考，不并行写同一事实。
-- `·源`：有逐字原文片段（`memory_open` 可看，哈希可校验）；
-- `·指针`：只有 session/turn/seq 指针，没有保存原文片段；
-- `·手写`：`memory_note` 手动写入；
-- 无标记：只有摘要，**不要**在没有 `memory_open` 校验的情况下把它当原文。
-- 指针拿不到时明确报 `source unavailable`，绝不猜一个假位置；**错的门牌比没有更坏**。
-- 修正历史：内容更新会递增 `revision` 并把旧快照压入 `history`（最多 20 条），`memory_open(id, history=true)` 可查看；不会静默覆盖旧版本。
-
-### 记忆体检
-
-`memory_doctor(deep=true)` 与控制台的「记忆体检」会：
-
-1. 读存储、来源覆盖、原文哈希、向量覆盖/漂移、重复哈希；
-2. 读最近召回审计，检查审计里的 id 是否还能解析；
-3. 检查阈值合法性；
-4. 深检真的 `memory_open` 一条记录，并用词法通道跑一次召回探针；
-5. 最后自检“所有检查项都跑了，没有跳过未知项”。
-
-“配置看起来对”不算通过；检查项必须真的取到证据。
+> neuron 只返回 id 和 activation；正文仍要 `memory_recall` / `memory_open` 回 holo 取。
 
 ---
 
-## 工作方式
+## 神经元记忆
 
-1. **记录**：监听 `session/event` 的 `turn/start`、`user/message`、`assistant/message`、`turn/end`，把当前回合的对话文本收集到内存缓冲区（有长度上限）。
-2. **蒸馏**：`turn/end` 后异步调用一次模型（复用当前会话的 provider/model，或配置覆盖），要求输出严格 JSON：`l1`、`l2[]`、`l3[]`。解析失败/没有模型时退化为确定性的 L1 摘要，所以“记录对话”永远不会因为模型不可用而丢失。
-3. **合并**：L2 做近似去重（同 scope 内相近事实更新而非追加）；L3 按 id/标题更新已有胶囊或新建；所有写入带 `source`（session/turn/seq + 逐字片段 + 哈希）和 `revision`，更新时保留旧快照。
-4. **召回**：`agent/pre-step` 里拿到本轮的新用户消息，先 `next()` 让其他插件处理，再按问题跑词法 / 字符 n-gram / 向量 / neuron 四通道排名，RRF 融合；每条候选先过 `injectMinEvidence` 与分层证据下限，L2 事实只有在标签命中或证据足够强时才进入。Active Window 只在 query 完全没有命中时兜底，不再作为每轮前缀。若 query 完全没有命中且 Active Window 有高重要度记忆，才会注入这些背景；两者都空时不产生 token。短问题（如“继续”）退化为最近/最重要的 L1+L3 快照。
-5. **注入**：作为一条 user-role snapshot 消息插入本步，带 `source.kind = "holo-memory"`，并在后续回合作为普通历史保留；不会被再次计入 L1 捕获。每行带证据标记，需要核对时用 `memory_open`。
+`neuron-memory/` 是同一仓库中的可选伴侣插件 `dsh-neuron-memory`。
+
+```text
+memory 节点  m:<holoId>
+  holoId / layer / label / tags / importance
+
+entity 节点  e:<normalized entity>
+  label / degree
+
+边  memory --mentions--> entity
+  weight / fireCount
+```
+
+- 记忆之间没有直接边，联想必须经过共享实体；
+- 只读 holo 记录，不复制 canonical 正文；
+- 扩散激活：`depth` / `damping` / `minSignal` / `topK`；
+- 增量 sync、度数剪枝、引用反馈；
+- holo 不在时自动退化为纯 holo 召回。
+
+控制台的 **神经元记忆** 子页面展示节点/边/平均度数、层级分布和 Top 实体。
+
+安装与详细边界见 [neuron-memory/README.md](neuron-memory/README.md)。
 
 ---
 
-## 边界与已知限制
+## 每日维护
 
-- 蒸馏是“回合结束后的后台调用”：桌面端常驻时可靠；headless 一次性任务在进程退出时可能来不及跑完最后一条蒸馏（会留下上一轮的 L1，不影响已有记忆）。
-- 记忆是本地明文 JSON；不要把密钥写进对话。插件在 L2/L3 写入前做了基本的密钥模式拦截，但不能替代你的判断。
-- L2 去重是词法近似（Jaccard）；开启向量后只影响召回，不影响写入去重。
-- 控制台只展示元数据与文本，不展示 4096 维原始向量；需要调试向量时用 `memory_stats` 看覆盖率。
-- 与其它注册 `memory_*` 工具的插件同时安装可能撞名，建议只保留一个记忆插件。
+宿主启动后读取 `maintenance.json`：
 
-## 文档与演示
+- 每天本地 **04:30** 运行一次；
+- 上次维护超过 20 小时（或从未运行）→ 启动约 30 秒后补跑；
+- 归档条件：
+  - L1 超过 14 天且重要度低于 8；
+  - 或超过 60 天，无论重要度；
+- 顺序：先追加 `archive/l1-YYYY-MM.jsonl`，再从活跃 `l1.json` 移除；
+- L2 / L3 不走此归档流程；
+- `memory_maintenance(dryRun=true)` 可预览；
+- `memory_doctor` 会检查最近维护时间。
 
-- 项目介绍 PPT：[docs/dsh-holo-memory-intro.pptx](docs/dsh-holo-memory-intro.pptx)（14 页，16:9，含演讲备注；三部分：插件介绍 / 安装方式 / 注意事项；含“不依赖 MCP 服务”“来源链与体检”说明页）
-- 更新日志：[CHANGELOG.md](CHANGELOG.md)
-- 生成脚本与背景素材：[docs/ppt/](docs/ppt/)
-- 测试：`npm test`（holo 34 项；neuron `neuron-memory/npm test` 7 项）
+---
+
+## 热更新与 HMR
+
+DSH 自带 `@deepseek-ai/dsh-hmr`。桌面版 profile 通常已经启用；如果当前 profile 的 `hmr` 条目处于 active，改配置/改代码可以走官方热重载，而不是重启 Host。
+
+### 配置热更新
+
+修改 profile 的 `cordis.patch.yml` 即可触发配置重组合：
+
+```yaml
+- id: holo-memory
+  config:
+    injectMinEvidence: 0.44
+    activeWindowFallbackOnly: true
+```
+
+### 服务端代码热更新
+
+让 HMR 监听插件源码/构建输出，并重新导入 `lib/`：
+
+```yaml
+- id: hmr
+  disabled: false
+  config:
+    root:
+      - "D:/path/to/dsh-holo-memory"
+```
+
+流程：
+
+```text
+改 src/*.ts
+→ npm run build
+→ lib/*.js 变化
+→ HMR 卸载旧插件 entry
+→ 重新导入新 lib
+→ 不重启 DSH
+```
+
+前提：插件必须 reload-safe——所有 timer / watcher / queue / observer 用 `ctx.effect` 或 disposer 释放；`apply` 幂等；持久状态只放 `$DSH_HOME/holo-memory`。
+
+### 客户端热更新
+
+服务端 HMR **不会自动替换浏览器已加载的 client module graph**。  
+- 开发模式：`pnpm run dev:web` + client HMR；
+- 生产模式：服务端 reload 后**刷新页面**加载新的 `client.js`，通常不需要重启 DSH Host。
+
+### 限制
+
+- HMR 依赖 Node loader 内部机制；`package.json` 单独变化不被检测；
+- 替换失败会停掉旧插件，新插件 inactive，且不会自动回滚；需要健康检查和 Host 重启兜底；
+- headless / SDK / ACP 默认可能禁用 HMR；packed worker 不暴露 Node module cache，代码替换不可用；
+- 浏览器端仍是独立加载链路。
+
+**没有 HMR 的环境**：改代码后重启 Host；或者采用“稳定 Host 插件 + 本地 sidecar 引擎”的架构，把可热更新的检索逻辑放到 sidecar。
+
+---
+
+## 测试
+
+```sh
+npm test
+```
+
+当前：
+
+```text
+holo:   35/35 PASS
+neuron:  7/7  PASS
+```
+
+测试覆盖：
+
+- L1/L2/L3 提取、JSON 解析失败降级；
+- 来源指针、逐字 excerpt、哈希校验；
+- 修订历史、删除、归档；
+- 四通道召回、RRF、neuron 候选预留；
+- 证据闸门、L2 标签闸门、Active Window 兜底；
+- 任务 query 不携带无关提示词规则；显式规则 query 仍能召回；
+- 控制台路由、体检、阈值合法性。
+
+真实生产库回归（任务 query）：
+
+```text
+8acbbcab + 5106ddbd · 810 字符 · active=0
+```
+
+显式规则 / ComfyUI / 项目状态 query 仍能正常召回。
+
+---
+
+## 边界与安全
+
+- 记忆是**本地明文 JSON**；不要把 API Key、密码、令牌写进对话；
+- 写入前会做基础 secrets 模式拦截，但不能替代你的判断；
+- 蒸馏是 `turn/end` 后的后台调用；headless 一次性任务退出时可能来不及跑最后一条；
+- L2 去重是词法近似（Jaccard）；开启向量只影响召回，不影响写入去重；
+- 与其它注册 `memory_*` 工具的插件同时安装可能撞名；建议只保留一个记忆插件；
+- 来源缺失时明确标 `·指针` 或 `source unavailable`，不猜假位置；
+- 控制台只展示元数据与文本，不展示 4096 维原始向量。
+
+### 权威源
+
+`dsh-holo-memory` 是自动 L1/L2/L3 记忆的唯一权威源。  
+ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同时写进两个库（双重记账）。
+
+---
+
+## 版本与路线
+
+- **0.5.3**：召回相关性闸门；Active Window 兜底化；L2 标签/证据门控；回归测试。
+- **0.5.2**：聊天工作步骤召回块；保持轨迹召回折叠行。
+- **0.5.1**：工作步骤召回可视化修复；context renderer priority；轨迹兼容。
+- **0.5.0**：神经元四通道、控制台神经元页、并发 graph 写修复。
+- **0.4.x**：来源指针、memory_open、修订历史、每日维护、memory_doctor。
+
+近期路线：
+
+- 继续观察 0.5.3 的证据闸门在长任务中的召回率/精确率；
+- 增加 HMR 演练与 reload-safe 生命周期检查；
+- 评估把可热更新检索逻辑拆到 sidecar 的可行性；
+- 完善介绍 PPT / 演示材料。
+
+---
+
+## 文档
+
+- [CHANGELOG.md](CHANGELOG.md)
+- [介绍 PPT v2](docs/dsh-holo-memory-intro-v2.pptx)
+- [介绍 PPT 生成脚本](docs/ppt/build_deck_paper.py)
+- [神经元伴侣 README](neuron-memory/README.md)
+- [0.5.3 召回相关性修复](CHANGELOG.md#053---2026-11-19)
+
+---
 
 ## License
 

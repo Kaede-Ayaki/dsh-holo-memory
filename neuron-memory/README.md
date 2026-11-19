@@ -1,9 +1,11 @@
 # dsh-neuron-memory · 0.1.0
 
-> 这是 `dsh-holo-memory` 0.5.0 的可选伴侣插件；不是本机旧 L5 的复制。
+> 这是 `dsh-holo-memory` 的可选伴侣插件；不是本机旧 L5 的复制。
 > **权威事实仍在 `dsh-holo-memory`，本插件只读它，不注入上下文。**
+>
+> 当前状态：P1/P2 已完成；holo 测试 35/35，neuron 测试 7/7。生产 profile 可选安装；不安装时 holo 自动退化为三通道召回。
 
-## P2 目标
+## P2 内容
 
 在 P1 联动之后补上可维护性：
 
@@ -73,13 +75,13 @@ neuronMemory.stats()
     maxTagsPerRecord: 16
 ```
 
-## P2 边界
+## 边界
 
 - neuron 仍然**不自动注入**；只给 holo 提供候选 ID；
 - holo-memory 的正文、source、revision、注入预算仍是唯一权威；
-- 不做 UI、不做可视化；
+- companion 自身不做 UI；控制台的「神经元记忆」页由 holo 侧提供；
 - 不读取本机旧 `neural_memory.sqlite3`；
-- 仍为沙箱，未安装到真实 profile。
+- 可选安装；未安装时 holo 的三通道召回照常工作。
 
 ## 压力测试（2026-11-19）
 
@@ -102,7 +104,7 @@ graph:        4461 memory / 539 entity / 4929 edge
 
 ## 合并测试
 
-- holo P1 合并到干净 worktree：`34/34 PASS`
+- holo 全量：`35/35 PASS`
 - 两插件共享 context 组合：`holoMemory` + `neuronMemory` 服务都在，注入 channels 包含 `neuron`
 - holo 原有 9 个工具 + neuron 3 个工具均注册
 
