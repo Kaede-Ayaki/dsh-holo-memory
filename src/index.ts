@@ -482,7 +482,6 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
     store,
     embedder,
     config,
-    runtime,
     onRecords,
     logger,
   });

@@ -3,6 +3,42 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.5.6] - 2026-11-19
+
+**主题：修复 0.5.5 引入的工具注册回归，恢复会话与 Agent 预设加载。**
+
+### Root Cause
+
+0.5.5 为读取/写入开关在 `registerTools` 里替换了 **共享 tools 服务** 的
+`ctx.tools.register`，且包装器没有返回原始 disposer。后果：
+
+- holo 自己的工具无法被正确卸载；
+- 后续注册工具的插件（尤其 `tool-agent-team` 的 per-agent scoped 工具）拿到
+  `undefined` disposer；
+- Agent 创建/重载时旧工具未正确清理 → `tool "spawn_teammate" is already registered`；
+- 清理阶段出现 `TypeError: dispose is not a function`；
+- 依赖工具注册的 Agent 预设整体加载失败。
+
+### Fixed
+
+- 删除对全局 `ctx.tools.register` 的 monkey-patch；
+- 读取/写入开关改为只控制自动管线：
+  - 读关闭：`agent/pre-step` 不注入；
+  - 写关闭：`HoloStore` 写闸门拒绝所有 canonical 写入，自动捕获/蒸馏/feedback/
+    embedding/neuron sync 全部停止；
+- 不再改变其它插件的工具注册行为。
+
+### Verification
+
+```text
+holo:   39/39 PASS
+neuron: 10/10 PASS
+```
+
+测试 profile 重新启用 `tool-agent-team`、holo-memory、neuron-memory 后：
+新建工作区会话成功，无 `spawn_teammate` 冲突，无 `dispose is not a function`；
+输入框读/写按钮正常出现。
+
 ## [0.5.5] - 2026-11-19
 
 **主题：输入框读取/写入双开关。**

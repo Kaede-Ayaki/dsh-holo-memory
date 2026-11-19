@@ -2,12 +2,10 @@ import type { HoloConfig } from './config.js';
 import type { AnyRecord } from './types.js';
 import { HoloStore } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
-import type { RuntimeToggles } from './runtime.js';
 interface ToolDeps {
     store: HoloStore;
     embedder: EmbeddingClient;
     config: HoloConfig;
-    runtime?: RuntimeToggles;
     onRecords?: (records: AnyRecord[]) => void;
     logger?: {
         warn(message: string): void;

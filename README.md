@@ -1,6 +1,6 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-0.5.5-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.5.6-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-35%2F35-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,7 +11,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`0.5.5`（2026-11-19）
+- 当前版本：`0.5.6`（2026-11-19）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 介绍 PPT：[docs/dsh-holo-memory-intro-v2.pptx](docs/dsh-holo-memory-intro-v2.pptx)
@@ -462,7 +462,7 @@ memory_open(id, maxChars?, history?)
 
 | 按钮 | 默认 | 关闭后的效果 |
 |---|---|---|
-| **读** | 开 | 不自动召回、不注入记忆；`memory_recall` / `memory_open` / `memory_list` / `memory_stats` 等读取工具也返回禁用提示；模型只看到普通上下文 |
+| **读** | 开 | 不自动召回、不注入记忆；模型只看到普通上下文。显式 `memory_recall` / `memory_open` 等手动工具仍可自己调用（只有 agent 主动读才会读） |
 | **写** | 开 | 不捕获回合、不蒸馏、不新增/修改/删除记忆、不写 embedding/neuron 反馈；`memory_note` / `memory_forget` / 非 dry-run `memory_maintenance` 也返回禁用提示 |
 
 状态由 Host 持有并持久化到：
@@ -707,7 +707,8 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 ## 版本与路线
 
-- **0.5.5**：输入框读取/写入双开关；Host 持久化；读取/写入工具统一受控。
+- **0.5.6**：移除全局 tools.register monkey-patch，修复工具 disposer 契约和预加载失败；保留自动读取/写入闸门。
+- **0.5.5**：输入框读取/写入双开关；Host 持久化。
 - **0.5.4**：神经元图项目隔离、查询词重叠过滤、种子去泛化、配置校验与 maxNodes 清理。
 - **0.5.3**：召回相关性闸门；Active Window 兜底化；L2 标签/证据门控；回归测试。
 - **0.5.2**：聊天工作步骤召回块；保持轨迹召回折叠行。
