@@ -1,9 +1,9 @@
-# dsh-neuron-memory · 0.1.0
+# dsh-neuron-memory · 0.1.1
 
 > 这是 `dsh-holo-memory` 的可选伴侣插件；不是本机旧 L5 的复制。
 > **权威事实仍在 `dsh-holo-memory`，本插件只读它，不注入上下文。**
 >
-> 当前状态：P1/P2 已完成；holo 测试 35/35，neuron 测试 7/7。生产 profile 可选安装；不安装时 holo 自动退化为三通道召回。
+> 当前状态：P1/P2 已完成；holo 测试 35/35，neuron 测试 10/10。生产图可选安装；不安装时 holo 自动退化为三通道召回。
 
 ## P2 内容
 
@@ -27,7 +27,7 @@
 
 ```text
 memory 节点  m:<holoId>
-  holoId / layer / label / tags / importance
+  holoId / layer / label / tags / importance / projectKey
 
 entity 节点  e:<normalized entity>
   label / degree
@@ -44,7 +44,7 @@ entity 节点  e:<normalized entity>
 | 工具 | 作用 |
 |---|---|
 | `neuron_ingest(rebuild?)` | 从 holoMemory 服务或只读 JSON 增量同步 |
-| `neuron_expand(query?, seedIds?, depth?, topK?)` | 扩散激活，返回候选 holo id |
+| `neuron_expand(query?, seedIds?, projectKey?, depth?, topK?)` | 扩散激活，返回候选 holo id；projectKey 过滤当前项目 + 全局记录 |
 | `neuron_stats()` | 节点/边/平均度数 |
 
 `neuron_expand` 只返回候选 id 和 activation；正文仍要 `memory_recall` / `memory_open` 去 holo 取。
@@ -73,7 +73,17 @@ neuronMemory.stats()
     maxEdges: 30000
     maxDegree: 12
     maxTagsPerRecord: 16
+    maxSeedEntities: 8
+    requireQueryOverlap: true
 ```
+
+### 作用域与噪声控制
+
+- `projectKey` 存在 memory 节点上；holo 自动扩展时只取当前 project + user-scoped；
+- query 自动扩展要求候选 label/tags 与 query 有 salient 词重叠；
+- 显式 `seedIds` 绕过 query overlap，适合明确知道种子时使用；
+- 自动 seed 过滤 `---/1girl/2d/thinking/提示词` 等泛桥词，并先剥离 URL；
+- 旧图没有 `projectKey` 时按 legacy 放行，下一次增量 sync 会写入新字段。
 
 ## 边界
 
@@ -105,6 +115,7 @@ graph:        4461 memory / 539 entity / 4929 edge
 ## 合并测试
 
 - holo 全量：`35/35 PASS`
+- neuron 全量：`10/10 PASS`
 - 两插件共享 context 组合：`holoMemory` + `neuronMemory` 服务都在，注入 channels 包含 `neuron`
 - holo 原有 9 个工具 + neuron 3 个工具均注册
 

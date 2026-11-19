@@ -11,6 +11,8 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     maxEdges: z<number, number, "defined">;
     maxDegree: z<number, number, "defined">;
     maxTagsPerRecord: z<number, number, "defined">;
+    maxSeedEntities: z<number, number, "defined">;
+    requireQueryOverlap: z<boolean, boolean, "defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     graphDir: z<string, string, "defined">;
     holoStoreDir: z<string, string, "defined">;
@@ -22,6 +24,8 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     maxEdges: z<number, number, "defined">;
     maxDegree: z<number, number, "defined">;
     maxTagsPerRecord: z<number, number, "defined">;
+    maxSeedEntities: z<number, number, "defined">;
+    requireQueryOverlap: z<boolean, boolean, "defined">;
 }>>, "plain">;
 export interface NeuronConfig {
     graphDir: string;
@@ -34,6 +38,8 @@ export interface NeuronConfig {
     maxEdges: number;
     maxDegree: number;
     maxTagsPerRecord: number;
+    maxSeedEntities: number;
+    requireQueryOverlap: boolean;
 }
 export declare const DEFAULT_CONFIG: NeuronConfig;
 export declare function normalizeConfig(raw: Partial<NeuronConfig> | undefined): NeuronConfig;

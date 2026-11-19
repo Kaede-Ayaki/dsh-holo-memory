@@ -1,6 +1,6 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-0.5.3-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.5.4-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-35%2F35-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,7 +11,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`0.5.3`（2026-11-19）
+- 当前版本：`0.5.4`（2026-11-19）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 介绍 PPT：[docs/dsh-holo-memory-intro-v2.pptx](docs/dsh-holo-memory-intro-v2.pptx)
@@ -371,7 +371,7 @@ $DSH_HOME/holo-memory/
 
 每个通道内部排名，RRF 融合；相同内容哈希共享 rank，避免重复记录刷榜。
 
-### 3. 证据闸门（0.5.3）
+### 3. 证据闸门（# 神经元伴侣）
 
 层内相对分不能单独决定注入。每条候选还要过绝对证据下限：
 
@@ -536,6 +536,8 @@ entity 节点  e:<normalized entity>
 - 记忆之间没有直接边，联想必须经过共享实体；
 - 只读 holo 记录，不复制 canonical 正文；
 - 扩散激活：`depth` / `damping` / `minSignal` / `topK`；
+- **项目隔离**：memory 节点带 `projectKey`，holo 自动扩展只取当前 project + user-scoped；
+- **查询词重叠闸门**：自动扩展要求候选 label/tags 与 query 有 salient 词重叠；显式 seedIds 例外；
 - 增量 sync、度数剪枝、引用反馈；
 - holo 不在时自动退化为纯 holo 召回。
 
@@ -628,7 +630,7 @@ npm test
 
 ```text
 holo:   35/35 PASS
-neuron:  7/7  PASS
+neuron: 10/10 PASS
 ```
 
 测试覆盖：
@@ -670,7 +672,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 ## 版本与路线
 
-- **0.5.3**：召回相关性闸门；Active Window 兜底化；L2 标签/证据门控；回归测试。
+- **# 神经元伴侣**：召回相关性闸门；Active Window 兜底化；L2 标签/证据门控；回归测试。
 - **0.5.2**：聊天工作步骤召回块；保持轨迹召回折叠行。
 - **0.5.1**：工作步骤召回可视化修复；context renderer priority；轨迹兼容。
 - **0.5.0**：神经元四通道、控制台神经元页、并发 graph 写修复。
@@ -678,7 +680,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 近期路线：
 
-- 继续观察 0.5.3 的证据闸门在长任务中的召回率/精确率；
+- 继续观察 # 神经元伴侣 的证据闸门在长任务中的召回率/精确率；
 - 增加 HMR 演练与 reload-safe 生命周期检查；
 - 评估把可热更新检索逻辑拆到 sidecar 的可行性；
 - 完善介绍 PPT / 演示材料。
@@ -691,10 +693,11 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 - [介绍 PPT v2](docs/dsh-holo-memory-intro-v2.pptx)
 - [介绍 PPT 生成脚本](docs/ppt/build_deck_paper.py)
 - [神经元伴侣 README](neuron-memory/README.md)
-- [0.5.3 召回相关性修复](CHANGELOG.md#053---2026-11-19)
+- [# 神经元伴侣 召回相关性修复](CHANGELOG.md#053---2026-11-19)
 
 ---
 
 ## License
 
 MIT
+

@@ -7,6 +7,17 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 const GRAPH_FILE = 'graph.json';
 const POSITIVE = 1e-9;
+/**
+ * Universal bridge words. They are useful inside a memory, but as activation
+ * seeds they light up unrelated corners of the graph ("2d", "1girl", "提示词").
+ */
+const GENERIC_SEED_LABELS = new Set([
+    '---', '1girl', '2d', '改为', 'thinking', 'summary', 'tag', 'json', 'm1',
+    'pov', 'solo', '新的', '可以', '什么', '这个', '那个', '项目', '用户',
+    '任务', '问题', '内容', '状态', '版本', '当前', '记忆', '对话', '提示词',
+    '主人令', '硬规则', '规则', 'the', 'and', 'for', 'with', 'that', 'this',
+    'https', 'http', 'www', 'com', 'org', 'cn', 'zh', 'api', 'docs', 'guides',
+]);
 function hash(text) {
     return createHash('sha1').update(text).digest('hex').slice(0, 12);
 }
@@ -64,6 +75,7 @@ function memoryFor(record, maxTags) {
         tags: tagsOf(record, maxTags),
         importance: typeof record.importance === 'number' ? record.importance : 5,
         updatedAt: typeof record.updatedAt === 'number' ? record.updatedAt : Date.now(),
+        projectKey: typeof record.projectKey === 'string' ? record.projectKey : '',
     };
 }
 function entityIdFor(label) {
@@ -74,6 +86,15 @@ function edgeIdFor(from, to) {
 }
 function emptyGraph() {
     return { version: 1, updatedAt: Date.now(), nodes: [], edges: [] };
+}
+function normalizeQueryText(query) {
+    // URLs otherwise contribute "https", "com", "id" and make unrelated labels
+    // look like topic matches.
+    return query.replace(/https?:\/\/\S+/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+function salientQueryTerms(query) {
+    return tokensOf(normalizeQueryText(query)).filter((token) => (token.length >= 3 || /^[a-z0-9]{3,}$/i.test(token)) &&
+        !GENERIC_SEED_LABELS.has(token));
 }
 export class NeuronGraph {
     dir;
@@ -197,6 +218,7 @@ export class NeuronGraph {
                     old.layer !== memory.layer ||
                     old.importance !== memory.importance ||
                     old.updatedAt !== memory.updatedAt ||
+                    old.projectKey !== memory.projectKey ||
                     old.tags.join('\u0000') !== memory.tags.join('\u0000');
                 if (changed) {
                     updated += 1;
@@ -282,6 +304,19 @@ export class NeuronGraph {
                 if (!keep.has(edge.from))
                     edgeMap.delete(id);
         }
+        // Dropping memories above maxNodes can orphan entities; recompute degrees
+        // and remove those nodes so stats/seed quality do not decay over time.
+        for (const entity of entityNodes.values())
+            entity.degree = 0;
+        for (const edge of edgeMap.values()) {
+            const entity = entityNodes.get(edge.to);
+            if (entity)
+                entity.degree += 1;
+        }
+        for (const [id, entity] of entityNodes) {
+            if (entity.degree === 0)
+                entityNodes.delete(id);
+        }
         this.snapshot = {
             version: 1,
             updatedAt: Date.now(),
@@ -312,35 +347,43 @@ export class NeuronGraph {
         const byHoloId = new Map(memoryNodes.map((node) => [node.holoId, node]));
         const scores = new Map();
         const seeds = [];
+        const seedLabels = [];
+        const seedNodeIds = [];
         for (const raw of request.seedIds ?? []) {
             const key = String(raw).trim();
             const match = byHoloId.get(key) ?? memoryNodes.find((node) => node.holoId.endsWith(key));
             if (match && !scores.has(match.id)) {
                 scores.set(match.id, 1);
-                seeds.push(match.id);
+                seeds.push(match.holoId);
+                seedLabels.push(match.label);
+                seedNodeIds.push(match.id);
             }
         }
-        const query = (request.query ?? '').trim();
+        const query = normalizeQueryText(request.query ?? '');
         if (query.length > 0) {
             // Seed from entity nodes only. Seeding from every memory label made
             // common Chinese n-grams ("什么", "这个", "默认") light up half the graph.
             const queryLower = query.toLowerCase();
-            const tokens = tokensOf(query).filter((token) => token.length >= 3 || /^[a-z0-9]/i.test(token));
+            const tokens = salientQueryTerms(query);
             const candidates = this.snapshot.nodes.filter((node) => {
                 if (node.kind !== 'entity')
                     return false;
-                if (node.label.length < 2)
+                if (node.label.length < 3)
+                    return false;
+                if (GENERIC_SEED_LABELS.has(node.label))
                     return false;
                 if (queryLower.includes(node.label))
                     return true;
                 return tokens.some((token) => node.label.includes(token) || token.includes(node.label));
             });
-            for (const node of candidates.slice(0, 12)) {
-                if (!scores.has(node.id))
+            for (const node of candidates.slice(0, this.config.maxSeedEntities)) {
+                if (!scores.has(node.id)) {
                     scores.set(node.id, 0.5);
+                    seedLabels.push(`entity:${node.label}`);
+                }
             }
         }
-        return { scores, seeds };
+        return { scores, seeds, seedLabels, seedNodeIds };
     }
     async applyFeedback(injectedIds, citedIds) {
         return this.mutate(() => this.applyFeedbackUnlocked(injectedIds, citedIds));
@@ -357,10 +400,9 @@ export class NeuronGraph {
         let decayed = 0;
         for (const edge of this.snapshot.edges) {
             const from = memoryById.get(edge.from);
-            const to = memoryById.get(edge.to);
-            if (!(from && touchedMemoryIds.has(from.id)) && !(to && touchedMemoryIds.has(to.id)))
+            if (!from || !touchedMemoryIds.has(from.id))
                 continue;
-            const citedEdge = Boolean((from && cited.has(from.holoId)) || (to && cited.has(to.holoId)));
+            const citedEdge = cited.has(from.holoId);
             if (citedEdge) {
                 edge.weight = Math.min(1, edge.weight + 0.02);
                 edge.fireCount += 1;
@@ -381,7 +423,11 @@ export class NeuronGraph {
         const damping = Math.max(0.1, Math.min(0.95, request.damping ?? this.config.damping));
         const minSignal = Math.max(0, request.minSignal ?? this.config.minSignal);
         const topK = Math.max(1, Math.min(30, Math.floor(request.topK ?? this.config.topK)));
-        const { scores, seeds } = this.seedScores(request);
+        const { scores, seeds, seedLabels, seedNodeIds } = this.seedScores(request);
+        const projectKey = (request.projectKey ?? '').trim();
+        const requireOverlap = request.requireQueryOverlap ?? this.config.requireQueryOverlap;
+        const overlapTerms = salientQueryTerms(request.query ?? '');
+        const mustOverlap = requireOverlap && overlapTerms.length > 0 && (request.seedIds ?? []).length === 0;
         const nodeById = new Map(this.snapshot.nodes.map((node) => [node.id, node]));
         const adjacency = new Map();
         for (const edge of this.snapshot.edges) {
@@ -420,12 +466,19 @@ export class NeuronGraph {
                 break;
             frontier = next;
         }
-        const seedSet = new Set(seeds);
+        const seedSet = new Set(seedNodeIds);
         const excludeSeed = request.excludeSeed ?? ((request.seedIds ?? []).length > 0);
         const hits = [];
         for (const node of this.snapshot.nodes) {
             if (node.kind !== 'memory')
                 continue;
+            if (projectKey && node.projectKey !== undefined && node.projectKey !== '' && node.projectKey !== projectKey)
+                continue;
+            if (mustOverlap) {
+                const haystack = `${node.label} ${node.tags.join(' ')}`.toLowerCase();
+                if (!overlapTerms.some((term) => haystack.includes(term)))
+                    continue;
+            }
             if (excludeSeed && seedSet.has(node.id))
                 continue;
             const activation = scores.get(node.id);
@@ -451,6 +504,7 @@ export class NeuronGraph {
         return {
             query: request.query ?? '',
             seeds,
+            seedLabels,
             hits: hits.slice(0, topK),
             depth,
             damping,
