@@ -2,6 +2,24 @@
 
 All notable changes to `dsh-neuron-memory`.
 
+## [0.1.3] - 2026-11-20
+
+**主题：清除残留的 `---` 表格分隔线。**
+
+### Fixed
+
+- `stripMarkdown` 增加 `-{3,}` / `—{3,}` 清理，覆盖表格分隔线和水平线；
+- 重新执行 `neuron_ingest(rebuild=true)`。
+
+### Verification
+
+```text
+neuron: 13/13 PASS
+重建后：457 memory / 1558 entity / 2328 edges
+--- audit: memory=0 entity=0 tags=0
+Markdown audit: badMemory=0 badEntity=0 badTags=0
+```
+
 ## [0.1.2] - 2026-11-20
 
 **主题：清洗神经元突触中的 Markdown / HTML / JSON 标签污染。**

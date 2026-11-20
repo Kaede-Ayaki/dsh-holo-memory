@@ -605,7 +605,7 @@ entity 节点  e:<normalized entity>
 
 安装与详细边界见 [neuron-memory/README.md](neuron-memory/README.md)。
 
-neuron 0.1.2 起会在建图时清洗 Markdown/HTML/JSON 标签污染；升级后需执行一次 `neuron_ingest(rebuild=true)`。
+neuron 0.1.3 起会在建图时清洗 Markdown/HTML/JSON 标签污染；升级后需执行一次 `neuron_ingest(rebuild=true)`。
 
 ---
 
