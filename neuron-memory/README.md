@@ -1,4 +1,4 @@
-# dsh-neuron-memory · 0.1.2
+# dsh-neuron-memory · 0.1.3
 
 > 这是 `dsh-holo-memory` 的可选伴侣插件；不是本机旧 L5 的复制。
 > **权威事实仍在 `dsh-holo-memory`，本插件只读它，不注入上下文。**
@@ -13,7 +13,7 @@
 - 去掉 Markdown 标题、引用、列表、表格、粗体/斜体/删除线、围栏代码块、链接语法；
 - 去掉 HTML 标签、未闭合尖括号、未配对方括号；
 - 去掉 JSON 提示词尾部（`json { ... }`），避免长 payload 占满 label；
-- 过滤纯 hash / `t_...` 分片等垃圾实体；
+- 过滤纯 hash / `t_...` 分片等垃圾实体，并移除残留的 `---` / `——` 分隔线；
 - 保留下划线技术名（如 `comfyui_powershiftscheduler`）和正常实体名。
 
 旧图需执行一次 `neuron_ingest(rebuild=true)`；重建前备份 `graph.json`。

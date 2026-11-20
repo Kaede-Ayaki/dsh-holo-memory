@@ -32,6 +32,8 @@ export function stripMarkdown(value) {
         .replace(/[[\]]/g, ' ')
         .replace(/[*~`]+/g, '')
         .replace(/[#<>]+/g, ' ')
+        .replace(/-{3,}/g, ' ')
+        .replace(/—{3,}/g, ' ')
         .replace(/(?<!\w)_+|_+(?!\w)/g, '')
         .replace(/&nbsp;/gi, ' ')
         .replace(/&amp;/gi, '&')
