@@ -21,6 +21,7 @@ import type {
   MemoryNode,
   NeuronSummary,
 } from './types.js';
+import { cleanEntity, cleanLabel, isJunkEntity, stripMarkdown } from './sanitize.js';
 
 const GRAPH_FILE = 'graph.json';
 const POSITIVE = 1e-9;
@@ -42,18 +43,11 @@ function hash(text: string): string {
 }
 
 function normalizeEntity(value: string): string {
-  return value
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/^[#@]+/, '')
-    .replace(/[^\p{L}\p{N}_-]+/gu, ' ')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .slice(0, 48);
+  return cleanEntity(value);
 }
 
 function tokensOf(text: string): string[] {
-  const lower = text.normalize('NFKC').toLowerCase();
+  const lower = stripMarkdown(text).normalize('NFKC').toLowerCase();
   const latin = lower.match(/[a-z0-9_\-]{2,}/g) ?? [];
   const cjkRuns = lower.match(/[\u3400-\u9fff]{2,}/g) ?? [];
   const cjk = new Set<string>();
@@ -67,8 +61,14 @@ function tokensOf(text: string): string[] {
 }
 
 function labelOf(record: HoloRecord): string {
-  const raw = record.title ?? record.summary ?? record.text ?? record.hologram ?? record.id;
-  return String(raw).replace(/\s+/g, ' ').trim().slice(0, 120);
+  const raw =
+    record.layer === 'l3'
+      ? (record.title ?? record.hologram)
+      : record.layer === 'l1'
+        ? (record.summary ?? record.intent)
+        : (record.text ?? record.title ?? record.hologram);
+  const label = cleanLabel(String(raw ?? record.id));
+  return label.length > 0 ? label : record.id;
 }
 
 function tagsOf(record: HoloRecord, maxTags: number): string[] {
@@ -80,10 +80,13 @@ function tagsOf(record: HoloRecord, maxTags: number): string[] {
   ];
   if (raw.length === 0) raw.push(...tokensOf(labelOf(record)).slice(0, 6));
   const generic = new Set(['fact', 'decision', 'preference', 'entity', 'task', 'correction', 'reference', 'project', 'user', 'l1', 'l2', 'l3']);
-  return [...new Set(raw.map((tag) => normalizeEntity(String(tag))).filter((tag) => tag.length >= 2 && !generic.has(tag)))].slice(
-    0,
-    maxTags,
-  );
+  return [
+    ...new Set(
+      raw
+        .map((tag) => normalizeEntity(String(tag)))
+        .filter((tag) => tag.length >= 2 && !generic.has(tag) && !isJunkEntity(tag)),
+    ),
+  ].slice(0, maxTags);
 }
 
 function memoryIdFor(holoId: string): string {

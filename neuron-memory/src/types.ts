@@ -50,6 +50,8 @@ export interface HoloRecord {
   text?: string;
   title?: string;
   hologram?: string;
+  intent?: string;
+  outcome?: string;
   topics?: string[];
   tags?: string[];
   themes?: string[];

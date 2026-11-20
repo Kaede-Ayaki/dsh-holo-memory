@@ -2,6 +2,31 @@
 
 All notable changes to `dsh-neuron-memory`.
 
+## [0.1.2] - 2026-11-20
+
+**主题：清洗神经元突触中的 Markdown / HTML / JSON 标签污染。**
+
+### Fixed
+
+- **memory label 清洗**：不再把 L1 summary / L2 text / L3 hologram 里的
+  Markdown 标题、引用、列表、表格、粗体、围栏代码块、链接语法直接存进图。
+- **JSON 尾部清理**：summary 后附的 `json { ... }` 提示词 payload 不再占据 label。
+- **HTML / 标签清洗**：移除 `<thinking>`、未闭合尖括号、未配对方括号、
+  Markdown 表格分隔行和剩余强调符号。
+- **entity 清洗**：entity 名统一走 NFKC + Markdown 清洗；过滤纯 hash、
+  `t_...` 分片、`m_...` / `e_...` 分片等垃圾实体；保留下划线技术名。
+- **旧图重建**：备份后执行 `neuron_ingest(rebuild=true)`。
+
+### Verification
+
+```text
+neuron: 13/13 PASS
+重建后：455 memory / 1534 entity / 2297 edges
+Markdown audit: badMemory=0, badEntity=0, badTags=0
+```
+
+备份：`graph.json.bak-pre-markdown-20261120`
+
 ## [0.1.1] - 2026-11-19
 
 **主题：按 holo-memory 的召回翻车点审计神经元模块。**

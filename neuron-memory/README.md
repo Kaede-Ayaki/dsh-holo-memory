@@ -1,9 +1,22 @@
-# dsh-neuron-memory · 0.1.1
+# dsh-neuron-memory · 0.1.2
 
 > 这是 `dsh-holo-memory` 的可选伴侣插件；不是本机旧 L5 的复制。
 > **权威事实仍在 `dsh-holo-memory`，本插件只读它，不注入上下文。**
 >
-> 当前状态：P1/P2 已完成；holo 测试 35/35，neuron 测试 10/10。生产图可选安装；不安装时 holo 自动退化为三通道召回。
+> 当前状态：P1/P2 已完成；holo 测试 43/43，neuron 测试 13/13。生产图可选安装；不安装时 holo 自动退化为三通道召回。
+
+## Markdown 清洗
+
+神经元只存突触标签，不存 canonical 正文。同步时对 memory label、entity label
+和 tags 统一清洗：
+
+- 去掉 Markdown 标题、引用、列表、表格、粗体/斜体/删除线、围栏代码块、链接语法；
+- 去掉 HTML 标签、未闭合尖括号、未配对方括号；
+- 去掉 JSON 提示词尾部（`json { ... }`），避免长 payload 占满 label；
+- 过滤纯 hash / `t_...` 分片等垃圾实体；
+- 保留下划线技术名（如 `comfyui_powershiftscheduler`）和正常实体名。
+
+旧图需执行一次 `neuron_ingest(rebuild=true)`；重建前备份 `graph.json`。
 
 ## P2 内容
 
