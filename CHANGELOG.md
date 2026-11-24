@@ -3,6 +3,33 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [Unreleased] - 0.8.0
+
+**主题：数值置信度与时间字段（Phase 0–2）。**
+
+### Added
+
+- `ClaimMeta`：`confidence`（0.000–1.000，三位小数）+ `confidenceBasis`（来源、抽取质量、佐证、反证、校验、校准版本）+ `validFrom/validTo/observedAt/recordedAt` + `status/supersedes/supersededBy`。
+- `confidence.ts`：`normalizeConfidence()`（clamp / 三位小数 / NaN 安全）、0–1000 整数基点、初始先验表、heuristic-v1 更新式、`shouldAutoApply`（0.700 阈值）。
+- `memory_note` 新增可选 `confidence` 参数（默认 0.950，用户明确陈述）。
+- 召回行显示 `conf=0.xxx`；低于 0.700 追加 `· 待验证`，可展示但不作为既定事实。
+- `eval/`：检索评估骨架（弱标注集、生产等价基线、通道消融、人工标注清单）。
+- `scripts/migrate-0.8.mjs`：幂等迁移脚本，默认 dry-run，`--apply` 先备份再写 `schema.json`。
+
+### Changed
+
+- 提取写入的新 L1/L2/L3 记录带 `claim`；`confidence` 全部走归一化。
+- 用户纠正（kind=correction）把置信度提到 0.990，并在 `confidenceHistory` 保留旧值。
+- 旧记录迁移：L2 保留原置信度并规范化，L1/L3 补 0.500，来源标记 `migration_unknown`。
+
+### Verification
+
+```text
+holo:   55/55 PASS
+live store: 567 records migrated (l1 403 / l2 159 / l3 5), 0 illegal, 0 drifted
+baseline@5 (weak labels): 0.0935 production-like vs 0.0432 no-vector
+```
+
 ## [0.7.0] - 2026-11-24
 
 **主题：A 系列正式更名「用户画像」；全息记忆工作台视觉统一。**
