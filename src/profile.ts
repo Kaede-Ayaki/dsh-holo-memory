@@ -1,5 +1,5 @@
 /**
- * A series: a distilled user preference / habit / personality profile.
+ * User profile: a distilled user preference / habit / personality profile.
  *
  * A is NOT a fourth canonical fact layer. It is a compact, evidence-linked
  * profile derived from the existing L1/L2/L3 records; the canonical evidence
@@ -194,7 +194,7 @@ export function buildAProfile(store: HoloStore, previous: AProfile | null): APro
 
   return {
     id: PROFILE_ID,
-    title: 'A · 用户偏好与人格',
+    title: '用户画像 · 偏好/习惯/人格',
     summary:
       '从 L1-L3 蒸馏出的稳定偏好、行为习惯与工作方式。低风险、可逆事项可默认按此执行；重要抉择必须先询问用户。',
     preferences,
@@ -272,7 +272,7 @@ export function renderAProfile(profile: AProfile | null, maxChars = 800): string
   };
   const boundary =
     '执行边界：低风险、可逆、日常事项默认按上述偏好执行；重要、不可逆、涉及付费/公开发布/安全隐私/关系边界的抉择，必须先询问用户。';
-  const lines: string[] = ['[A · 用户偏好与人格]', compact(profile.summary, 100)];
+  const lines: string[] = ['[用户画像 · 偏好/习惯/人格]', compact(profile.summary, 100)];
   if (profile.preferences.length > 0) {
     lines.push('偏好偏向：', ...profile.preferences.slice(0, 3).map((x) => `- ${compact(x, 96)}`));
   }

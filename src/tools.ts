@@ -112,7 +112,7 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
     defineTool({
       name: 'memory_profile',
       description:
-        'Read the A-series profile distilled from L1-L3: stable user preferences, habits, personality and working style, plus the decision boundary. ' +
+        'Read the user-profile profile distilled from L1-L3: stable user preferences, habits, personality and working style, plus the decision boundary. ' +
         'Pass refresh=true to re-distill it from the current L1-L3 records.',
       parameters: {
         refresh: { type: 'boolean', description: 'Re-distill from current L1-L3 records before returning (default false).' },
@@ -122,7 +122,7 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         await deps.profileStore.whenReady().catch(() => undefined);
         if (args.refresh === true) await deps.profileStore.refresh(deps.store);
         const profile = deps.profileStore.get();
-        if (!profile) return 'A-series profile is empty. Turn on writing and let a few turns accumulate, or call memory_profile(refresh=true).';
+        if (!profile) return 'user-profile profile is empty. Turn on writing and let a few turns accumulate, or call memory_profile(refresh=true).';
         const text = renderAProfile(profile, 2400);
         return `${text}\n\nEvidence ids: ${profile.evidenceIds.slice(0, 20).join(', ')}`;
       },

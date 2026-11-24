@@ -195,6 +195,84 @@
           /* responsive */
           "@media (max-width:880px){.hm-columns{grid-template-columns:minmax(0,1fr)}.hm-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-hero{align-items:flex-start}.hm-total-box{text-align:left}}",
           "@media (max-width:520px){.hm-config-grid{grid-template-columns:minmax(0,1fr)}.hm-hero{padding:16px}.hm-hero h2{font-size:20px}.hm-hero-side{align-items:flex-start;gap:8px}}",
+          /* unified workbench v0.7 */
+          ".hm-pane{--hm-surface:var(--dsw-alias-bg-layer-2,#0f182b);--hm-surface2:var(--dsw-alias-bg-layer-3,#142039);--hm-border:var(--dsw-alias-border-l3,#263450);--hm-text:var(--dsw-alias-label-primary,#e8eeff);--hm-sub:var(--dsw-alias-label-secondary,#a8b4cf);--hm-faint:var(--dsw-alias-label-tertiary,#8996b3);--hm-brand:var(--dsw-alias-brand-primary,#5b7cfa);padding:22px clamp(16px,3.6vw,38px) 38px;background:radial-gradient(1100px 420px at 78% -120px,rgba(91,124,250,.13),transparent 65%)}",
+          ".hm-shell{max-width:1180px;gap:13px}",
+          ".hm-workbench-head{position:relative;display:flex!important;align-items:flex-start;justify-content:space-between;gap:20px;padding:18px 20px!important;border:1px solid rgba(91,124,250,.30)!important;border-radius:16px!important;background:linear-gradient(135deg,rgba(91,124,250,.18),rgba(167,139,250,.07) 45%,transparent 75%),var(--hm-surface2)!important;box-shadow:0 12px 34px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.05)!important;overflow:hidden}",
+          ".hm-workbench-head:before{content:'';position:absolute;right:-100px;top:-160px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(91,124,250,.26),transparent 68%);pointer-events:none}",
+          ".hm-brand{position:relative;z-index:1;display:flex;align-items:flex-start;gap:12px;min-width:0}",
+          ".hm-brand-mark{width:38px;height:38px;flex:0 0 auto;display:grid;place-items:center;border-radius:11px;color:#fff;background:linear-gradient(145deg,#647dfb,#9b8cff);box-shadow:0 6px 18px rgba(91,124,250,.36),inset 0 1px 0 rgba(255,255,255,.18)}",
+          ".hm-brand-copy{min-width:0}",
+          ".hm-eyebrow{display:flex;align-items:center;gap:7px;font-size:9px;line-height:14px;font-weight:650;letter-spacing:.16em;text-transform:uppercase;color:var(--hm-cyan)}",
+          ".hm-eyebrow:before{content:'';width:14px;height:1px;background:var(--hm-cyan);opacity:.8}",
+          ".hm-brand-copy h1{margin:3px 0 3px;font-size:21px;line-height:28px;font-weight:650;letter-spacing:-.015em}",
+          ".hm-brand-copy p{margin:0;font-size:11px;line-height:17px;color:var(--hm-sub)}",
+          ".hm-head-actions{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-end;gap:9px;flex:0 0 auto}",
+          ".hm-pill-row{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap;max-width:460px}",
+          ".hm-pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border:.5px solid var(--hm-border);border-radius:999px;background:rgba(255,255,255,.025);color:var(--hm-faint);font-size:9.5px;line-height:22px;white-space:nowrap}",
+          ".hm-pill b{color:var(--hm-text);font-weight:600;font-variant-numeric:tabular-nums}",
+          ".hm-pill-dot{width:5px;height:5px;border-radius:50%;background:var(--hm-green);box-shadow:0 0 0 3px rgba(74,222,128,.1)}",
+          ".hm-pill-dot.hm-amber{background:var(--hm-amber);box-shadow:0 0 0 3px rgba(245,184,76,.1)}",
+          ".hm-pill-dot.hm-red{background:var(--hm-red);box-shadow:0 0 0 3px rgba(248,113,113,.1)}",
+          ".hm-workbench-nav{display:flex;align-items:center;gap:3px;padding:4px;border:.5px solid var(--hm-border);border-radius:12px;background:rgba(10,16,30,.35);overflow:auto}",
+          ".hm-nav-item{display:inline-flex;align-items:center;gap:6px;height:31px;padding:0 11px;border:0;border-radius:8px;background:transparent;color:var(--hm-faint);font-family:inherit;font-size:11px;line-height:29px;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}",
+          ".hm-nav-item:hover{color:var(--hm-text);background:rgba(255,255,255,.045)}",
+          ".hm-nav-item.hm-nav-on{color:var(--hm-text);background:rgba(91,124,250,.16);box-shadow:inset 0 0 0 .5px rgba(91,124,250,.35)}",
+          ".hm-nav-item svg{opacity:.9}",
+          ".hm-nav-count{min-width:16px;padding:0 5px;border-radius:5px;background:rgba(255,255,255,.06);color:var(--hm-faint);font-size:9px;line-height:15px;text-align:center;font-variant-numeric:tabular-nums}",
+          ".hm-nav-item.hm-nav-on .hm-nav-count{color:var(--hm-sub);background:rgba(91,124,250,.15)}",
+          ".hm-page{display:flex;flex-direction:column;gap:12px;min-width:0}",
+          ".hm-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:2px 2px 0}",
+          ".hm-page-title{display:flex;align-items:center;gap:8px;font-size:15px;line-height:21px;font-weight:620;letter-spacing:-.01em}",
+          ".hm-page-title svg{color:var(--hm-brand)}",
+          ".hm-page-sub{margin-top:2px;font-size:10px;line-height:15px;color:var(--hm-faint)}",
+          ".hm-page-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}",
+          ".hm-metrics{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}",
+          ".hm-metric{padding:12px 13px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.018),transparent),var(--hm-surface)}",
+          ".hm-metric-icon{width:28px;height:28px;border-radius:8px}",
+          ".hm-metric-value{font-size:20px;line-height:24px}",
+          ".hm-metric-label{font-size:9px;line-height:13px}",
+          ".hm-panel{border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.012),transparent),var(--hm-surface);box-shadow:0 1px 0 rgba(255,255,255,.015) inset}",
+          ".hm-panel-head{padding:12px 14px 9px}",
+          ".hm-panel-title{font-size:12px;line-height:17px}",
+          ".hm-panel-body{padding:0 14px 13px}",
+          ".hm-columns{gap:11px;grid-template-columns:minmax(0,1.55fr) minmax(280px,1fr)}",
+          ".hm-col-main,.hm-col-side{gap:11px}",
+          ".hm-profile-hero{display:flex;align-items:flex-start;gap:12px;padding:15px 16px;border:.5px solid var(--hm-border);border-radius:12px;background:linear-gradient(135deg,rgba(91,124,250,.11),rgba(167,139,250,.04),transparent),var(--hm-surface)}",
+          ".hm-profile-avatar{width:34px;height:34px;flex:0 0 auto;display:grid;place-items:center;border-radius:10px;background:rgba(91,124,250,.16);color:var(--hm-brand)}",
+          ".hm-profile-copy{min-width:0;flex:1 1 auto}",
+          ".hm-profile-copy h3{margin:0 0 3px;font-size:14px;line-height:20px;font-weight:620}",
+          ".hm-profile-copy p{margin:0;font-size:10.5px;line-height:17px;color:var(--hm-sub)}",
+          ".hm-profile-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}",
+          ".hm-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}",
+          ".hm-profile-card .hm-panel-body{padding-top:1px}",
+          ".hm-profile-list{display:flex;flex-direction:column;gap:7px}",
+          ".hm-profile-line{position:relative;padding:7px 9px 7px 12px;border-radius:7px;background:rgba(255,255,255,.022);font-size:10.5px;line-height:17px;color:var(--hm-sub);white-space:pre-wrap;word-break:break-word}",
+          ".hm-profile-line:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:9px;background:rgba(91,124,250,.55)}",
+          ".hm-profile-empty{padding:18px 12px;border:.5px dashed var(--hm-border);border-radius:9px;color:var(--hm-faint);font-size:10.5px;line-height:17px;text-align:center}",
+          ".hm-neuron-page{display:flex;flex-direction:column;gap:11px}",
+          ".hm-neuron-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}",
+          ".hm-neuron-card{padding:12px 13px;border:.5px solid var(--hm-border);border-radius:12px;background:var(--hm-surface)}",
+          ".hm-neuron-num{font-size:20px;line-height:24px}",
+          ".hm-neuron-panel{padding:0;border:.5px solid var(--hm-border);border-radius:12px;background:var(--hm-surface);overflow:hidden}",
+          ".hm-neuron-panel-title{padding:12px 14px 9px;margin:0;font-size:12px;line-height:17px;border-bottom:.5px solid var(--hm-border)}",
+          ".hm-neuron-panel>.hm-neuron-note{padding:11px 14px 13px}",
+          ".hm-neuron-panel>.hm-neuron-note~.hm-neuron-note{padding-top:0}",
+          ".hm-neuron-note{font-size:10px;line-height:16px;color:var(--hm-faint)}",
+          ".hm-neuron-entity{padding:6px 14px;border-bottom:.5px solid rgba(255,255,255,.035)}",
+          ".hm-neuron-bar{display:block;flex:0 0 76px;height:4px;border-radius:99px;background:linear-gradient(90deg,#5b7cfa,#a78bfa);margin-top:0}",
+          ".hm-neuron-entity:last-child{border-bottom:0}",
+          ".hm-neuron-sample{padding:6px 14px;border-bottom:.5px solid rgba(255,255,255,.035);font-size:10px;line-height:16px;color:var(--hm-sub)}",
+          ".hm-neuron-sample:last-child{border-bottom:0}",
+          ".hm-neuron-badge{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:5px;background:rgba(91,124,250,.14);color:#b8c5ff;font-size:8.5px;line-height:15px;font-weight:650;letter-spacing:.05em}",
+          ".hm-empty{padding:24px 14px;border-radius:10px;background:rgba(255,255,255,.012)}",
+          ".hm-btn{height:28px;line-height:26px;border-radius:7px;font-size:10px}",
+          ".hm-btn-primary{font-size:10px}",
+          ".hm-workbench-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 2px 0;color:var(--hm-faint);font-size:9px;line-height:14px}",
+          ".hm-workbench-foot code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--hm-sub)}",
+          "@media (max-width:980px){.hm-head-actions{align-items:flex-start}.hm-workbench-head{flex-direction:column}.hm-pill-row{justify-content:flex-start;max-width:none}}",
+          "@media (max-width:880px){.hm-profile-grid{grid-template-columns:minmax(0,1fr)}.hm-neuron-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-workbench-nav{overflow-x:auto}.hm-page-head{align-items:flex-start;flex-direction:column}}",
+          "@media (max-width:520px){.hm-neuron-grid{grid-template-columns:minmax(0,1fr)}.hm-brand-copy h1{font-size:19px}.hm-workbench-head{padding:15px}.hm-head-actions{width:100%}.hm-pill-row{max-width:none}}",
         ].join("");
 
         function ensureStyleSheet() {
@@ -224,6 +302,10 @@
           activity: ["M3 12h4l2.5-6 4 12 2.5-6H21"],
           box: ["M21 8 12 3 3 8v8l9 5 9-5V8Z", "m3 8 9 5 9-5", "M12 13v8"],
           chevron: ["m6 9 6 6 6-6"],
+          user: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M4 21a8 8 0 0 1 16 0"],
+          sliders: ["M4 7h10", "M18 7h2", "M14 7v0", "M4 17h2", "M10 17h10", "M8 4v6", "M16 14v6"],
+          network: ["M12 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z", "M5 15a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z", "M19 15a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z", "m10.8 8.5-4.3 5.8", "m13.2 8.5 4.3 5.8", "M7.5 17.5h9"],
+          share: ["M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z", "M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z", "M18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z", "m8.6 13.5 6.8 3.9", "m15.4 6.6-6.8 3.9"],
         };
 
         function icon(name, size) {
@@ -367,7 +449,7 @@
           var body = text.replace(/^\[[^\n]*holo-memory[^\n]*\]\s*\n?/i, "").trim();
           var meta = (data.mode === "recent-fallback" ? "兜底 · " : "") +
             (active > 0 ? "主动×" + active + " · " : "") +
-            (aProfile > 0 ? "A×" + aProfile + " · " : "") +
+            (aProfile > 0 ? "画像×" + aProfile + " · " : "") +
             "L1×" + (layers.l1 || 0) + " L2×" + (layers.l2 || 0) + " L3×" + (layers.l3 || 0) +
             " · " + chars + " 字符";
           return h(
@@ -1175,100 +1257,57 @@
           var neuronTop = neuronAvailable && Array.isArray(neuron.topEntities) ? neuron.topEntities : [];
           var neuronSamples = neuronAvailable && Array.isArray(neuron.sampleMemories) ? neuron.sampleMemories : [];
           var neuronMaxDegree = neuronAvailable ? Math.max(1, neuron.maxDegree || 0) : 1;
-          var neuronPanel = h(
-            "div",
-            { className: "hm-neuron-page" },
-            h(
-              "div",
-              { className: "hm-neuron-panel" },
-              h(
-                "div",
-                { className: "hm-neuron-panel-title" },
-                h("span", { className: "hm-neuron-badge" }, "NEURON"),
-                "神经元记忆 · 联想索引",
-              ),
-              h(
-                "div",
-                { className: "hm-neuron-note" },
-                "只读双部图：memory ↔ entity。神经元只提供候选 holo id，不复制正文，也不自己注入上下文。",
-              ),
-              !neuronAvailable
-                ? h(
-                    "div",
-                    { className: "hm-neuron-note", style: { marginTop: "10px" } },
-                    "未检测到 dsh-neuron-memory，或该插件未在当前 profile 加载。" +
-                      (neuron && neuron.reason ? "（" + neuron.reason + "）" : ""),
-                  )
-                : h(
-                    "div",
-                    { className: "hm-neuron-grid", style: { marginTop: "11px" } },
-                    h("div", { className: "hm-neuron-card" }, h("div", { className: "hm-neuron-num" }, String(neuronStats.memoryNodes)), h("div", { className: "hm-neuron-label" }, "memory 节点")),
-                    h("div", { className: "hm-neuron-card" }, h("div", { className: "hm-neuron-num" }, String(neuronStats.entityNodes)), h("div", { className: "hm-neuron-label" }, "entity 节点")),
-                    h("div", { className: "hm-neuron-card" }, h("div", { className: "hm-neuron-num" }, String(neuronStats.edges)), h("div", { className: "hm-neuron-label" }, "mention 边")),
-                    h("div", { className: "hm-neuron-card" }, h("div", { className: "hm-neuron-num" }, String(neuronStats.averageDegree)), h("div", { className: "hm-neuron-label" }, "平均度数")),
-                    h("div", { className: "hm-neuron-card" }, h("div", { className: "hm-neuron-num" }, String(neuron.maxDegree || 0)), h("div", { className: "hm-neuron-label" }, "最大度数")),
-                  ),
-            ),
-            neuronAvailable
-              ? h(
-                  "div",
-                  { className: "hm-columns" },
-                  h(
-                    "div",
-                    { className: "hm-col-main" },
-                    h(
-                      "div",
-                      { className: "hm-neuron-panel" },
-                      h("div", { className: "hm-neuron-panel-title" }, icon("sparkles", 14), "按层统计"),
-                      h(
-                        "div",
-                        { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-                        h("span", { className: "hm-tab hm-tab-on" }, "L1 " + ((neuron.byLayer && neuron.byLayer.l1) || 0)),
-                        h("span", { className: "hm-tab hm-tab-on" }, "L2 " + ((neuron.byLayer && neuron.byLayer.l2) || 0)),
-                        h("span", { className: "hm-tab hm-tab-on" }, "L3 " + ((neuron.byLayer && neuron.byLayer.l3) || 0)),
-                      ),
-                      h(
-                        "div",
-                        { style: { marginTop: "12px" } },
-                        neuronSamples.map(function (sample) {
-                          return h(
-                            "div",
-                            { className: "hm-neuron-sample", key: sample.holoId },
-                            h("b", null, sample.layer.toUpperCase()),
-                            h("span", null, sample.label),
-                            h("span", { style: { color: "var(--hm-faint)" } }, sample.holoId.slice(-8)),
-                          );
-                        }),
-                      ),
-                    ),
-                  ),
-                  h(
-                    "div",
-                    { className: "hm-col-side" },
-                    h(
-                      "div",
-                      { className: "hm-neuron-panel" },
-                      h("div", { className: "hm-neuron-panel-title" }, icon("database", 14), "Top 实体"),
-                      neuronTop.length === 0
-                        ? h("div", { className: "hm-neuron-note" }, "暂无实体节点")
-                        : neuronTop.map(function (entity) {
-                            return h(
-                              "div",
-                              { className: "hm-neuron-entity", key: entity.label },
-                              h("div", { style: { flex: "1 1 auto", minWidth: 0 } },
-                                h("div", { className: "hm-neuron-entity-name" }, entity.label),
-                                h("div", { className: "hm-neuron-bar", style: { width: Math.max(8, Math.round((entity.degree / neuronMaxDegree) * 100)) + "%" } }),
-                              ),
-                              h("div", { className: "hm-neuron-degree" }, String(entity.degree)),
-                            );
-                          }),
-                    ),
-                  ),
-                )
-              : null,
-          );
-
           var aProfile = profile && profile.profile ? profile.profile : null;
+
+          var pageHead = function (title, subtitle, actions, iconName) {
+            return h(
+              "div",
+              { className: "hm-page-head" },
+              h(
+                "div",
+                null,
+                h("div", { className: "hm-page-title" }, icon(iconName || "layers", 15), title),
+                subtitle ? h("div", { className: "hm-page-sub" }, subtitle) : null,
+              ),
+              actions && actions.length > 0 ? h("div", { className: "hm-page-actions" }, actions) : null,
+            );
+          };
+          var pill = function (label, value, tone) {
+            return h(
+              "span",
+              { className: "hm-pill" },
+              h("span", { className: "hm-pill-dot" + (tone ? " hm-" + tone : "") }),
+              label,
+              h("b", null, value),
+            );
+          };
+          var simplePanel = function (title, iconName, meta, body) {
+            return h(
+              "section",
+              { className: "hm-panel" },
+              h(
+                "div",
+                { className: "hm-panel-head" },
+                h("div", { className: "hm-panel-title" }, icon(iconName || "layers", 14), title),
+                meta ? h("span", { className: "hm-panel-meta" }, meta) : null,
+              ),
+              h("div", { className: "hm-panel-body" }, body),
+            );
+          };
+          var navItem = function (key, label, iconName, count) {
+            return h(
+              "button",
+              {
+                key: key,
+                className: "hm-nav-item" + (view === key ? " hm-nav-on" : ""),
+                onClick: function () { setView(key); },
+              },
+              icon(iconName, 14),
+              h("span", null, label),
+              typeof count === "number" ? h("span", { className: "hm-nav-count" }, String(count)) : null,
+            );
+          };
+
           var refreshProfile = function () {
             fetchJson("/holo-memory/profile/refresh", {
               method: "POST",
@@ -1277,37 +1316,199 @@
               setError(String(err && err.message ? err.message : err));
             });
           };
-          var aSection = function (title, items) {
-            if (!items || items.length === 0) return null;
-            return h("div", { style: { marginTop: "12px" } },
-              h("div", { className: "hm-panel-title" }, icon("sparkles", 13), title),
-              items.map(function (item, index) {
-                return h("div", { className: "hm-neuron-sample", key: title + "-" + index },
-                  h("span", { style: { flex: "1 1 auto", whiteSpace: "normal" } }, item));
-              }));
+          var profileCard = function (title, iconName, items, options) {
+            var opts = options || {};
+            var list = Array.isArray(items) ? items : [];
+            return h(
+              "section",
+              { className: "hm-panel hm-profile-card" },
+              h(
+                "div",
+                { className: "hm-panel-head" },
+                h("div", { className: "hm-panel-title" }, icon(iconName || "sparkles", 14), title),
+                h("span", { className: "hm-panel-meta" }, String(list.length)),
+              ),
+              h(
+                "div",
+                { className: "hm-panel-body" },
+                list.length === 0
+                  ? h("div", { className: "hm-profile-empty" }, opts.empty || "暂无")
+                  : opts.chips
+                    ? h("div", { className: "hm-tags" }, list.map(function (item, index) {
+                        return h("span", { className: "hm-tag", key: title + "-" + index }, item);
+                      }))
+                    : h("div", { className: "hm-profile-list" }, list.map(function (item, index) {
+                        return h("div", { className: "hm-profile-line", key: title + "-" + index }, item);
+                      })),
+              ),
+            );
           };
-          var profilePanel = h("div", { className: "hm-neuron-page" },
-            h("div", { className: "hm-neuron-panel" },
-              h("div", { className: "hm-neuron-panel-title" },
-                h("span", { className: "hm-neuron-badge" }, "A SERIES"),
-                "A · 用户偏好与人格"),
-              h("div", { className: "hm-neuron-note" },
-                "从 L1-L3 蒸馏出的稳定偏好、行为习惯、人格与工作方式。低风险、可逆事项可默认照此执行；重要抉择仍会先咨询你。"),
-              !aProfile
-                ? h("div", { className: "hm-neuron-note", style: { marginTop: "10px" } },
-                    "A 系列还没有内容。先正常对话几轮让它自动蒸馏，或点击下面按钮从现有 L1-L3 重建。")
-                : h("div", null,
-                    h("div", { className: "hm-neuron-note", style: { marginTop: "10px" } }, aProfile.summary || ""),
-                    aSection("偏好偏向", aProfile.preferences),
-                    aSection("行为习惯", aProfile.habits),
-                    aSection("人格 / 工作方式", aProfile.personality),
-                    aSection("工作风格关键词", aProfile.workingStyle),
-                    aSection("重要抉择：先询问", aProfile.confirmFor),
-                    h("div", { className: "hm-neuron-note", style: { marginTop: "12px" } },
-                      "证据记录 " + ((aProfile.evidenceIds || []).length) + " 条 · revision " + (aProfile.revision || 0))),
-              h("div", { style: { marginTop: "14px", display: "flex", gap: "8px" } },
-                h("button", { className: "hm-btn", onClick: refreshProfile }, "重新蒸馏 A 系列"),
-                h("button", { className: "hm-btn", onClick: load, disabled: loading }, "刷新"))));
+
+          var profilePanel = h(
+            "div",
+            { className: "hm-page" },
+            pageHead(
+              "用户画像",
+              "从 L1-L3 蒸馏出的稳定偏好、行为习惯、人格与工作方式。低风险事项可默认按此执行；重要抉择仍先询问。",
+              [
+                h("button", { className: "hm-btn", onClick: refreshProfile }, "重新蒸馏"),
+                h("button", { className: "hm-btn", onClick: load, disabled: loading }, loading ? "读取中" : "刷新"),
+              ],
+              "user",
+            ),
+            !aProfile
+              ? simplePanel("用户画像", "user", null,
+                  h("div", { className: "hm-empty" },
+                    icon("user", 22),
+                    h("div", null, "用户画像还没有内容。"),
+                    h("div", null, "先正常对话几轮让它自动蒸馏，或点击“重新蒸馏”从现有 L1-L3 重建。")))
+              : h(
+                  "div",
+                  { className: "hm-page", style: { gap: "11px" } },
+                  h(
+                    "div",
+                    { className: "hm-profile-hero" },
+                    h("div", { className: "hm-profile-avatar" }, icon("user", 18)),
+                    h(
+                      "div",
+                      { className: "hm-profile-copy" },
+                      h("h3", null, "用户画像 · 偏好与人格"),
+                      h("p", null, aProfile.summary || "从 L1-L3 蒸馏出的用户侧画像。"),
+                      h(
+                        "div",
+                        { className: "hm-profile-meta" },
+                        h("span", { className: "hm-pill" }, h("span", { className: "hm-pill-dot" }), "证据 ", h("b", null, String((aProfile.evidenceIds || []).length))),
+                        h("span", { className: "hm-pill" }, h("span", { className: "hm-pill-dot" }), "版本 ", h("b", null, String(aProfile.revision || 0))),
+                        h("span", { className: "hm-pill" }, h("span", { className: "hm-pill-dot" }), "自动执行 ", h("b", null, aProfile.autoApply ? "开" : "关")),
+                      ),
+                    ),
+                  ),
+                  h(
+                    "div",
+                    { className: "hm-profile-grid" },
+                    profileCard("偏好偏向", "sparkles", aProfile.preferences),
+                    profileCard("行为习惯", "activity", aProfile.habits),
+                    profileCard("人格 / 工作方式", "user", aProfile.personality),
+                    profileCard("工作风格关键词", "layers", aProfile.workingStyle, { chips: true }),
+                    profileCard("重要抉择：先询问", "shield", aProfile.confirmFor),
+                    profileCard("证据与状态", "database", [
+                      "证据记录 " + ((aProfile.evidenceIds || []).length) + " 条",
+                      "画像版本 revision " + (aProfile.revision || 0),
+                      "自动执行：" + (aProfile.autoApply ? "开启（仅低风险事项）" : "关闭"),
+                      "重要抉择：先咨询用户",
+                    ]),
+                  ),
+                ),
+          );
+
+          var neuronPanel = h(
+            "div",
+            { className: "hm-page" },
+            pageHead(
+              "神经元记忆",
+              "实体关联与扩散激活。只提供候选 holo id，不复制正文，也不自行注入上下文。",
+              [pill("节点", neuronAvailable ? String((neuronStats.memoryNodes || 0) + (neuronStats.entityNodes || 0)) : "未加载", neuronAvailable ? "" : "amber")],
+              "network",
+            ),
+            h(
+              "div",
+              { className: "hm-metrics" },
+              metric("memory 节点", neuronAvailable ? neuronStats.memoryNodes : "—", "关联记忆", "#22d3ee", "layers"),
+              metric("entity 节点", neuronAvailable ? neuronStats.entityNodes : "—", "实体/标签", "#5b7cfa", "network"),
+              metric("边", neuronAvailable ? neuronStats.edges : "—", "mention", "#a78bfa", "share"),
+              metric("平均度数", neuronAvailable ? neuronStats.averageDegree : "—", "连接密度", "#4ade80", "activity"),
+              metric("最大度数", neuronAvailable ? (neuronStats.maxDegree || 0) : "—", "hub 上限", "#f5b84c", "alert"),
+            ),
+            !neuronAvailable
+              ? simplePanel("未加载", "network", null,
+                  h("div", { className: "hm-empty" }, icon("network", 20),
+                    h("div", null, "未检测到 dsh-neuron-memory，或该插件未在当前 profile 加载。"),
+                    neuron && neuron.reason ? h("div", null, neuron.reason) : null))
+              : h(
+                  "div",
+                  { className: "hm-columns" },
+                  h(
+                    "div",
+                    { className: "hm-col-main" },
+                    simplePanel("Top 实体", "database", neuronTop.length + " 个",
+                      neuronTop.length === 0
+                        ? h("div", { className: "hm-profile-empty" }, "暂无实体节点")
+                        : h("div", { className: "hm-profile-list" }, neuronTop.map(function (entity) {
+                            return h("div", { className: "hm-status-row", key: entity.label },
+                              h("span", { className: "hm-status-label", style: { color: "var(--hm-sub)" } }, entity.label),
+                              h("span", { className: "hm-status-value", style: { display: "flex", alignItems: "center", gap: "7px" } },
+                                h("span", { className: "hm-neuron-bar", style: { width: Math.max(8, Math.round((entity.degree / neuronMaxDegree) * 100)) + "%" } }),
+                                h("span", { style: { fontVariantNumeric: "tabular-nums" } }, String(entity.degree)),
+                              ));
+                          }))),
+                    simplePanel("样本记忆", "layers", neuronSamples.length + " 条",
+                      neuronSamples.length === 0
+                        ? h("div", { className: "hm-profile-empty" }, "暂无样本记忆")
+                        : h("div", { className: "hm-profile-list" }, neuronSamples.map(function (sample) {
+                            return h("div", { className: "hm-status-row", key: sample.holoId },
+                              h("span", { className: "hm-status-label" }, String(sample.layer || "").toUpperCase(), h("span", { style: { color: "var(--hm-faint)" } }, sample.holoId.slice(-8))),
+                              h("span", { className: "hm-status-value", title: sample.label }, sample.label));
+                          }))),
+                  ),
+                  h(
+                    "div",
+                    { className: "hm-col-side" },
+                    simplePanel("按层统计", "layers", null,
+                      h("div", { className: "hm-tags" },
+                        h("span", { className: "hm-tag" }, "L1 " + ((neuron.byLayer && neuron.byLayer.l1) || 0)),
+                        h("span", { className: "hm-tag" }, "L2 " + ((neuron.byLayer && neuron.byLayer.l2) || 0)),
+                        h("span", { className: "hm-tag" }, "L3 " + ((neuron.byLayer && neuron.byLayer.l3) || 0)))),
+                    simplePanel("说明", "shield", null,
+                      h("div", { className: "hm-profile-list" },
+                        h("div", { className: "hm-profile-line" }, "神经元只负责联想候选；正文始终回 holo 读取。"),
+                        h("div", { className: "hm-profile-line" }, "实体与边来自 holo 记录标签，标签已统一清洗 Markdown/HTML。"),
+                        h("div", { className: "hm-profile-line" }, "Top 实体按 degree 排序；hub 过强会触发剪枝与衰减。"))),
+                  ),
+                ),
+          );
+
+          var settingsPage = h(
+            "div",
+            { className: "hm-page" },
+            pageHead(
+              "运行与设置",
+              "向量模型、运行状态与记忆体检。所有配置只影响 holo 索引，不改写 canonical 记忆正文。",
+              [pill("向量", config && config.enabled ? "已启用" : "未启用", config && config.enabled ? "" : "amber")],
+              "sliders",
+            ),
+            h(
+              "div",
+              { className: "hm-columns" },
+              h("div", { className: "hm-col-main" }, configPanel, statusPanel),
+              h("div", { className: "hm-col-side" }, doctorPanel),
+            ),
+          );
+
+          var memoryPage = h(
+            "div",
+            { className: "hm-page" },
+            pageHead(
+              "记忆总览",
+              "L1 对话摘要、L2 原子事实、L3 全息胶囊，以及最近一次自动召回审计。",
+              [pill("records", String(total), "")],
+              "layers",
+            ),
+            h(
+              "div",
+              { className: "hm-metrics" },
+              metric("L1 对话", counts.l1 || 0, "每轮摘要", "#22d3ee", "chat"),
+              metric("L2 事实", counts.l2 || 0, "原子事实", "#5b7cfa", "database"),
+              metric("L3 全息", counts.l3 || 0, "整体胶囊", "#a78bfa", "sparkles"),
+              metric("已向量化", embedded, embeddedPct + "%", "#4ade80", "cpu"),
+              metric("占用", (counts.bytes / 1024).toFixed(1) + " KB", "l1/l2/l3.json", "#f5b84c", "box"),
+            ),
+            h(
+              "div",
+              { className: "hm-columns" },
+              h("div", { className: "hm-col-main" }, memoryPanel),
+              h("div", { className: "hm-col-side" }, auditPanel),
+            ),
+          );
 
           return h(
             "div",
@@ -1317,76 +1518,59 @@
               { className: "hm-shell" },
               h(
                 "header",
-                { className: "hm-hero", "data-window-drag": "true" },
+                { className: "hm-workbench-head", "data-window-drag": "true" },
                 h(
                   "div",
-                  { className: "hm-hero-copy" },
-                  h("div", { className: "hm-kicker" }, "Holographic Memory"),
-                  h("h2", null, "全息记忆控制台"),
-                  h("p", null, "L1 对话 · L2 事实 · L3 全息 · 自动召回与跨会话审计"),
+                  { className: "hm-brand" },
+                  h("div", { className: "hm-brand-mark" }, icon("layers", 20)),
                   h(
                     "div",
-                    { className: "hm-view-tabs" },
-                    h(
-                      "button",
-                      { className: "hm-view-tab" + (view === "memory" ? " hm-view-tab-on" : ""), onClick: function () { setView("memory"); } },
-                      "记忆总览",
-                    ),
-                    h(
-                      "button",
-                      { className: "hm-view-tab" + (view === "profile" ? " hm-view-tab-on" : ""), onClick: function () { setView("profile"); } },
-                      "A 系列",
-                    ),
-                    h(
-                      "button",
-                      { className: "hm-view-tab" + (view === "neuron" ? " hm-view-tab-on" : ""), onClick: function () { setView("neuron"); } },
-                      "神经元记忆",
-                    ),
+                    { className: "hm-brand-copy" },
+                    h("div", { className: "hm-eyebrow" }, "Holographic Memory"),
+                    h("h1", null, "全息记忆"),
+                    h("p", null, "长期记忆工作台 · 分层存储 / 混合召回 / 用户画像 / 联想索引"),
                   ),
                 ),
                 h(
                   "div",
-                  { className: "hm-hero-side" },
+                  { className: "hm-head-actions" },
                   h(
                     "div",
-                    { className: "hm-total-box" },
-                    h("div", { className: "hm-total-number" }, String(total)),
-                    h("div", { className: "hm-total-label" }, "memories"),
+                    { className: "hm-pill-row" },
+                    pill("存储", total + " 条"),
+                    pill("向量", embeddedPct + "%", embeddedPct === 100 ? "" : "amber"),
+                    pill("画像", aProfile ? "已生成" : "待生成", aProfile ? "" : "amber"),
+                    pill("神经", neuronAvailable ? neuronStats.memoryNodes + " 节点" : "未加载", neuronAvailable ? "" : "amber"),
                   ),
                   h(
                     "button",
-                    { className: "hm-btn hm-hero-refresh", title: "刷新", onClick: load, disabled: loading },
+                    { className: "hm-btn hm-btn-primary", onClick: load, disabled: loading },
                     h("span", { className: loading ? "hm-spin" : "", style: { display: "inline-flex" } }, icon("refresh", 12)),
                     loading ? "读取中" : "刷新",
                   ),
                 ),
               ),
-              view === "profile"
-                ? profilePanel
-                : view === "neuron"
-                ? neuronPanel
-                : [
-                    h(
-                      "div",
-                      { className: "hm-metrics" },
-                      metric("L1 对话", counts.l1 || 0, "每轮摘要", "#22d3ee", "chat"),
-                      metric("L2 事实", counts.l2 || 0, "原子事实", "#5b7cfa", "database"),
-                      metric("L3 全息", counts.l3 || 0, "整体胶囊", "#a78bfa", "sparkles"),
-                      metric("已向量化", embedded, "Qwen3 · 4096D", "#4ade80", "cpu"),
-                      metric("占用", (counts.bytes / 1024).toFixed(1) + " KB", "l1/l2/l3.json", "#f5b84c", "box"),
-                    ),
-                    h(
-                      "div",
-                      { className: "hm-columns" },
-                      h("div", { className: "hm-col-main" }, configPanel, memoryPanel),
-                      h("div", { className: "hm-col-side" }, statusPanel, doctorPanel, auditPanel),
-                    ),
-                  ],
+              h(
+                "nav",
+                { className: "hm-workbench-nav" },
+                navItem("memory", "记忆总览", "layers", total),
+                navItem("profile", "用户画像", "user"),
+                navItem("neuron", "神经元", "network", neuronAvailable ? neuronStats.memoryNodes : undefined),
+                navItem("settings", "运行与设置", "sliders"),
+              ),
+              view === "profile" ? profilePanel : view === "neuron" ? neuronPanel : view === "settings" ? settingsPage : memoryPage,
+              h(
+                "div",
+                { className: "hm-workbench-foot" },
+                h("span", null, "本地 JSON · ", h("code", { title: stats ? stats.storageDir : "" }, stats ? stats.storageDir : "$DSH_HOME/holo-memory")),
+                h("span", null, "自动召回 · 来源可追溯 · 画像只用于低风险默认"),
+              ),
             ),
           );
         }
 
-        function HoloMemoryIcon(props) {
+
+                function HoloMemoryIcon(props) {
           return icon("layers", (props && props.size) || 18);
         }
 

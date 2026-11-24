@@ -49,7 +49,7 @@ async function seed(dir) {
   return store;
 }
 
-test('A-series distills preferences, habits and personality from L1-L3', async () => {
+test('user-profile distills preferences, habits and personality from L1-L3', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-a-'));
   const store = await seed(dir);
   const profileStore = new ProfileStore(dir);
@@ -66,7 +66,7 @@ test('A-series distills preferences, habits and personality from L1-L3', async (
   await fs.rm(dir, { recursive: true, force: true });
 });
 
-test('A-series render has an explicit high-stakes confirmation boundary', () => {
+test('user-profile render has an explicit high-stakes confirmation boundary', () => {
   const profile = {
     id: 'a_user_profile', title: 'A', summary: 'x', preferences: ['先给结论'], habits: [], personality: [],
     workingStyle: [], confirmFor: ['公开发布'], autoApply: true, evidenceIds: [], importance: 9,

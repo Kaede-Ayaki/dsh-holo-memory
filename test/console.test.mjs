@@ -120,7 +120,7 @@ test('console exposes stats, doctor and open routes', async () => {
       headers: { 'x-holo-memory': '1' },
     })).json();
     assert.equal(profileRefreshed.ok, true);
-    assert.equal(profileRefreshed.profile.title, 'A · 用户偏好与人格');
+    assert.equal(profileRefreshed.profile.title, '用户画像 · 偏好/习惯/人格');
     assert.ok(profileRefreshed.profile.preferences.length > 0);
     assert.match(profileRefreshed.text, /执行边界/);
   } finally {

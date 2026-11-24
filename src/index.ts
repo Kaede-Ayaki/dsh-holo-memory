@@ -472,9 +472,9 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       name: 'holo-memory:guidance',
       order: 5000,
       text:
-        'You have a three-layer holographic long-term memory (L1 dialogue summaries, L2 atomic facts, L3 holistic capsules) and an A-series profile distilled from them. ' +
+        'You have a three-layer holographic long-term memory (L1 dialogue summaries, L2 atomic facts, L3 holistic capsules) and a user-profile layer distilled from them. ' +
         'Relevant memories may be injected automatically as a user-role "holo-memory" block; treat it as background facts and verify against current state. ' +
-        'When an "[A · 用户偏好与人格]" block is present, treat it as the user\'s stable preferences, habits and working style: follow it by default for low-risk, reversible, everyday decisions. ' +
+        'When an "[用户画像 · 偏好/习惯/人格]" block is present, treat it as the user\'s stable preferences, habits and working style: follow it by default for low-risk, reversible, everyday decisions. ' +
         'For important, irreversible, expensive, public-posting, safety/privacy, or relationship-affecting decisions, ask the user first instead of deciding from the profile. ' +
         'Rows labelled with (id:xxxxxxxx) may be cited by that id when you actually use them. ' +
         'Use memory_recall for more context, memory_note to persist durable facts, memory_forget to correct stale ones. ' +

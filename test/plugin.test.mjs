@@ -169,14 +169,14 @@ test('holo pre-step consumes neuronMemory.expand as an associative channel', asy
   await fs.rm(dir, { recursive: true, force: true });
 });
 
-test('A-series profile is injected even when query recall is empty', async () => {
+test('user-profile profile is injected even when query recall is empty', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-profile-inject-'));
   await fs.writeFile(
     path.join(dir, 'a.json'),
     JSON.stringify({
       profile: {
         id: 'a_user_profile',
-        title: 'A · 用户偏好与人格',
+        title: '用户画像 · 偏好/习惯/人格',
         summary: '用户偏好先给结论，再给细节。',
         preferences: ['先给结论', '中文回答'],
         habits: ['动手前先确认代码现状'],
@@ -209,7 +209,7 @@ test('A-series profile is injected even when query recall is empty', async () =>
   }
   const injected = results.at(-1).messages.at(-1);
   assert.equal(injected.source.kind, 'holo-memory');
-  assert.match(injected.content[0].text, /\[A · 用户偏好与人格\]/);
+  assert.match(injected.content[0].text, /\[用户画像 · 偏好\/习惯\/人格\]/);
   assert.match(injected.content[0].text, /先给结论/);
   assert.match(injected.content[0].text, /重要.*询问|必须先询问/);
   assert.equal(injected.source.a, 1);

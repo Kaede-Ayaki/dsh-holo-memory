@@ -3,13 +3,50 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.7.0] - 2026-11-24
+
+**主题：A 系列正式更名「用户画像」；全息记忆工作台视觉统一。**
+
+### Changed
+
+- 所有用户可见名称：`A 系列` → `用户画像`（内部 `a.json` / `aSeries*` 保留兼容）。
+- 注入块标题改为 `[用户画像 · 偏好/习惯/人格]`。
+- 工具描述、系统提示词、控制台、README 统一使用「用户画像」。
+- 工作台重构为统一信息架构：
+  - 记忆总览
+  - 用户画像
+  - 神经元
+  - 运行与设置
+- 统一页头、导航、状态胶囊、卡片、指标、标签、列表、空状态和按钮样式。
+- 向量模型配置、运行状态、记忆体检从总览移入「运行与设置」。
+- 记忆总览保留指标 + 记忆记录 + 最近自动召回。
+- 用户画像页使用统一卡片展示偏好、习惯、人格、工作风格、重要抉择与证据状态。
+- 神经元页去掉独立霓虹视觉，改用同一套卡片和指标。
+- 增加响应式布局、页脚存储路径与统一状态提示。
+
+### Fixed
+
+- 神经元 Top 实体度数条恢复可见。
+- 页头与品牌标识、导航 active 状态、状态胶囊统一对比度。
+
+### Verification
+
+```text
+holo:   43/43 PASS
+client: node --check PASS
+```
+
+生产工作台截图：
+
+![全息记忆工作台](docs/console.png)
+
 ## [0.6.0] - 2026-11-19
 
-**主题：A 系列 —— 从 L1-L3 蒸馏用户偏好、行为习惯与人格。**
+**主题：用户画像 —— 从 L1-L3 蒸馏用户偏好、行为习惯与人格。**
 
 ### Added
 
-- **A 系列画像**：独立 `a.json`，从现有 L1/L2/L3 记录蒸馏：
+- **用户画像画像**：独立 `a.json`，从现有 L1/L2/L3 记录蒸馏：
   - `preferences` 喜好偏向；
   - `habits` 行为习惯；
   - `personality` 人格与工作方式；
@@ -17,11 +54,11 @@ Format follows Keep a Changelog; versions follow the package version.
   - `confirmFor` 必须咨询用户的抉择类型；
   - `evidenceIds` 指回原 L1/L2/L3 记录。
 - **自动注入**：每轮 L1-L3 召回后追加紧凑的
-  `[A · 用户偏好与人格]` 块；即使没有 query 命中，A 画像也可单独注入。
+  `[用户画像 · 偏好/习惯/人格]` 块；即使没有 query 命中，A 画像也可单独注入。
 - **决策边界**：A 块与系统提示词同时声明：
   - 低风险、可逆、日常事项默认按偏好执行；
   - 重要、不可逆、付费、公开发布、安全隐私、关系边界等抉择必须先咨询用户。
-- **控制台 A 系列页**：查看偏好/习惯/人格/工作方式/边界，支持“重新蒸馏”。
+- **控制台 用户画像页**：查看偏好/习惯/人格/工作方式/边界，支持“重新蒸馏”。
 - **工具 `memory_profile(refresh?)`**：读取 A 画像；`refresh=true` 从当前 L1-L3 重建。
 - **配置**：`aSeriesEnabled`、`aSeriesMaxChars`、`aSeriesRefreshOnExtract`。
 - **画像去重**：按 facet（交付、MOSS、tag 流、肢体、查证、LoRA、语言等）聚类，
@@ -29,7 +66,7 @@ Format follows Keep a Changelog; versions follow the package version.
 
 ### Changed
 
-- 控制台视图增加「A 系列」；召回工作步骤 meta 增加 `A×1` 标记。
+- 控制台视图增加「用户画像」；召回工作步骤 meta 增加 `画像×1` 标记。
 - 工具数从 9 增至 10。
 
 ### Verification

@@ -32,7 +32,7 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     activeWindowFallbackOnly: z<boolean, boolean, "defined">;
     /** Reciprocal-rank-fusion constant; 60 is the standard default. */
     rrfRankConstant: z<number, number, "defined">;
-    /** A series: distilled user preferences, habits and personality. */
+    /** User profile: distilled user preferences, habits and personality. */
     aSeriesEnabled: z<boolean, boolean, "defined">;
     aSeriesMaxChars: z<number, number, "defined">;
     aSeriesRefreshOnExtract: z<boolean, boolean, "defined">;
@@ -103,7 +103,7 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     activeWindowFallbackOnly: z<boolean, boolean, "defined">;
     /** Reciprocal-rank-fusion constant; 60 is the standard default. */
     rrfRankConstant: z<number, number, "defined">;
-    /** A series: distilled user preferences, habits and personality. */
+    /** User profile: distilled user preferences, habits and personality. */
     aSeriesEnabled: z<boolean, boolean, "defined">;
     aSeriesMaxChars: z<number, number, "defined">;
     aSeriesRefreshOnExtract: z<boolean, boolean, "defined">;
