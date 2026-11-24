@@ -12,7 +12,7 @@ import { Bm25Index, ngramCoverage, tokenize } from './lexical.js';
 import { redactSecrets } from './sanitize.js';
 import { evidenceTag } from './source.js';
 import { localDate } from './time.js';
-import { CONFIDENCE_AUTO_APPLY_MIN, isActiveClaim } from './confidence.js';
+import { CONFIDENCE_AUTO_APPLY_MIN, isValidAt } from './confidence.js';
 
 export type RecallBand = 'immediate' | 'working' | 'background';
 
@@ -199,7 +199,7 @@ function activeWindowCandidates(
   const records: AnyRecord[] = [...store.visible('l2', projectKey), ...store.visible('l3', projectKey)];
   const eligible = records.filter((record) => {
     if (exclude.has(record.id)) return false;
-    if (!isActiveClaim(record.claim, asOf)) return false;
+    if (!isValidAt(record.claim, asOf)) return false;
     if (record.layer === 'l2') {
       if (record.supersededBy) return false;
       return record.importance >= minImportance && (kinds.has(record.kind) || record.importance >= 8);
@@ -266,7 +266,7 @@ export async function recall(
     const candidates = store.visible(layer, options.projectKey).filter((record) => {
       if (layer === 'l2' && (record as L2Record).supersededBy) return false;
       // Phase 3: only claims valid at the requested instant are retrievable.
-      if (!isActiveClaim(record.claim, asOf)) return false;
+      if (!isValidAt(record.claim, asOf)) return false;
       return true;
     });
     if (candidates.length === 0) continue;

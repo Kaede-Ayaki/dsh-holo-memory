@@ -110,3 +110,56 @@ test('confidence normalizes temporal claims to three decimals', async () => {
   assert.equal(record.claim.confidence, normalizeConfidence(record.claim.confidence));
   assert.equal(record.claim.status, 'active');
 });
+
+
+test('a superseded claim stays readable before validTo and disappears afterwards', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-super-'));
+  const config = normalizeConfig({});
+  const store = new HoloStore(dir, config);
+  await store.whenReady();
+  const project = projectIdFor('D:\\work\\demo');
+  const now = Date.now();
+  const changedAt = now - 2 * DAY;
+  const base = {
+    layer: 'l2',
+    projectKey: project.key,
+    projectLabel: 'demo',
+    scope: 'project',
+    createdAt: now - 10 * DAY,
+    updatedAt: now,
+    hash: contentHash('y'),
+    importance: 8,
+    kind: 'preference',
+    tags: ['style'],
+    confidence: 0.9,
+  };
+  const oldClaim = createClaimMeta('user_explicit', { confidence: 0.9 });
+  oldClaim.validFrom = now - 10 * DAY;
+  oldClaim.validTo = changedAt;
+  oldClaim.status = 'superseded';
+  oldClaim.supersededBy = 'l2_new';
+  const oldId = newId('l2');
+  store.insert({ ...base, id: oldId, text: '水族箱过滤器清洗：每周一次（旧要求）。', claim: oldClaim });
+
+  const newClaim = createClaimMeta('user_explicit', { confidence: 0.95 });
+  newClaim.validFrom = changedAt;
+  newClaim.supersedes = [oldId];
+  const newIdRecord = newId('l2');
+  store.insert({
+    ...base,
+    id: newIdRecord,
+    createdAt: now - 2 * DAY,
+    text: '水族箱过滤器清洗：每三周一次（新要求，替代每周）。',
+    claim: newClaim,
+  });
+
+  const past = await idsAt(store, config, project, '水族箱过滤器 清洗 周期', now - 5 * DAY);
+  const pastTexts = past.map((id) => textOfId(store, id));
+  assert.ok(pastTexts.some((text) => text.includes('旧要求')), 'historical view keeps the old requirement');
+  assert.ok(!pastTexts.some((text) => text.includes('新要求')), 'historical view hides the future requirement');
+
+  const current = await idsAt(store, config, project, '水族箱过滤器 清洗 周期', now);
+  const currentTexts = current.map((id) => textOfId(store, id));
+  assert.ok(currentTexts.some((text) => text.includes('新要求')), 'current view shows the new requirement');
+  assert.ok(!currentTexts.some((text) => text.includes('旧要求')), 'current view hides the replaced requirement');
+});

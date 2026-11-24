@@ -180,6 +180,8 @@ export interface ExtractionResult {
     tags?: string[];
     confidence?: number;
     importance?: number;
+    /** Existing L2 ids this new fact replaces (requirement changed). */
+    supersedes?: string[];
   }>;
   l3?: Array<{
     id?: string;

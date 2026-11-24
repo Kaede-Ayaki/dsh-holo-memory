@@ -169,11 +169,51 @@ export function withConfidence(claim: ClaimMeta, nextConfidence: number, reason:
   return { ...claim, confidence: normalized, confidenceHistory: history };
 }
 
+/**
+ * True when the claim is valid at `at`. Historical queries can therefore read a
+ * superseded/expired claim as long as `at` falls inside [validFrom, validTo).
+ */
+export function isValidAt(claim: ClaimMeta | undefined, at = Date.now()): boolean {
+  if (!claim) return true;
+  if (claim.status === 'expired' || claim.status === 'disputed') return false;
+  if (typeof claim.validFrom === 'number' && at < claim.validFrom) return false;
+  if (typeof claim.validTo === 'number' && at >= claim.validTo) return false;
+  if (claim.status === 'superseded' && typeof claim.validTo !== 'number') return false;
+  return true;
+}
+
 /** True when a claim is currently valid and usable as a default. */
 export function isActiveClaim(claim: ClaimMeta | undefined, now = Date.now()): boolean {
   if (!claim) return true;
   if (claim.status !== 'active') return false;
-  if (typeof claim.validFrom === 'number' && now < claim.validFrom) return false;
-  if (typeof claim.validTo === 'number' && now >= claim.validTo) return false;
-  return true;
+  return isValidAt(claim, now);
+}
+
+/**
+ * Close a claim at `at` because a newer one replaced it. The old claim keeps its
+ * window (so historical `asOf` queries still work) but stops being active.
+ */
+export function supersedeClaim(
+  claim: ClaimMeta,
+  options: { at?: number; byId?: string; reason?: string } = {},
+): ClaimMeta {
+  const at = options.at ?? Date.now();
+  const history = [
+    ...(claim.confidenceHistory ?? []),
+    { at, confidence: claim.confidence, reason: options.reason ?? 'superseded' },
+  ].slice(-MAX_CONFIDENCE_HISTORY);
+  return {
+    ...claim,
+    status: 'superseded',
+    validTo: at,
+    ...(options.byId ? { supersededBy: options.byId } : {}),
+    confidenceHistory: history,
+  };
+}
+
+/** Mark a new claim as replacing earlier ids and starting now. */
+export function linkSupersedes(claim: ClaimMeta, oldIds: string[], at = Date.now()): ClaimMeta {
+  if (oldIds.length === 0) return claim;
+  const supersedes = [...new Set([...(claim.supersedes ?? []), ...oldIds])];
+  return { ...claim, supersedes, validFrom: claim.validFrom ?? at };
 }

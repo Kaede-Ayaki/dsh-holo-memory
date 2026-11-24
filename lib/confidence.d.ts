@@ -79,5 +79,21 @@ export declare const MAX_CONFIDENCE_HISTORY = 10;
  * in `confidenceHistory` so the move stays auditable.
  */
 export declare function withConfidence(claim: ClaimMeta, nextConfidence: number, reason: string, at?: number): ClaimMeta;
+/**
+ * True when the claim is valid at `at`. Historical queries can therefore read a
+ * superseded/expired claim as long as `at` falls inside [validFrom, validTo).
+ */
+export declare function isValidAt(claim: ClaimMeta | undefined, at?: number): boolean;
 /** True when a claim is currently valid and usable as a default. */
 export declare function isActiveClaim(claim: ClaimMeta | undefined, now?: number): boolean;
+/**
+ * Close a claim at `at` because a newer one replaced it. The old claim keeps its
+ * window (so historical `asOf` queries still work) but stops being active.
+ */
+export declare function supersedeClaim(claim: ClaimMeta, options?: {
+    at?: number;
+    byId?: string;
+    reason?: string;
+}): ClaimMeta;
+/** Mark a new claim as replacing earlier ids and starting now. */
+export declare function linkSupersedes(claim: ClaimMeta, oldIds: string[], at?: number): ClaimMeta;

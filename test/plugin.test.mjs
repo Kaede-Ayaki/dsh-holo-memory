@@ -88,7 +88,7 @@ test('apply registers tools, guidance section and lifecycle listeners', async ()
     extractEnabled: true,
     injectEnabled: true,
   });
-  assert.equal(ctx.registered.length, 10, 'ten model-facing tools are registered');
+  assert.equal(ctx.registered.length, 11, 'eleven model-facing tools are registered');
   assert.deepEqual(
     ctx.registered.map((tool) => tool.name).sort(),
     [
@@ -102,6 +102,7 @@ test('apply registers tools, guidance section and lifecycle listeners', async ()
       'memory_profile',
       'memory_recall',
       'memory_stats',
+      'memory_supersede',
     ],
   );
   assert.equal(ctx.sections.length, 1);

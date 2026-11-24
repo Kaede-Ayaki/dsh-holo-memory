@@ -8,7 +8,7 @@ import type { AnyRecord, ExtractionResult, FactKind, L1Record, L2Record, L3Recor
 import { HoloStore, contentHash, newId } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { nearDuplicate } from './lexical.js';
-import { createClaimMeta, normalizeConfidence, withConfidence } from './confidence.js';
+import { createClaimMeta, linkSupersedes, normalizeConfidence, supersedeClaim, withConfidence } from './confidence.js';
 import { looksSecret, redactSecrets } from './sanitize.js';
 import { sourceFromTurn } from './source.js';
 import { reviseRecord } from './revisions.js';
@@ -113,6 +113,7 @@ export function normalizeExtraction(value: unknown): ExtractionResult | null {
         tags: cleanList(fact.tags, 6, 24),
         confidence,
         importance: typeof fact.importance === 'number' ? clamp(fact.importance, 1, 10) : 6,
+        supersedes: cleanList(fact.supersedes, 3, 64).filter((id) => /^l2_/.test(id)),
       });
     }
   }
@@ -167,7 +168,7 @@ export function buildExtractionPrompt(capture: TurnCapture, existingL3: L3Record
     .join('\n');
   const l2Lines = existingL2
     .slice(-14)
-    .map((record) => `- ${record.text.slice(0, 180)}`)
+    .map((record) => `- id=${record.id} | ${record.text.slice(0, 180)}`)
     .join('\n');
   const transcript = transcriptOf(capture, config.extractMaxTranscriptChars);
   return `You are the memory distillation engine for DeepSeek Harness, a coding agent.
@@ -181,6 +182,7 @@ Three layers:
 Rules:
 - Write all text in the SAME language as the conversation (Chinese conversation => Chinese memory).
 - Update rather than duplicate: if a fact refines an existing fact, use kind "correction" and state the corrected fact.
+- When this turn CHANGES an earlier requirement/decision (a new instruction replaces the old one), set that L2 item's "supersedes" to the exact existing id(s) it replaces. Use an empty list when nothing is replaced. Never guess an id.
 - L2 must be self-contained: no "he", "it", "that file" without naming it.
 - Keep l2 to at most 6 items; return [] for l2 if nothing durable.
 - Keep l3 to at most 1 item; return [] for l3 if this turn adds no holistic insight.
@@ -200,7 +202,7 @@ ${transcript}
 Return ONLY this JSON shape:
 {
   "l1": {"summary": "...", "topics": ["..."], "intent": "...", "outcome": "...", "importance": 5},
-  "l2": [{"text": "...", "kind": "preference", "scope": "user", "tags": ["..."], "confidence": 0.9, "importance": 8}],
+  "l2": [{"text": "...", "kind": "preference", "scope": "user", "tags": ["..."], "confidence": 0.9, "importance": 8, "supersedes": ["l2_existing_id"]}],
   "l3": [{"id": "l3_xxx (only when updating an existing capsule)", "title": "...", "hologram": "...", "themes": ["..."], "entities": ["..."], "open_loops": ["..."], "scope": "project", "importance": 7}]
 }`;
 }
@@ -384,6 +386,22 @@ export function applyExtraction(
         sourceTurn: capture.turn,
       };
       store.insert(record);
+      const replaced = (fact.supersedes ?? []).filter((id) => id !== record.id);
+      if (replaced.length > 0) {
+        const linked = linkSupersedes(record.claim!, replaced, now);
+        record.claim = linked;
+        store.update('l2', record.id, { claim: linked });
+        for (const oldId of replaced) {
+          const old = store.find(oldId);
+          if (!old || old.layer !== 'l2') continue;
+          const oldConfidence = (old as { confidence?: number }).confidence;
+          const baseClaim = old.claim ?? createClaimMeta('migration_unknown', { confidence: oldConfidence ?? 0.5 });
+          store.update('l2', oldId, {
+            claim: supersedeClaim(baseClaim, { at: now, byId: record.id, reason: 'requirement changed' }),
+            supersededBy: record.id,
+          });
+        }
+      }
       touched.push(record);
     }
   }
