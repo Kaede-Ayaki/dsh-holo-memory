@@ -8,6 +8,7 @@ import type { AnyRecord, ExtractionResult, FactKind, L1Record, L2Record, L3Recor
 import { HoloStore, contentHash, newId } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { nearDuplicate } from './lexical.js';
+import { createClaimMeta, normalizeConfidence } from './confidence.js';
 import { looksSecret, redactSecrets } from './sanitize.js';
 import { sourceFromTurn } from './source.js';
 import { reviseRecord } from './revisions.js';
@@ -104,8 +105,7 @@ export function normalizeExtraction(value: unknown): ExtractionResult | null {
       if (text.length === 0 || text.length < 3 || looksSecret(text)) continue;
       const kind = FACT_KINDS.includes(fact.kind as FactKind) ? (fact.kind as FactKind) : 'fact';
       const scope: Scope = fact.scope === 'user' ? 'user' : 'project';
-      const confidence =
-        typeof fact.confidence === 'number' ? clamp(fact.confidence, 0, 1) : 0.7;
+      const confidence = normalizeConfidence(fact.confidence, 0.7);
       out.l2!.push({
         text,
         kind,
@@ -321,6 +321,7 @@ export function applyExtraction(
         hash: contentHash(summary),
         revision: 1,
         source,
+        claim: createClaimMeta('model_inference', { observedAt: now, recordedAt: now }),
         sessionId: capture.sessionId,
         turn: capture.turn,
         cwd: capture.cwd,
@@ -341,7 +342,7 @@ export function applyExtraction(
         text: fact.text,
         kind: fact.kind ?? existing.kind,
         tags: fact.tags ?? existing.tags,
-        confidence: fact.confidence ?? existing.confidence,
+        confidence: normalizeConfidence(fact.confidence ?? existing.confidence),
         importance: fact.importance ?? existing.importance,
         sourceSessionId: capture.sessionId,
         sourceTurn: capture.turn,
@@ -364,10 +365,15 @@ export function applyExtraction(
         hash: contentHash(fact.text),
         revision: 1,
         source,
+        claim: createClaimMeta('model_inference', {
+          confidence: normalizeConfidence(fact.confidence, 0.7),
+          observedAt: now,
+          recordedAt: now,
+        }),
         text: fact.text,
         kind: fact.kind ?? 'fact',
         tags: fact.tags ?? [],
-        confidence: fact.confidence ?? 0.7,
+        confidence: normalizeConfidence(fact.confidence, 0.7),
         sourceSessionId: capture.sessionId,
         sourceTurn: capture.turn,
       };
@@ -407,6 +413,7 @@ export function applyExtraction(
         hash: contentHash(`${capsule.title}\n${capsule.hologram}`),
         revision: 1,
         source,
+        claim: createClaimMeta('model_inference', { observedAt: now, recordedAt: now }),
         title: capsule.title,
         hologram: capsule.hologram,
         themes: capsule.themes ?? [],

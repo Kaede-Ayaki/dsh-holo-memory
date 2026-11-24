@@ -26,6 +26,40 @@ export interface RecordRevision {
     /** Content snapshot without embedding/history to avoid recursive growth. */
     snapshot: Record<string, unknown>;
 }
+/** Where a confidence value came from; never a substitute for the number. */
+export type ConfidenceSourceType = 'user_explicit' | 'user_correction' | 'multi_turn_inference' | 'model_inference' | 'imported' | 'migration_unknown';
+export interface ConfidenceBasis {
+    sourceType: ConfidenceSourceType;
+    /** 0.000–1.000 quality of the extraction that produced the claim. */
+    extractionQuality: number;
+    /** Independent corroborations (integer, not a repeat count of the same claim). */
+    corroboration: number;
+    /** Contradictions observed so far (integer). */
+    contradiction: number;
+    verified: boolean;
+    /** heuristic-v1 / platt-v1 / isotonic-v1 … */
+    calibrationVersion: string;
+}
+/**
+ * Phase-1 claim metadata: one authoritative numeric confidence plus the time
+ * and lifecycle fields needed by later phases (temporal, conflict, decay).
+ */
+export interface ClaimMeta {
+    /** 0.000–1.000, three decimals; the only authoritative confidence. */
+    confidence: number;
+    confidenceBasis: ConfidenceBasis;
+    /** When the claim starts to hold. */
+    validFrom?: number;
+    /** When it stops holding; empty means still valid. */
+    validTo?: number;
+    /** When the user said it / the event happened. */
+    observedAt: number;
+    /** When the system stored it. */
+    recordedAt: number;
+    status: 'active' | 'superseded' | 'expired' | 'disputed';
+    supersedes?: string[];
+    supersededBy?: string;
+}
 export interface BaseRecord {
     id: string;
     layer: Layer;
@@ -54,6 +88,11 @@ export interface BaseRecord {
     revision?: number;
     /** Previous content versions, capped and oldest-first. */
     history?: RecordRevision[];
+    /**
+     * Phase-1 claim metadata (confidence basis + validity window + lifecycle).
+     * Optional so legacy records keep loading unchanged.
+     */
+    claim?: ClaimMeta;
 }
 export interface L1Record extends BaseRecord {
     layer: 'l1';
