@@ -766,6 +766,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 - [在线演示（GitHub Pages）](https://kaede-ayaki.github.io/dsh-holo-memory/demo/)
 - [预览生成脚本](docs/preview/gen_previews.py)
 - [检索评估基线（Phase 0）](eval/README.md)
+- [Schema 迁移脚本（0.8，dry-run 默认）](scripts/migrate-0.8.mjs)
 - [神经元伴侣 README](neuron-memory/README.md)
 - [神经元伴侣召回相关性修复](CHANGELOG.md#053---2026-11-19)
 
