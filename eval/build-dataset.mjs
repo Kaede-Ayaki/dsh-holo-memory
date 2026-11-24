@@ -44,8 +44,12 @@ const seen = new Set();
 const positives = [];
 const negatives = [];
 const NOISE = ['[用户画像', 'Your parent agent id', 'holo-memory context', '[长期记忆自动召回'];
+// The injection log is supposed to be pre-redacted, but a historical prompt can
+// still contain a credential. Never copy one into a dataset or label sheet.
+const SECRET = /\b(hf_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})\b/g;
+const scrub = (text) => String(text).replace(SECRET, '[REDACTED-SECRET]');
 for (const row of rows) {
-  const query = typeof row.query === 'string' ? row.query.trim().replace(/\s+/g, ' ') : '';
+  const query = scrub(typeof row.query === 'string' ? row.query.trim().replace(/\s+/g, ' ') : '');
   if (query.length < 8) continue;
   if (NOISE.some((marker) => query.includes(marker))) continue;
   const selected = Array.isArray(row.selected) ? row.selected : [];
