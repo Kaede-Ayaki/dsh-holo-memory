@@ -27,3 +27,6 @@ eval/label-sheet.md
 eval/label-sheet-50.md
 eval/dataset-human.jsonl
 eval/runs/
+eval/truth-sheet*.md
+eval/truth.jsonl
+eval/calibration*.json

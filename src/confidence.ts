@@ -7,6 +7,7 @@
  * UI-only hint and must never be stored.
  */
 import type { ClaimMeta, ConfidenceBasis, ConfidenceSourceType } from './types.js';
+import { applyCalibration } from './calibration.js';
 
 /** Current schema version for claim metadata and migration bookkeeping. */
 export const SCHEMA_VERSION = '0.8.0';
@@ -142,7 +143,7 @@ export function createClaimMeta(
 ): ClaimMeta {
   const now = Date.now();
   return {
-    confidence: normalizeConfidence(options.confidence ?? initialConfidence(sourceType)),
+    confidence: applyCalibration(normalizeConfidence(options.confidence ?? initialConfidence(sourceType))),
     confidenceBasis: createConfidenceBasis(sourceType, {
       extractionQuality: options.extractionQuality,
       verified: options.verified,

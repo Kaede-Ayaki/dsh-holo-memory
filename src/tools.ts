@@ -71,6 +71,11 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         query: { type: 'string', required: true, description: 'What to recall, in natural language.' },
         layers: { type: 'string', description: 'Comma-separated layers to search: l1,l2,l3 (default all).' },
         limit: { type: 'number', description: 'Max items per layer (default 5).' },
+        asOf: {
+          type: 'string',
+          description:
+            'ISO date/time (e.g. 2026-06-01). Retrieve memories valid at that instant instead of now; expired or not-yet-valid claims are excluded.',
+        },
       },
       output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
       async execute(args, exec) {
@@ -83,12 +88,19 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         const limit = Math.max(1, Math.min(20, Math.floor(args.limit ?? 5)));
         const counts = { l1: 0, l2: 0, l3: 0 };
         for (const layer of layers) counts[layer] = limit;
+        let asOf: number | undefined;
+        if (typeof args.asOf === 'string' && args.asOf.trim().length > 0) {
+          const parsed = Date.parse(args.asOf);
+          if (!Number.isFinite(parsed)) return `Invalid asOf value: ${args.asOf}`;
+          asOf = parsed;
+        }
         const result = await recall(deps.store, deps.embedder, deps.config, args.query, {
           projectKey: project.key,
           currentSessionId: exec.agent?.session?.id,
           maxChars: 6000,
           minScore: 0.12,
           counts,
+          asOf,
           signal: exec.signal,
         });
         if (!result) return 'No relevant memory found.';

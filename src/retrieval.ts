@@ -12,7 +12,7 @@ import { Bm25Index, ngramCoverage, tokenize } from './lexical.js';
 import { redactSecrets } from './sanitize.js';
 import { evidenceTag } from './source.js';
 import { localDate } from './time.js';
-import { CONFIDENCE_AUTO_APPLY_MIN } from './confidence.js';
+import { CONFIDENCE_AUTO_APPLY_MIN, isActiveClaim } from './confidence.js';
 
 export type RecallBand = 'immediate' | 'working' | 'background';
 
@@ -144,6 +144,8 @@ export interface RecallOptions {
   counts: { l1: number; l2: number; l3: number };
   /** Associative candidates from dsh-neuron-memory: only holo ids, no text. */
   neuronHits?: ReadonlyArray<{ id: string; activation: number }>;
+  /** Point in time (ms) the caller asks about; defaults to now. */
+  asOf?: number;
   signal?: AbortSignal;
 }
 
@@ -186,6 +188,7 @@ function activeWindowCandidates(
   config: HoloConfig,
   projectKey: string,
   exclude: Set<string>,
+  asOf: number,
 ): RecallItem[] {
   const enabled = config.activeWindowEnabled !== false;
   const maxItems = Number.isFinite(config.activeWindowMaxItems) ? Math.max(0, config.activeWindowMaxItems) : 2;
@@ -196,6 +199,7 @@ function activeWindowCandidates(
   const records: AnyRecord[] = [...store.visible('l2', projectKey), ...store.visible('l3', projectKey)];
   const eligible = records.filter((record) => {
     if (exclude.has(record.id)) return false;
+    if (!isActiveClaim(record.claim, asOf)) return false;
     if (record.layer === 'l2') {
       if (record.supersededBy) return false;
       return record.importance >= minImportance && (kinds.has(record.kind) || record.importance >= 8);
@@ -250,6 +254,7 @@ export async function recall(
   const queryVector = await embedder.query(trimmedQuery, options.signal, config.queryEmbeddingTimeoutMs);
   const useVectors = embedder.enabled && queryVector !== null;
   const items: RecallItem[] = [];
+  const asOf = options.asOf ?? Date.now();
   const rrfConstant = Math.max(1, Math.round(config.rrfRankConstant || 60));
   const minEvidence = Math.max(0, Math.min(1, config.injectMinEvidence ?? 0.44));
   let queryHits = 0;
@@ -260,6 +265,8 @@ export async function recall(
   for (const layer of LAYER_ORDER) {
     const candidates = store.visible(layer, options.projectKey).filter((record) => {
       if (layer === 'l2' && (record as L2Record).supersededBy) return false;
+      // Phase 3: only claims valid at the requested instant are retrievable.
+      if (!isActiveClaim(record.claim, asOf)) return false;
       return true;
     });
     if (candidates.length === 0) continue;
@@ -375,6 +382,7 @@ export async function recall(
         config,
         options.projectKey,
         new Set(items.map((item) => item.record.id)),
+        asOf,
       )
     : [];
   if (items.length === 0 && active.length === 0) return null;

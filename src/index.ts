@@ -19,6 +19,7 @@
 import path from 'node:path';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths';
+import { loadCalibrationFile } from './calibration.js';
 import { Config, normalizeConfig, type HoloConfig } from './config.js';
 import { HoloStore, projectIdFor } from './store.js';
 import { EmbeddingClient } from './embeddings.js';
@@ -92,6 +93,7 @@ export function apply(ctx: any, rawConfig: Partial<HoloConfig> | undefined): voi
       : path.join(resolveDshHome(), 'holo-memory');
   const logger: LoggerLike = ctx.logger ?? { warn: () => undefined };
   applySavedEmbeddingConfig(config, storageDir);
+loadCalibrationFile(path.join(storageDir, 'calibration.json'));
   const store = new HoloStore(storageDir, config);
   const runtime = new RuntimeToggles(storageDir);
   store.setWriteGuard(() => runtime.get().write);

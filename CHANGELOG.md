@@ -15,6 +15,9 @@ Format follows Keep a Changelog; versions follow the package version.
 - 召回行显示 `conf=0.xxx`；低于 0.700 追加 `· 待验证`，可展示但不作为既定事实。
 - `eval/`：检索评估骨架（弱标注集、生产等价基线、通道消融、人工标注清单）。
 - `scripts/migrate-0.8.mjs`：幂等迁移脚本，默认 dry-run，`--apply` 先备份再写 `schema.json`。
+- `memory_recall(asOf=...)`：时间检索，`asOf` 时刻才有效的 claim 才参与召回；过期、未生效、被替代的默认不可见。
+- `src/calibration.ts`：Platt 校准（拟合 / 应用）、Brier、ECE、可靠性曲线；`<store>/calibration.json` 存在时插件启动自动加载。
+- `eval/` 增补：真值标注表生成、真值导入、校准拟合脚本（`build-truth-sheet.mjs` / `from-truth.mjs` / `calibrate.mjs`）。
 
 ### Changed
 
@@ -25,7 +28,7 @@ Format follows Keep a Changelog; versions follow the package version.
 ### Verification
 
 ```text
-holo:   55/55 PASS
+holo:   64/64 PASS
 live store: 567 records migrated (l1 403 / l2 159 / l3 5), 0 illegal, 0 drifted
 baseline@5 (weak labels): 0.0935 production-like vs 0.0432 no-vector
 ```

@@ -46,6 +46,8 @@ export interface RecallOptions {
         id: string;
         activation: number;
     }>;
+    /** Point in time (ms) the caller asks about; defaults to now. */
+    asOf?: number;
     signal?: AbortSignal;
 }
 /**
