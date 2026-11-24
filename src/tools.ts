@@ -134,10 +134,10 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
       },
       output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
       async execute(args) {
-        const oldRecord = deps.store.find(args.oldId);
+        const oldRecord = findBySuffix(deps.store, args.oldId);
         if (!oldRecord) return `Not found: ${args.oldId}`;
         const newId = typeof args.newId === 'string' ? args.newId.trim() : '';
-        const newRecord = newId ? deps.store.find(newId) : undefined;
+        const newRecord = newId ? findBySuffix(deps.store, newId) : undefined;
         if (newRecord && newRecord.id === oldRecord.id) return 'Refusing to supersede a record with itself.';
         const oldConfidence = (oldRecord as { confidence?: number }).confidence;
         const baseClaim = oldRecord.claim ?? createClaimMeta('migration_unknown', { confidence: oldConfidence ?? 0.5 });

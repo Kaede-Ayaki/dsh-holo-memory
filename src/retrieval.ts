@@ -264,7 +264,7 @@ export async function recall(
 
   for (const layer of LAYER_ORDER) {
     const candidates = store.visible(layer, options.projectKey).filter((record) => {
-      if (layer === 'l2' && (record as L2Record).supersededBy) return false;
+      if (layer === 'l2' && (record as L2Record).supersededBy && !record.claim) return false;
       // Phase 3: only claims valid at the requested instant are retrievable.
       if (!isValidAt(record.claim, asOf)) return false;
       return true;
