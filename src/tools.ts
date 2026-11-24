@@ -1,5 +1,6 @@
 /** Model-facing memory tools: recall, note, list, forget, stats. */
 import { defineTool } from '@deepseek-ai/dsh-tools';
+import { createClaimMeta, normalizeConfidence } from './confidence.js';
 import type { HoloConfig } from './config.js';
 import type { AnyRecord, L1Record, L2Record, L3Record, Layer, Scope } from './types.js';
 import { HoloStore, contentHash, newId, projectIdFor } from './store.js';
@@ -142,6 +143,11 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         title: { type: 'string', description: 'Required for l3 capsules: short title for the holistic memory.' },
         tags: { type: 'array', items: { type: 'string' }, description: 'Optional labels for retrieval.' },
         importance: { type: 'number', description: '1-10, default 6.' },
+        confidence: {
+          type: 'number',
+          description:
+            '0.000-1.000, three decimals; how certain this fact is. Defaults to 0.950 for an explicit user statement. Low numbers are shown but never treated as fact.',
+        },
       },
       output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
       async execute(args, exec) {
@@ -156,6 +162,8 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         const now = Date.now();
         const sessionId = exec.agent?.session?.id;
         const source = sourceFromManual(text, sessionId);
+        const confidence = normalizeConfidence(args.confidence, 0.95);
+        const claim = createClaimMeta('user_explicit', { confidence, observedAt: now, recordedAt: now });
         if (layer === 'l3') {
           const title = (args.title ?? text.slice(0, 60)).trim();
           if (title.length === 0) return 'Not saved: an l3 capsule needs a title.';
@@ -177,6 +185,7 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
             entities: [],
             openLoops: [],
             sourceSessions: sessionId ? [sessionId] : [],
+            claim,
           };
           deps.store.insert(record);
           deps.onRecords?.([record]);
@@ -194,10 +203,11 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
           hash: contentHash(text),
           revision: 1,
           source,
+          claim,
           text,
           kind: 'fact',
           tags,
-          confidence: 0.9,
+          confidence,
           sourceSessionId: sessionId,
         };
         deps.store.insert(record);

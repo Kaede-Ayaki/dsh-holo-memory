@@ -71,5 +71,13 @@ export declare function createClaimMeta(sourceType: ConfidenceSourceType, option
     extractionQuality?: number;
     verified?: boolean;
 }): ClaimMeta;
+/** How many confidence moves we keep per claim. */
+export declare const MAX_CONFIDENCE_HISTORY = 10;
+/**
+ * Return a claim with a new confidence and one history entry. Used when a
+ * correction or corroboration changes the number; the previous value is kept
+ * in `confidenceHistory` so the move stays auditable.
+ */
+export declare function withConfidence(claim: ClaimMeta, nextConfidence: number, reason: string, at?: number): ClaimMeta;
 /** True when a claim is currently valid and usable as a default. */
 export declare function isActiveClaim(claim: ClaimMeta | undefined, now?: number): boolean;

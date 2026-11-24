@@ -12,6 +12,8 @@ import {
   shouldAutoApply,
   toBasisPoints,
   createClaimMeta,
+  withConfidence,
+  MAX_CONFIDENCE_HISTORY,
 } from '../lib/confidence.js';
 
 test('normalizeConfidence clamps, rounds to three decimals, rejects NaN', () => {
@@ -97,4 +99,30 @@ test('isActiveClaim respects status and validity window', () => {
   superseded.status = 'superseded';
   assert.equal(isActiveClaim(superseded, now), false, 'superseded');
   assert.equal(isActiveClaim(undefined, now), true, 'legacy record without claim stays visible');
+});
+
+
+test('withConfidence records an audit trail and normalizes the new value', () => {
+  const claim = createClaimMeta('model_inference', { confidence: 0.55 });
+  const next = withConfidence(claim, 0.991234, 'user_correction', 1234);
+  assert.equal(next.confidence, 0.991);
+  assert.equal(next.confidenceHistory.length, 1);
+  assert.equal(next.confidenceHistory[0].confidence, 0.55);
+  assert.equal(next.confidenceHistory[0].reason, 'user_correction');
+  assert.equal(next.confidenceHistory[0].at, 1234);
+});
+
+test('withConfidence is a no-op when the basis points do not move', () => {
+  const claim = createClaimMeta('user_explicit', { confidence: 0.95 });
+  const same = withConfidence(claim, 0.9501, 'noise');
+  assert.equal(same, claim, 'same value returns the same claim object');
+});
+
+test('confidence history stays bounded', () => {
+  let claim = createClaimMeta('model_inference', { confidence: 0.4 });
+  for (let i = 1; i <= MAX_CONFIDENCE_HISTORY + 5; i += 1) {
+    claim = withConfidence(claim, 0.4 + (i % 40) / 100, `move-${i}`, i);
+  }
+  assert.equal(claim.confidenceHistory.length, MAX_CONFIDENCE_HISTORY);
+  assert.equal(claim.confidenceHistory.at(-1).reason, `move-${MAX_CONFIDENCE_HISTORY + 5}`);
 });

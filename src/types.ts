@@ -81,6 +81,8 @@ export interface ClaimMeta {
   status: 'active' | 'superseded' | 'expired' | 'disputed';
   supersedes?: string[];
   supersededBy?: string;
+  /** Bounded audit trail of confidence changes (why it moved). */
+  confidenceHistory?: Array<{ at: number; confidence: number; reason: string }>;
 }
 
 export interface BaseRecord {

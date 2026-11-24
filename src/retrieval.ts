@@ -12,6 +12,7 @@ import { Bm25Index, ngramCoverage, tokenize } from './lexical.js';
 import { redactSecrets } from './sanitize.js';
 import { evidenceTag } from './source.js';
 import { localDate } from './time.js';
+import { CONFIDENCE_AUTO_APPLY_MIN } from './confidence.js';
 
 export type RecallBand = 'immediate' | 'working' | 'background';
 
@@ -94,24 +95,32 @@ function tagMatchesQuery(record: AnyRecord, queryLower: string): boolean {
   });
 }
 
+function confidenceSuffix(record: AnyRecord): string {
+  const claim = record.claim;
+  if (!claim) return '';
+  const value = ` conf=${claim.confidence.toFixed(3)}`;
+  return claim.confidence < CONFIDENCE_AUTO_APPLY_MIN ? `${value} · 待验证` : value;
+}
+
 function lineFor(item: RecallItem): string {
   const record = item.record;
   const id = record.id.slice(-8);
   const suffix = ` (id:${id})`;
   const tag = evidenceTag(record);
+  const conf = confidenceSuffix(record);
   if (record.layer === 'l3') {
     const l3 = record as L3Record;
     const loops = l3.openLoops.length > 0 ? ` | 待续: ${redactSecrets(l3.openLoops.slice(0, 3).join('；'))}` : '';
-    return `- [L3${tag}] ${redactSecrets(l3.title)}: ${redactSecrets(l3.hologram)}${loops}${suffix}`;
+    return `- [L3${tag}${conf}] ${redactSecrets(l3.title)}: ${redactSecrets(l3.hologram)}${loops}${suffix}`;
   }
   if (record.layer === 'l2') {
     const l2 = record as L2Record;
     const tags = l2.tags.length > 0 ? ` [${redactSecrets(l2.tags.slice(0, 4).join(','))}]` : '';
-    return `- [L2${tag}] ${redactSecrets(l2.text)}${tags}${suffix}`;
+    return `- [L2${tag}${conf}] ${redactSecrets(l2.text)}${tags}${suffix}`;
   }
   const l1 = record as L1Record;
   const date = localDate(l1.createdAt);
-  return `- [L1 ${date}${tag}] ${redactSecrets(l1.summary)}${suffix}`;
+  return `- [L1 ${date}${tag}${conf}] ${redactSecrets(l1.summary)}${suffix}`;
 }
 
 const LAYER_ORDER: Layer[] = ['l3', 'l2', 'l1'];

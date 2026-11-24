@@ -8,7 +8,7 @@ import type { AnyRecord, ExtractionResult, FactKind, L1Record, L2Record, L3Recor
 import { HoloStore, contentHash, newId } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { nearDuplicate } from './lexical.js';
-import { createClaimMeta, normalizeConfidence } from './confidence.js';
+import { createClaimMeta, normalizeConfidence, withConfidence } from './confidence.js';
 import { looksSecret, redactSecrets } from './sanitize.js';
 import { sourceFromTurn } from './source.js';
 import { reviseRecord } from './revisions.js';
@@ -338,11 +338,17 @@ export function applyExtraction(
   for (const fact of extraction.l2 ?? []) {
     const existing = findExistingFact(store, capture.projectKey, fact.scope ?? 'project', fact.text);
     if (existing) {
+      const kind = fact.kind ?? existing.kind;
+      const baseClaim = existing.claim ?? createClaimMeta('migration_unknown', { confidence: existing.confidence });
+      // A correction is an explicit user move: raise confidence and keep the
+      // previous value in confidenceHistory instead of silently overwriting it.
+      const nextClaim = kind === 'correction' ? withConfidence(baseClaim, 0.99, 'user_correction') : baseClaim;
       store.update('l2', existing.id, reviseRecord(existing, {
         text: fact.text,
-        kind: fact.kind ?? existing.kind,
+        kind,
+        claim: nextClaim,
         tags: fact.tags ?? existing.tags,
-        confidence: normalizeConfidence(fact.confidence ?? existing.confidence),
+        confidence: normalizeConfidence(fact.confidence ?? nextClaim.confidence),
         importance: fact.importance ?? existing.importance,
         sourceSessionId: capture.sessionId,
         sourceTurn: capture.turn,

@@ -153,6 +153,21 @@ export function createClaimMeta(
   };
 }
 
+/** How many confidence moves we keep per claim. */
+export const MAX_CONFIDENCE_HISTORY = 10;
+
+/**
+ * Return a claim with a new confidence and one history entry. Used when a
+ * correction or corroboration changes the number; the previous value is kept
+ * in `confidenceHistory` so the move stays auditable.
+ */
+export function withConfidence(claim: ClaimMeta, nextConfidence: number, reason: string, at = Date.now()): ClaimMeta {
+  const normalized = normalizeConfidence(nextConfidence);
+  if (toBasisPoints(normalized) === toBasisPoints(claim.confidence)) return claim;
+  const history = [...(claim.confidenceHistory ?? []), { at, confidence: claim.confidence, reason }].slice(-MAX_CONFIDENCE_HISTORY);
+  return { ...claim, confidence: normalized, confidenceHistory: history };
+}
+
 /** True when a claim is currently valid and usable as a default. */
 export function isActiveClaim(claim: ClaimMeta | undefined, now = Date.now()): boolean {
   if (!claim) return true;
