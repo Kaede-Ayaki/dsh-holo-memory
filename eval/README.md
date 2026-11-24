@@ -9,6 +9,7 @@ eval/
   README.md              口径与指标定义
   build-dataset.mjs      从 injections.jsonl 抽弱标注数据集 + 待人工标注清单
   run.mjs                离线跑 recall，输出指标与标注清单
+  from-labels.mjs        把标好的 sheet 转成 dataset-human.jsonl
   sample-dataset.jsonl   入库的合成示例（3 条，用来验证脚本能跑）
   dataset.jsonl          真实弱标注集（本地，gitignore）
   candidates.jsonl       待人工标注 query（本地，gitignore）
@@ -62,6 +63,21 @@ node eval/run.mjs --data ".dsh/holo-memory" --dataset eval\dataset.jsonl `
 # 3) 生成人工标注清单（query + Top-5，供逐条打勾）
 node eval/run.mjs --data "D:\Deepseek-harness\.dsh\holo-memory" --label eval\label-sheet.md
 ```
+
+## 人工标注流程
+
+1. 打开 `eval/label-sheet-50.md`（或 `label-sheet.md` 全量 138 条）；
+2. 每个 query 一张表，在「命中」列打 `✓` 表示该条记忆本该被召回；**都不命中就留空**（表示无相关）；
+3. 存盘后运行：
+
+```powershell
+node eval/from-labels.mjs --sheet eval/label-sheet-50.md --out eval/dataset-human.jsonl
+node eval/run.mjs --data ".dsh/holo-memory" --dataset eval/dataset-human.jsonl `
+  --live-config ".dsh/profiles/desktop/cordis.patch.yml" --vector --neuron --active `
+  --out eval/baseline-human.json
+```
+
+`label-sheet-50.md` 与 `dataset-human.jsonl` 都含真实 query，已被 gitignore。
 
 ## 通道开关
 

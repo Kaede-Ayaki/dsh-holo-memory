@@ -24,4 +24,6 @@ docs/*.pptx
 eval/dataset.jsonl
 eval/candidates.jsonl
 eval/label-sheet.md
+eval/label-sheet-50.md
+eval/dataset-human.jsonl
 eval/runs/
