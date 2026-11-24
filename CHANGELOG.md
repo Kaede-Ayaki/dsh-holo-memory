@@ -36,9 +36,11 @@ holo:   43/43 PASS
 client: node --check PASS
 ```
 
-生产工作台截图：
+生产工作台预览：
 
-![全息记忆工作台](docs/console.png)
+![全息记忆工作台示意图](docs/preview/workbench.svg)
+
+> 矢量示意图（示例数据）。仓库自本版本起不发布任何真实截图，避免泄露本机记忆内容。
 
 ## [0.6.0] - 2026-11-19
 

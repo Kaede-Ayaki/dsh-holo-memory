@@ -7,3 +7,15 @@ Thumbs.db
 .env.*
 embedding.key
 docs/ppt/.dsh-office-*/
+
+# 截图与演示稿不入库：真实界面会暴露本机记忆内容。
+# 界面预览请用 docs/preview/ 下的手工 SVG 示意图。
+docs/*.png
+docs/*.jpg
+docs/*.jpeg
+docs/*.webp
+docs/**/*.png
+docs/**/*.jpg
+docs/**/*.jpeg
+docs/**/*.webp
+docs/*.pptx

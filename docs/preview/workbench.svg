@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860" role="img" aria-label="全息记忆工作台 0.7.0 界面示意图">
+  <title>全息记忆工作台 0.7.0 界面示意图</title>
+  <desc>Synthetic UI mockup with example data; contains no real memory content.</desc>
+  <rect width="1280" height="860" fill="#0b1220"/>
+
+  <rect x="1" y="1" width="1278" height="858" rx="18" fill="#0b1220" stroke="#263450" stroke-width="1"/>
+  <rect x="40" y="32" width="46" height="46" rx="13" fill="url(#brand)"/>
+  <g transform="translate(55,47) scale(1.0)"><path d="M2 6l6-3 6 3-6 3-6-3Zm0 4l6 3 6-3" fill="none" stroke="#ffffff" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="100" y="55" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="20" fill="#e8eeff" font-weight="700" text-anchor="start">全息记忆工作台</text>
+  <text x="100" y="76" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11.5" fill="#8996b3" font-weight="400" text-anchor="start">分层存储 · 混合召回 · 用户画像 · 联想索引</text>
+  <circle cx="1074" cy="55" r="4" fill="#4ade80"/>
+  <rect x="1060" y="40" width="96" height="30" rx="15.0" fill="#12203a" stroke="#2b4a3e" stroke-width="1"/>
+  <text x="1108.0" y="59.14" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11.5" fill="#b8f0c8" font-weight="500" text-anchor="middle">运行中</text>
+  <rect x="1168" y="40" width="72" height="30" rx="15.0" fill="#1a2340" stroke="#263450" stroke-width="1"/>
+  <text x="1204.0" y="58.96" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11" fill="#8996b3" font-weight="500" text-anchor="middle">示例数据</text>
+  <rect x="40" y="100" width="140" height="38" rx="10" fill="#182545" stroke="#3d5bb8" stroke-width="1"/>
+  <g transform="translate(54,111) scale(1.0)"><path d="M2 6l6-3 6 3-6 3-6-3Zm0 4l6 3 6-3" fill="none" stroke="#5b7cfa" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="80" y="124" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#e8eeff" font-weight="600" text-anchor="start">记忆总览</text>
+  <rect x="126" y="110" width="44" height="18" rx="9" fill="#22315a"/>
+  <text x="148.0" y="123" font-family="'JetBrains Mono','Cascadia Code',Consolas,monospace" font-size="10.5" fill="#9fb4e8" font-weight="500" text-anchor="middle">1,284</text>
+  <rect x="190" y="100" width="140" height="38" rx="10" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <g transform="translate(204,111) scale(1.0)"><path d="M8 8a2.4 2.4 0 1 0 0-4.8A2.4 2.4 0 0 0 8 8Zm-4.5 5c.5-2.2 2.3-3.4 4.5-3.4s4 1.2 4.5 3.4" fill="none" stroke="#8996b3" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="230" y="124" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#a8b4cf" font-weight="500" text-anchor="start">用户画像</text>
+  <rect x="276" y="110" width="44" height="18" rx="9" fill="#1a2340"/>
+  <text x="298.0" y="123" font-family="'JetBrains Mono','Cascadia Code',Consolas,monospace" font-size="10.5" fill="#8996b3" font-weight="500" text-anchor="middle">12</text>
+  <rect x="340" y="100" width="140" height="38" rx="10" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <g transform="translate(354,111) scale(1.0)"><path d="M8 3.2a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4ZM3.5 10v1.2a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm9 0v1.2a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM8 6.8v3.4m-3.4 1.4 2.4-2m4.4 2-2.4-2" fill="none" stroke="#8996b3" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="380" y="124" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#a8b4cf" font-weight="500" text-anchor="start">神经元</text>
+  <rect x="426" y="110" width="44" height="18" rx="9" fill="#1a2340"/>
+  <text x="448.0" y="123" font-family="'JetBrains Mono','Cascadia Code',Consolas,monospace" font-size="10.5" fill="#8996b3" font-weight="500" text-anchor="middle">573</text>
+  <rect x="490" y="100" width="158" height="38" rx="10" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <g transform="translate(504,111) scale(1.0)"><path d="M3 5h10M3 11h10M6 3v4M10 9v4" fill="none" stroke="#8996b3" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="530" y="124" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#a8b4cf" font-weight="500" text-anchor="start">运行与设置</text>
+  <rect x="40" y="158" width="292" height="98" rx="12" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <text x="56" y="183" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11.5" fill="#8996b3" font-weight="400" text-anchor="start">记忆总数</text>
+  <text x="56" y="214" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="23" fill="#e8eeff" font-weight="700" text-anchor="start">1,284</text>
+  <text x="56" y="234" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">跨 3 层 · 向量覆盖 92%</text>
+  <rect x="56" y="243" width="112.99999999999999" height="5" rx="2.5" fill="#22d3ee"/>
+  <rect x="172.0" y="243" width="57.0" height="5" rx="2.5" fill="#5b7cfa"/>
+  <rect x="232.0" y="243" width="21.0" height="5" rx="2.5" fill="#a78bfa"/>
+  <rect x="348" y="158" width="292" height="98" rx="12" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <text x="364" y="183" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11.5" fill="#8996b3" font-weight="400" text-anchor="start">L1 对话层</text>
+  <text x="364" y="214" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="23" fill="#e8eeff" font-weight="700" text-anchor="start">742</text>
+  <text x="364" y="234" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">回合摘要 · 最近 14 天</text>
+  <rect x="364" y="243" width="200" height="5" rx="2.5" fill="#1b2740"/>
+  <rect x="364" y="243" width="115.99999999999999" height="5" rx="2.5" fill="#22d3ee"/>
+  <rect x="656" y="158" width="292" height="98" rx="12" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <text x="672" y="183" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11.5" fill="#8996b3" font-weight="400" text-anchor="start">L2 事实层</text>
+  <text x="672" y="214" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="23" fill="#e8eeff" font-weight="700" text-anchor="start">386</text>
+  <text x="672" y="234" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">原子事实 · 可回原文</text>
+  <rect x="672" y="243" width="200" height="5" rx="2.5" fill="#1b2740"/>
+  <rect x="672" y="243" width="68.0" height="5" rx="2.5" fill="#5b7cfa"/>
+  <rect x="964" y="158" width="292" height="98" rx="12" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <text x="980" y="183" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11.5" fill="#8996b3" font-weight="400" text-anchor="start">L3 胶囊层</text>
+  <text x="980" y="214" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="23" fill="#e8eeff" font-weight="700" text-anchor="start">156</text>
+  <text x="980" y="234" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">整体印象 · 长期</text>
+  <rect x="980" y="243" width="200" height="5" rx="2.5" fill="#1b2740"/>
+  <rect x="980" y="243" width="28.000000000000004" height="5" rx="2.5" fill="#a78bfa"/>
+  <rect x="40" y="276" width="812" height="482" rx="14" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <text x="60" y="306" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="14" fill="#e8eeff" font-weight="700" text-anchor="start">记忆记录</text>
+  <text x="60" y="324" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">最近 5 条 · 按时间倒序</text>
+  <rect x="660" y="288" width="172" height="30" rx="15" fill="#142039" stroke="#263450" stroke-width="1"/>
+  <g transform="translate(674,295) scale(1.0)"><path d="M7 12a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4Zm3.4 1 2.4 2.4" fill="none" stroke="#8996b3" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="700" y="307" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="11" fill="#8996b3" font-weight="400" text-anchor="start">搜索记忆…</text>
+  <rect x="60" y="350" width="34" height="20" rx="6" fill="#22d3ee" opacity="0.14"/>
+  <text x="77" y="364" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#22d3ee" font-weight="700" text-anchor="middle">L1</text>
+  <text x="108" y="364" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#e8eeff" font-weight="500" text-anchor="start">整理 0.7.0 工作台改版清单：页头、导航、卡片统一。</text>
+  <text x="108" y="384" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">今天 11:42 · 会话摘要</text>
+  <rect x="726" y="354" width="46" height="20" rx="10.0" fill="#12203a" stroke="#2b4a3e" stroke-width="1"/>
+  <text x="749.0" y="367.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#9fe0b4" font-weight="500" text-anchor="middle">·源</text>
+  <rect x="782" y="354" width="50" height="20" rx="10.0" fill="#1a2340" stroke="#263450" stroke-width="1"/>
+  <text x="807.0" y="367.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#8996b3" font-weight="500" text-anchor="middle">核对</text>
+  <line x1="60" y1="406" x2="832" y2="406" stroke="#1b2740" stroke-width="1"/>
+  <rect x="60" y="428" width="34" height="20" rx="6" fill="#5b7cfa" opacity="0.14"/>
+  <text x="77" y="442" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#5b7cfa" font-weight="700" text-anchor="middle">L2</text>
+  <text x="108" y="442" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#e8eeff" font-weight="500" text-anchor="start">偏好：文档标题用中文，代码块统一 text。</text>
+  <text x="108" y="462" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">今天 10:15 · 会话摘要</text>
+  <rect x="726" y="432" width="46" height="20" rx="10.0" fill="#12203a" stroke="#2b4a3e" stroke-width="1"/>
+  <text x="749.0" y="445.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#9fe0b4" font-weight="500" text-anchor="middle">·源</text>
+  <rect x="782" y="432" width="50" height="20" rx="10.0" fill="#1a2340" stroke="#263450" stroke-width="1"/>
+  <text x="807.0" y="445.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#8996b3" font-weight="500" text-anchor="middle">核对</text>
+  <line x1="60" y1="484" x2="832" y2="484" stroke="#1b2740" stroke-width="1"/>
+  <rect x="60" y="506" width="34" height="20" rx="6" fill="#a78bfa" opacity="0.14"/>
+  <text x="77" y="520" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#a78bfa" font-weight="700" text-anchor="middle">L3</text>
+  <text x="108" y="520" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#e8eeff" font-weight="500" text-anchor="start">项目节奏：先做评估基线，再改记忆 schema。</text>
+  <text x="108" y="540" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">昨天 21:30 · 会话摘要</text>
+  <rect x="726" y="510" width="46" height="20" rx="10.0" fill="#12203a" stroke="#2b4a3e" stroke-width="1"/>
+  <text x="749.0" y="523.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#9fe0b4" font-weight="500" text-anchor="middle">·指针</text>
+  <rect x="782" y="510" width="50" height="20" rx="10.0" fill="#1a2340" stroke="#263450" stroke-width="1"/>
+  <text x="807.0" y="523.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#8996b3" font-weight="500" text-anchor="middle">核对</text>
+  <line x1="60" y1="562" x2="832" y2="562" stroke="#1b2740" stroke-width="1"/>
+  <rect x="60" y="584" width="34" height="20" rx="6" fill="#5b7cfa" opacity="0.14"/>
+  <text x="77" y="598" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#5b7cfa" font-weight="700" text-anchor="middle">L2</text>
+  <text x="108" y="598" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#e8eeff" font-weight="500" text-anchor="start">约定：回复先给结论，再给证据。</text>
+  <text x="108" y="618" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">昨天 18:04 · 会话摘要</text>
+  <rect x="726" y="588" width="46" height="20" rx="10.0" fill="#12203a" stroke="#2b4a3e" stroke-width="1"/>
+  <text x="749.0" y="601.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#9fe0b4" font-weight="500" text-anchor="middle">·源</text>
+  <rect x="782" y="588" width="50" height="20" rx="10.0" fill="#1a2340" stroke="#263450" stroke-width="1"/>
+  <text x="807.0" y="601.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#8996b3" font-weight="500" text-anchor="middle">核对</text>
+  <line x1="60" y1="640" x2="832" y2="640" stroke="#1b2740" stroke-width="1"/>
+  <rect x="60" y="662" width="34" height="20" rx="6" fill="#22d3ee" opacity="0.14"/>
+  <text x="77" y="676" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#22d3ee" font-weight="700" text-anchor="middle">L1</text>
+  <text x="108" y="676" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12.5" fill="#e8eeff" font-weight="500" text-anchor="start">排查向量回填失败，确认是超时问题。</text>
+  <text x="108" y="696" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">昨天 15:22 · 会话摘要</text>
+  <rect x="726" y="666" width="46" height="20" rx="10.0" fill="#12203a" stroke="#2b4a3e" stroke-width="1"/>
+  <text x="749.0" y="679.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#9fe0b4" font-weight="500" text-anchor="middle">·手写</text>
+  <rect x="782" y="666" width="50" height="20" rx="10.0" fill="#1a2340" stroke="#263450" stroke-width="1"/>
+  <text x="807.0" y="679.6" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#8996b3" font-weight="500" text-anchor="middle">核对</text>
+  <rect x="868" y="276" width="372" height="482" rx="14" fill="#0f182b" stroke="#263450" stroke-width="1"/>
+  <text x="888" y="306" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="14" fill="#e8eeff" font-weight="700" text-anchor="start">最近自动召回</text>
+  <text x="888" y="324" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">跨会话注入 · 可回溯来源</text>
+  <line x1="888" y1="340" x2="1220" y2="340" stroke="#1b2740" stroke-width="1"/>
+  <text x="888" y="370" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="500" text-anchor="start">今天 11:40</text>
+  <text x="1218" y="370" font-family="'JetBrains Mono','Cascadia Code',Consolas,monospace" font-size="10" fill="#8996b3" font-weight="400" text-anchor="end">session-8f2c</text>
+  <text x="888" y="394" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12" fill="#a8b4cf" font-weight="500" text-anchor="start">这个项目下一步该做什么？</text>
+  <rect x="888" y="406" width="54" height="20" rx="6" fill="#22d3ee" opacity="0.13"/>
+  <text x="915" y="420" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#22d3ee" font-weight="600" text-anchor="middle">L1 · 2</text>
+  <rect x="950" y="406" width="54" height="20" rx="6" fill="#5b7cfa" opacity="0.13"/>
+  <text x="977" y="420" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#5b7cfa" font-weight="600" text-anchor="middle">L2 · 4</text>
+  <rect x="1012" y="406" width="54" height="20" rx="6" fill="#a78bfa" opacity="0.13"/>
+  <text x="1039" y="420" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#a78bfa" font-weight="600" text-anchor="middle">L3 · 1</text>
+  <text x="888" y="446" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">注入 1.1K 字符 · 命中 7 条</text>
+  <text x="888" y="504" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="500" text-anchor="start">今天 09:12</text>
+  <text x="1218" y="504" font-family="'JetBrains Mono','Cascadia Code',Consolas,monospace" font-size="10" fill="#8996b3" font-weight="400" text-anchor="end">session-31a7</text>
+  <text x="888" y="528" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12" fill="#a8b4cf" font-weight="500" text-anchor="start">把工作台四个视图的间距再统一一下。</text>
+  <rect x="888" y="540" width="54" height="20" rx="6" fill="#22d3ee" opacity="0.13"/>
+  <text x="915" y="554" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#22d3ee" font-weight="600" text-anchor="middle">L1 · 1</text>
+  <rect x="950" y="540" width="54" height="20" rx="6" fill="#5b7cfa" opacity="0.13"/>
+  <text x="977" y="554" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#5b7cfa" font-weight="600" text-anchor="middle">L2 · 3</text>
+  <rect x="1012" y="540" width="54" height="20" rx="6" fill="#a78bfa" opacity="0.13"/>
+  <text x="1039" y="554" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#a78bfa" font-weight="600" text-anchor="middle">L3 · 2</text>
+  <text x="888" y="580" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">注入 860 字符 · 命中 6 条</text>
+  <text x="888" y="638" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="500" text-anchor="start">昨天 22:05</text>
+  <text x="1218" y="638" font-family="'JetBrains Mono','Cascadia Code',Consolas,monospace" font-size="10" fill="#8996b3" font-weight="400" text-anchor="end">session-c40e</text>
+  <text x="888" y="662" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="12" fill="#a8b4cf" font-weight="500" text-anchor="start">上次改到哪一步了？</text>
+  <rect x="888" y="674" width="54" height="20" rx="6" fill="#22d3ee" opacity="0.13"/>
+  <text x="915" y="688" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#22d3ee" font-weight="600" text-anchor="middle">L1 · 3</text>
+  <rect x="950" y="674" width="54" height="20" rx="6" fill="#5b7cfa" opacity="0.13"/>
+  <text x="977" y="688" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#5b7cfa" font-weight="600" text-anchor="middle">L2 · 2</text>
+  <rect x="1012" y="674" width="54" height="20" rx="6" fill="#a78bfa" opacity="0.13"/>
+  <text x="1039" y="688" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10" fill="#a78bfa" font-weight="600" text-anchor="middle">L3 · 1</text>
+  <text x="888" y="714" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">注入 1.4K 字符 · 命中 6 条</text>
+  <line x1="40" y1="782" x2="1220" y2="782" stroke="#1b2740" stroke-width="1"/>
+  <text x="40" y="805" font-family="'JetBrains Mono','Cascadia Code',Consolas,monospace" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="start">存储：$DSH_HOME/holo-memory</text>
+  <text x="1220" y="805" font-family="'Microsoft YaHei','Noto Sans SC','PingFang SC','Segoe UI',sans-serif" font-size="10.5" fill="#8996b3" font-weight="400" text-anchor="end">工作台 0.7.0 · 四视图统一</text>
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7b93ff"/>
+      <stop offset="1" stop-color="#4459d8"/>
+    </linearGradient>
+  </defs>
+</svg>

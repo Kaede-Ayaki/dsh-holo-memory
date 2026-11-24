@@ -14,7 +14,9 @@
 - 当前版本：`0.7.0`（2026-11-24）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
-- 介绍 PPT：[docs/dsh-holo-memory-intro-v2.pptx](docs/dsh-holo-memory-intro-v2.pptx)
+- 界面预览：[docs/preview/](docs/preview/) —— 手工绘制的矢量示意图（示例数据）
+
+> 本仓库**不发布任何真实截图**：截图会暴露作者本机的记忆内容。所有界面预览都是 `docs/preview/` 里用 SVG 手工绘制的示意图，内容是合成的示例数据，不含真实记忆。
 
 ---
 
@@ -70,7 +72,7 @@ dsh-holo-memory 把“记住”拆成三个动作：
 
 ### 用户画像：偏好、习惯与人格
 
-A 不是第四层事实库，而是从 L1/L2/L3 中**蒸馏出来的用户侧画像**，保存在独立的 `a.json`，证据仍指回原记录。
+用户画像不是第四层事实库，而是从 L1/L2/L3 中**蒸馏出来的用户侧画像**，保存在独立的 `a.json`，证据仍指回原记录。
 
 | 字段 | 内容 |
 |---|---|
@@ -460,13 +462,9 @@ memory_open(id, maxChars?, history?)
 
 ## 工作步骤可视化
 
-![工作步骤里的长期记忆自动召回](docs/recall-step.png)
+![召回块示意图](docs/preview/recall-block.svg)
 
 当前版本在聊天「已完成」工作步骤里显示折叠行：
-
-![聊天工作步骤里的召回块](docs/workstep.png)
-
-当前 DSH 会把 context 消息投影到工作步骤/轨迹：
 
 - 聊天「已完成」工作步骤里出现可折叠召回行：
   `长期记忆自动召回 | holo-memory · N 字符`
@@ -474,13 +472,15 @@ memory_open(id, maxChars?, history?)
 - 展开后可看 query、L1/L2/L3 数量、selected id、channels、score；
 - 原生的其他 context 行（skill catalog、instructions 等）仍交给 DSH 原来的渲染器。
 
+> 预览为矢量示意图，内容是合成示例；仓库不发布真实截图。
+
 > 如果侧边栏看不到「全息记忆」，或工作步骤没有召回行：先**刷新页面**；仍没有再重启 DSH。
 
 ---
 
 ## 输入框双开关（读取 / 写入）
 
-![输入框里的读取与写入开关](docs/toggle-buttons.png)
+![双开关示意图](docs/preview/input-toggles.svg)
 
 输入框工具行、JSON 复制按钮旁边有两个默认打开的开关：
 
@@ -513,7 +513,9 @@ POST 需要 `x-holo-memory: 1` 请求头。
 
 0.7.0 起工作台统一为「记忆总览 / 用户画像 / 神经元 / 运行与设置」四个视图，共用页头、导航、状态胶囊、卡片与间距。
 
-![全息记忆工作台](docs/console.png)
+![全息记忆工作台示意图](docs/preview/workbench.svg)
+
+> 预览为矢量示意图（示例数据），不是真实截图；仓库不发布真实截图。
 
 安装后侧边栏会出现 **全息记忆** 一级入口：
 
@@ -759,10 +761,12 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 ## 文档
 
 - [CHANGELOG.md](CHANGELOG.md)
-- [介绍 PPT v2](docs/dsh-holo-memory-intro-v2.pptx)
-- [介绍 PPT 生成脚本](docs/ppt/build_deck_paper.py)
+- [界面预览（SVG 示意图）](docs/preview/)
+- [预览生成脚本](docs/preview/gen_previews.py)
 - [神经元伴侣 README](neuron-memory/README.md)
 - [神经元伴侣召回相关性修复](CHANGELOG.md#053---2026-11-19)
+
+> 介绍 PPT 与真实截图不再随仓库发布（两者都含本机记忆内容）。需要时在本地重新生成。
 
 ---
 
