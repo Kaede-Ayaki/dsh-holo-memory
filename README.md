@@ -15,6 +15,7 @@
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 界面预览：[docs/preview/](docs/preview/) —— 手工绘制的矢量示意图（示例数据）
+- 在线演示：[GitHub Pages 静态演示](https://kaede-ayaki.github.io/dsh-holo-memory/demo/) —— 可点击的四视图，合成示例数据
 
 > 本仓库**不发布任何真实截图**：截图会暴露作者本机的记忆内容。所有界面预览都是 `docs/preview/` 里用 SVG 手工绘制的示意图，内容是合成的示例数据，不含真实记忆。
 
@@ -762,6 +763,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 - [CHANGELOG.md](CHANGELOG.md)
 - [界面预览（SVG 示意图）](docs/preview/)
+- [在线演示（GitHub Pages）](https://kaede-ayaki.github.io/dsh-holo-memory/demo/)
 - [预览生成脚本](docs/preview/gen_previews.py)
 - [神经元伴侣 README](neuron-memory/README.md)
 - [神经元伴侣召回相关性修复](CHANGELOG.md#053---2026-11-19)
