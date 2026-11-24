@@ -28,7 +28,7 @@ export interface InjectionEvent {
   chars: number;
   mode: 'recall' | 'recent-fallback' | 'profile' | 'recall+profile';
   layers: { l1: number; l2: number; l3: number };
-  /** user-profile profile was injected (0 or 1). */
+  /** user profile was injected (0 or 1). */
   a?: number;
   /** Active-window rows included in addition to query matches. */
   active?: number;

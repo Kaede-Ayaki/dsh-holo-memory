@@ -152,7 +152,7 @@ declare module '@deepseek-ai/dsh-llm' {
             /** Number of active-window memories included besides query matches. */
             active?: number;
             mode?: 'recall' | 'recent-fallback' | 'profile' | 'recall+profile';
-            /** Number of user-profile profile blocks included (0 or 1). */
+            /** Number of user profile blocks included (0 or 1). */
             a?: number;
             layers?: {
                 l1: number;

@@ -16,7 +16,7 @@ export interface InjectionEvent {
         l2: number;
         l3: number;
     };
-    /** user-profile profile was injected (0 or 1). */
+    /** user profile was injected (0 or 1). */
     a?: number;
     /** Active-window rows included in addition to query matches. */
     active?: number;
