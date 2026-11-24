@@ -19,3 +19,9 @@ docs/**/*.jpg
 docs/**/*.jpeg
 docs/**/*.webp
 docs/*.pptx
+
+# 评估集含真实对话 query：只在本地，不进仓库。
+eval/dataset.jsonl
+eval/candidates.jsonl
+eval/label-sheet.md
+eval/runs/

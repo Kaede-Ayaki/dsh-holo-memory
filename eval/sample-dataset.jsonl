@@ -1,0 +1,3 @@
+{"id":"s-0001","query":"示例：如何更换水族箱过滤器","cwd":"D:/example/project","expected":["l2_example_record_a"],"distractors":[],"k":5,"annotator":"synthetic","note":"sample row; ids are fake"}
+{"id":"s-0002","query":"示例：上次把向量模型换成了哪一个","cwd":"D:/example/project","expected":["l2_example_record_b","l2_example_record_c"],"distractors":["l2_example_record_z"],"k":5,"annotator":"synthetic","note":"sample row; ids are fake"}
+{"id":"s-0003","query":"示例：这个仓库下一步还剩什么没做","cwd":"","expected":[],"distractors":[],"k":5,"annotator":"synthetic","note":"negative sample; ids are fake"}

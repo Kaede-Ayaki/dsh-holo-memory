@@ -1,0 +1,86 @@
+# eval/ — 检索评估基线（Phase 0）
+
+目的：**先量出现状，再改字段和算法**。所有后续改动（置信度、时间、冲突、衰减）都必须能在这套指标上复跑对比。
+
+## 目录
+
+```text
+eval/
+  README.md              口径与指标定义
+  build-dataset.mjs      从 injections.jsonl 抽弱标注数据集 + 待人工标注清单
+  run.mjs                离线跑 recall，输出指标与标注清单
+  sample-dataset.jsonl   入库的合成示例（3 条，用来验证脚本能跑）
+  dataset.jsonl          真实弱标注集（本地，gitignore）
+  candidates.jsonl       待人工标注 query（本地，gitignore）
+  label-sheet.md         人工标注清单（本地，gitignore）
+  baseline-*.json        聚合指标（入库，不含 query 原文）
+```
+
+## 指标
+
+| 指标 | 定义 |
+|---|---|
+| Recall@K | `|期望命中 ∩ 返回前 K| / |期望命中|` |
+| Precision@K | `|期望命中 ∩ 返回前 K| / K` |
+| MRR | 第一个期望命中的倒数排名 |
+| nDCG@K | 二值增益归一化 |
+| quiet rate | 期望为空时，返回也为空的比例 |
+| expected survival | 期望 id 在活库里还存在的比例（L1 归档会让这个数下降） |
+| stale hit rate | 返回结果里带 `supersededBy`（已被替代）的比例 |
+| evidence rate | 返回结果里带可校验原文（`excerptHash`）的比例 |
+
+> 指标只统计**查询命中项**；active-window（resident）项单独计数，不混进 Recall。
+
+## 数据集格式
+
+`dataset.jsonl` 每行：
+
+```json
+{"id":"w-0001","query":"...","cwd":"D:\\\\Deepseek-harness","expected":["l2_xxx"],"distractors":[],"k":5,"annotator":"injection-weak","note":"weak: what 0.7.0 injected"}
+```
+
+- `annotator`：`injection-weak`（系统当时注入的 id，只能测稳定性）、`human`（人工标注，才是真正的相关性）。
+- `distractors`：明确不应命中的 id，Phase 0.3 再补。
+
+## 运行
+
+```powershell
+# 1) 从注入日志抽数据（本地，不入库）
+node eval/build-dataset.mjs --injections "$env:USERPROFILE\..\Deepseek-harness\.dsh\holo-memory\injections.jsonl" --out eval\dataset.jsonl --candidates 120
+
+# 2a) 纯 lexical + ngram（离线、可复现，做算法对照）
+node eval/run.mjs --data ".dsh/holo-memory" --dataset eval\dataset.jsonl `
+  --live-config ".dsh/profiles/desktop/cordis.patch.yml" `
+  --out eval\baseline-0.7.0-lexical.json
+
+# 2b) 生产等价（vector + neuron + active window；需要 SiliconFlow key 与网络）
+node eval/run.mjs --data ".dsh/holo-memory" --dataset eval\dataset.jsonl `
+  --live-config ".dsh/profiles/desktop/cordis.patch.yml" `
+  --vector --neuron --active `
+  --out eval\baseline-0.7.0.json
+
+# 3) 生成人工标注清单（query + Top-5，供逐条打勾）
+node eval/run.mjs --data "D:\Deepseek-harness\.dsh\holo-memory" --label eval\label-sheet.md
+```
+
+## 通道开关
+
+| 开关 | 作用 |
+|---|---|
+| `--live-config <yml>` | 从 DSH profile 读真实的 inject 配额/阈值/embedding 配置（桌面端：`.dsh/profiles/desktop/cordis.patch.yml`） |
+| `--vector` | 打开向量通道（读 `embedding.json` + `keyFile`，走真实 API） |
+| `--neuron` | 打开神经元联想通道（读 `.dsh/neuron-memory/graph.json`） |
+| `--active` | 把 active-window（resident）条目也算进返回结果（生产注入包含它们） |
+
+四路通道可以任意组合做消融：`lexical / +vector / +neuron / +active`。
+
+## 隐私
+
+`dataset.jsonl`、`candidates.jsonl`、`label-sheet.md` 含真实对话 query，**一律 gitignore，不进仓库**。  
+`baseline-*.json` 只保留聚合指标与记录 id，不含 query 原文，可以入库。
+
+## 口径提醒
+
+- 弱标注集上的数字只回答「现在的召回和 0.7.0 当时一致吗」，不回答「召回到的东西对不对」；
+- 真正的 Recall@K 要等 `label-sheet.md` 人工标完之后，用 `annotator: human` 的子集单独跑一份；
+- 跑完基线后，任何算法/阈值改动都必须先跑同一命令，指标下降不许合入。
