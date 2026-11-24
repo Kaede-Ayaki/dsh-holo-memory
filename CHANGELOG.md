@@ -3,7 +3,7 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
-## [Unreleased] - 0.8.0
+## [0.8.0] - 2026-11-24
 
 **主题：数值置信度与时间字段（Phase 0–2）。**
 
@@ -16,6 +16,9 @@ Format follows Keep a Changelog; versions follow the package version.
 - `eval/`：检索评估骨架（弱标注集、生产等价基线、通道消融、人工标注清单）。
 - `scripts/migrate-0.8.mjs`：幂等迁移脚本，默认 dry-run，`--apply` 先备份再写 `schema.json`。
 - `memory_recall(asOf=...)`：时间检索，`asOf` 时刻才有效的 claim 才参与召回；过期、未生效、被替代的默认不可见。
+- `memory_supersede(oldId, newId?, reason?)`：需求变更时关闭旧 claim（`validTo` = 变更时刻），并把新 claim 挂上 `supersedes`。
+- `memory_timeline(id)`：沿 `supersedes / supersededBy` 双向走链，输出「旧 → 新」的有效期与状态。
+- 提取提示词支持 `supersedes`：识别「新要求替换旧要求」并自动闭环。
 - `src/calibration.ts`：Platt 校准（拟合 / 应用）、Brier、ECE、可靠性曲线；`<store>/calibration.json` 存在时插件启动自动加载。
 - `eval/` 增补：真值标注表生成、真值导入、校准拟合脚本（`build-truth-sheet.mjs` / `from-truth.mjs` / `calibrate.mjs`）。
 
@@ -28,9 +31,10 @@ Format follows Keep a Changelog; versions follow the package version.
 ### Verification
 
 ```text
-holo:   64/64 PASS
+holo:   66/66 PASS
 live store: 567 records migrated (l1 403 / l2 159 / l3 5), 0 illegal, 0 drifted
-baseline@5 (weak labels): 0.0935 production-like vs 0.0432 no-vector
+baseline@5 (human labels, 50 queries): 1.000 production-like / 0.950 nDCG@5; no-vector 0.384
+neuron: reserved-slot removed + activation-gated evidence (was costing ~8 recall points)
 ```
 
 ## [0.7.0] - 2026-11-24

@@ -1,6 +1,7 @@
 /** Model-facing memory tools: recall, note, list, forget, stats. */
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { createClaimMeta, linkSupersedes, normalizeConfidence, supersedeClaim } from './confidence.js';
+import { buildTimeline, formatTimeline } from './timeline.js';
 import type { HoloConfig } from './config.js';
 import type { AnyRecord, L1Record, L2Record, L3Record, Layer, Scope } from './types.js';
 import { HoloStore, contentHash, newId, projectIdFor } from './store.js';
@@ -151,6 +152,25 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
           deps.store.update(newRecord.layer, newRecord.id, { claim: nextClaim });
         }
         return `Superseded ${oldRecord.id}${newRecord ? ` by ${newRecord.id}` : ''} at ${new Date(claim.validTo ?? Date.now()).toISOString()}.`;
+      },
+    }),
+  );
+
+  ctx.tools.register(
+    defineTool({
+      name: 'memory_timeline',
+      description:
+        'Show the requirement timeline for a memory: which older claims it replaced, when each one was valid, and what replaced it. ' +
+        'Use after memory_recall when the user asks "what did we change", "which rule is current", or "when did this change".',
+      parameters: {
+        id: { type: 'string', required: true, description: 'Memory id (full or 8-char suffix) anywhere in the chain.' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => stringOutput(String(value)) },
+      async execute(args) {
+        const record = findBySuffix(deps.store, args.id);
+        if (!record) return `Not found: ${args.id}`;
+        const entries = buildTimeline(deps.store, record.id);
+        return formatTimeline(entries);
       },
     }),
   );

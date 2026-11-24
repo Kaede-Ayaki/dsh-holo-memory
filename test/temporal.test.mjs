@@ -8,6 +8,7 @@ import { normalizeConfig } from '../lib/config.js';
 import { EmbeddingClient } from '../lib/embeddings.js';
 import { recall } from '../lib/retrieval.js';
 import { createClaimMeta, normalizeConfidence } from '../lib/confidence.js';
+import { buildTimeline, formatTimeline } from '../lib/timeline.js';
 
 const DAY = 86_400_000;
 
@@ -162,4 +163,52 @@ test('a superseded claim stays readable before validTo and disappears afterwards
   const currentTexts = current.map((id) => textOfId(store, id));
   assert.ok(currentTexts.some((text) => text.includes('新要求')), 'current view shows the new requirement');
   assert.ok(!currentTexts.some((text) => text.includes('旧要求')), 'current view hides the replaced requirement');
+});
+
+
+test('timeline walks the supersede chain oldest-first', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-line-'));
+  const config = normalizeConfig({});
+  const store = new HoloStore(dir, config);
+  await store.whenReady();
+  const project = projectIdFor('D:\\work\\demo');
+  const now = Date.now();
+  const base = {
+    layer: 'l2',
+    projectKey: project.key,
+    projectLabel: 'demo',
+    scope: 'project',
+    createdAt: now,
+    updatedAt: now,
+    hash: contentHash('z'),
+    importance: 7,
+    kind: 'preference',
+    tags: ['style'],
+    confidence: 0.9,
+  };
+  const oldId = newId('l2');
+  const oldClaim = createClaimMeta('user_explicit', { confidence: 0.9 });
+  oldClaim.validFrom = now - 3 * DAY;
+  store.insert({ ...base, id: oldId, text: '提示词交付：只用 tag 流。', claim: oldClaim });
+
+  const newClaim = createClaimMeta('user_explicit', { confidence: 0.95 });
+  newClaim.validFrom = now - DAY;
+  newClaim.supersedes = [oldId];
+  const newIdRecord = newId('l2');
+  store.insert({ ...base, id: newIdRecord, text: '提示词交付：tag 流 + 英文长描述两段。', claim: newClaim });
+
+  store.update('l2', oldId, {
+    claim: { ...oldClaim, status: 'superseded', validTo: now - DAY, supersededBy: newIdRecord },
+    supersededBy: newIdRecord,
+  });
+
+  const entries = buildTimeline(store, newIdRecord);
+  assert.equal(entries.length, 2);
+  assert.match(entries[0].text, /tag 流。/);
+  assert.equal(entries[0].status, 'superseded');
+  assert.match(entries[1].text, /英文长描述/);
+  assert.equal(entries[1].status, 'active');
+  const text = formatTimeline(entries);
+  assert.match(text, /时间线（旧 → 新）/);
+  assert.match(text, /superseded/);
 });

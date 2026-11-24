@@ -1,6 +1,6 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-0.7.0-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.8.0-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-43%2F43-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,7 +11,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`0.7.0`（2026-11-24）
+- 当前版本：`0.8.0`（2026-11-24）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 界面预览：[docs/preview/](docs/preview/) —— 手工绘制的矢量示意图（示例数据）
@@ -554,17 +554,29 @@ POST /holo-memory/delete   { "id": "..." }
 
 ---
 
+## 置信度与时间线
+
+- 每条 L1/L2/L3 记录可带 `claim`：`confidence`（0.000–1.000，三位小数）+ 来源、佐证/反证、`validFrom / validTo`、`status`、`supersedes / supersededBy`。
+- 置信度不是「高/中/低」字符串；内部按 0–1000 整数基点比较。低于 0.700 的记忆会标 `· 待验证`，可展示但不当作既定事实。
+- 需求变更时**不覆盖旧记录**：老 claim 落 `superseded`（`validTo` = 变更时刻），新 claim 记 `supersedes`。`memory_recall(asOf="2026-06-01")` 能回到当时有效的版本，`memory_timeline(id)` 展示整条变更链。
+- 缺少 `claim` 的旧记录保持可见；`scripts/migrate-0.8.mjs` 可补齐（L2 保留原值并规范化，L1/L3 补 0.500，来源标记 `migration_unknown`）。
+- 评估基线在 `eval/`：50 条人工标注集上 Recall@5 `1.000`、nDCG@5 `0.950`（vector + neuron + active）；纯 lexical 只有 `0.384`。
+
+---
+
 ## 模型工具
 
 ### holo 工具
 
 | 工具 | 用途 |
 |---|---|
-| `memory_recall(query, layers?, limit?)` | 混合检索三层记忆，返回 id、证据标记和 score |
+| `memory_recall(query, layers?, limit?, asOf?)` | 混合检索三层记忆；`asOf` 回到某个时刻的有效版本 |
 | `memory_open(id, maxChars?, history?)` | 回取原文片段、source 指针、哈希与修订历史 |
-| `memory_note(text, layer?, scope?, title?, tags?, importance?)` | 主动写入 L2 事实或 L3 胶囊 |
+| `memory_note(text, layer?, scope?, title?, tags?, importance?, confidence?)` | 主动写入 L2 事实或 L3 胶囊；`confidence` 默认 0.950 |
 | `memory_list(layer?, limit?)` | 按时间列出某一层 |
 | `memory_forget(id)` | 删除过时/错误记录 |
+| `memory_supersede(oldId, newId?, reason?)` | 需求变更时关闭旧 claim 并挂到新 claim |
+| `memory_timeline(id)` | 展示一条记忆的变更链（旧 → 新、有效期、状态） |
 | `memory_injections(limit?)` | 最近自动召回审计 |
 | `memory_stats()` | 数量、覆盖率、存储路径、蒸馏状态、阈值 |
 | `memory_doctor(deep?)` | 记忆体检；deep 会真打开原文并跑召回探针 |
@@ -751,8 +763,8 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 近期路线：
 
-- **0.7.0**：用户画像命名统一 + 工作台视觉统一（当前版本）；
-- **0.8.x**：检索评估基线、置信度 0.000–1.000 schema、时间有效性；
+- **0.8.0**：数值置信度（ClaimMeta）+ 时间线（asOf / supersede / memory_timeline）+ 检索评估基线（当前版本）；
+- **0.7.0**：用户画像命名统一 + 工作台视觉统一；
 - **0.9.x**：冲突检测/解决、衰减与检索回归集；
 - 继续观察证据闸门在长任务中的召回率/精确率；
 - 增加 HMR 演练与 reload-safe 生命周期检查。

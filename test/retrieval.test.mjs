@@ -171,22 +171,32 @@ test('citation feedback records access and only counts a real suffix citation', 
   await fs.rm(dir, { recursive: true, force: true });
 });
 
-test('neuron candidates join RRF even when lexical relevance is below threshold', async () => {
+test('a strong neuron hit opens the relevance gate, a weak one does not', async () => {
   const { dir, store, project } = await seed();
   const config = normalizeConfig({ activeWindowEnabled: false });
   const embedder = new EmbeddingClient(config);
   const record = store.visible('l2', project.key)[0];
-  const result = await recall(store, embedder, config, '完全不相关的天气问题', {
+  const base = {
     projectKey: project.key,
     currentSessionId: 's-new',
     maxChars: 1200,
     minScore: 0.12,
     counts: { l1: 2, l2: 1, l3: 3 },
-    neuronHits: [{ id: record.id, activation: 0.8 }],
+  };
+
+  const weak = await recall(store, embedder, config, '完全不相关的天气问题', {
+    ...base,
+    neuronHits: [{ id: record.id, activation: 0.6 }],
   });
-  assert.ok(result, 'neuron channel can open the gate');
-  assert.ok(result.items.some((item) => item.record.id === record.id), 'neuron candidate reserves a slot under quota=1');
-  assert.ok(result.items.some((item) => item.channels.includes('neuron')));
+  assert.equal(weak, null, 'a weak associative hint alone must not inject an unrelated memory');
+
+  const strong = await recall(store, embedder, config, '完全不相关的天气问题', {
+    ...base,
+    neuronHits: [{ id: record.id, activation: 0.95 }],
+  });
+  assert.ok(strong, 'a strong neuron hit can open the gate');
+  assert.ok(strong.items.some((item) => item.record.id === record.id));
+  assert.ok(strong.items.some((item) => item.channels.includes('neuron')));
   await fs.rm(dir, { recursive: true, force: true });
 });
 
