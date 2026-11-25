@@ -15,6 +15,8 @@ export interface ConsoleDeps {
     profileStore: ProfileStore;
     /** Queue all records for re-embedding after the model changed. */
     onConfigSaved?: () => void;
+    /** Called after a console delete so indexes/profile refresh immediately. */
+    onMutation?: () => void;
     /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
     getNeuron?: () => NeuronConsoleService | undefined;
 }

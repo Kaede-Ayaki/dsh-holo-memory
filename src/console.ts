@@ -48,6 +48,8 @@ export interface ConsoleDeps {
   profileStore: ProfileStore;
   /** Queue all records for re-embedding after the model changed. */
   onConfigSaved?: () => void;
+  /** Called after a console delete so indexes/profile refresh immediately. */
+  onMutation?: () => void;
   /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
   getNeuron?: () => NeuronConsoleService | undefined;
 }
@@ -268,6 +270,7 @@ async function remove(deps: ConsoleDeps, id: string): Promise<Record<string, unk
   if (!match) return { ok: false, error: 'not found' };
   deps.store.remove(match.id);
   await deps.store.flush();
+  deps.onMutation?.();
   return { ok: true, removed: publicRecord(match) };
 }
 

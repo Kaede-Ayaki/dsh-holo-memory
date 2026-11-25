@@ -99,6 +99,20 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
   store.setWriteGuard(() => runtime.get().write);
   const profileStore = new ProfileStore(storageDir);
   profileStore.setWriteGuard(() => runtime.get().write);
+
+  // Per-project profiles live next to the global one; a project constraint must
+  // never be injected into a different project's session.
+  const projectProfiles = new Map<string, ProfileStore>();
+  const projectProfileStore = (key: string): ProfileStore => {
+    let existing = projectProfiles.get(key);
+    if (!existing) {
+      existing = new ProfileStore(storageDir, `a-${key}.json`);
+      existing.setWriteGuard(() => runtime.get().write);
+      void existing.whenReady().catch(() => undefined);
+      projectProfiles.set(key, existing);
+    }
+    return existing;
+  };
   const embedder = new EmbeddingClient(config);
   const abort = new AbortController();
 
@@ -145,13 +159,26 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
     }
   };
 
+  const refreshProfiles = (records: AnyRecord[]): void => {
+    if (!config.aSeriesEnabled || !config.aSeriesRefreshOnExtract || !store.writesAllowed()) return;
+    void profileStore.refresh(store, 'user').catch(() => undefined);
+    const keys = new Set(
+      records.filter((record) => record.scope === 'project' && record.projectKey).map((record) => record.projectKey),
+    );
+    // A delete/supersede carries no records: refresh every loaded project view.
+    if (records.length === 0) for (const key of projectProfiles.keys()) keys.add(key);
+    for (const key of keys) void projectProfileStore(key).refresh(store, 'project', key).catch(() => undefined);
+  };
+
   const onRecords = (records: AnyRecord[]): void => {
     queueEmbedding(records);
     syncNeuron();
-    if (config.aSeriesEnabled && config.aSeriesRefreshOnExtract && store.writesAllowed()) {
-      void profileStore.refresh(store).catch(() => undefined);
-    }
+    refreshProfiles(records);
   };
+
+  // Deletes and supersedes do not carry new records, but they invalidate the
+  // neuron graph and the profile snapshot just the same.
+  const onMutation = (): void => onRecords([]);
 
   const drainEmbeddings = async (): Promise<void> => {
     while (pendingEmbeddings.size > 0) {
@@ -385,8 +412,15 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
     }
     try {
       await profileStore.whenReady().catch(() => undefined);
+      const projectStore = project.key ? projectProfileStore(project.key) : undefined;
+      if (projectStore) await projectStore.whenReady().catch(() => undefined);
       const profileText = config.aSeriesEnabled
-        ? renderAProfile(profileStore.get(), config.aSeriesMaxChars)
+        ? [
+            renderAProfile(profileStore.get(), config.aSeriesMaxChars),
+            projectStore ? renderAProfile(projectStore.get(), config.aSeriesMaxChars) : '',
+          ]
+            .filter((part) => part.length > 0)
+            .join('\n\n')
         : '';
       const recalled =
         (await recall(store, embedder, config, query, {
@@ -509,6 +543,7 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
     config,
     profileStore,
     onRecords,
+    onMutation,
     logger,
   });
 
@@ -525,6 +560,7 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
             profileStore,
             logger,
             onConfigSaved: () => queueEmbedding([...store.list('l1'), ...store.list('l2'), ...store.list('l3')]),
+            onMutation,
             getNeuron: () => {
               try {
                 return ctx.get?.('neuronMemory');

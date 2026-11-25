@@ -1,6 +1,6 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-0.8.0-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.9.0-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-43%2F43-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,7 +11,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`0.8.0`（2026-11-24）
+- 当前版本：`0.9.0`（2026-11-26）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 界面预览：[docs/preview/](docs/preview/) —— 手工绘制的矢量示意图（示例数据）
@@ -561,6 +561,8 @@ POST /holo-memory/delete   { "id": "..." }
 - 需求变更时**不覆盖旧记录**：老 claim 落 `superseded`（`validTo` = 变更时刻），新 claim 记 `supersedes`。`memory_recall(asOf="2026-06-01")` 能回到当时有效的版本，`memory_timeline(id)` 展示整条变更链。
 - 缺少 `claim` 的旧记录保持可见；`scripts/migrate-0.8.mjs` 可补齐（L2 保留原值并规范化，L1/L3 补 0.500，来源标记 `migration_unknown`）。
 - 评估基线在 `eval/`：50 条人工标注集上 Recall@5 `1.000`、nDCG@5 `0.950`（vector + neuron + active）；纯 lexical 只有 `0.384`。
+- `score` 是**层内归一化**结果（每层最高分为 1.0），只用于层内排序与预算；跨层排序用原始 RRF 值，不要把三层各自的 1.0 当成同一把尺子。
+- 召回里置信度只做**软加权**（`0.9 + 0.2·confidence`）与**同分 tie-break**，不设独立通道、不加硬性罚分：独立通道会被高置信但弱相关的记录挤占配额。
 
 ---
 
@@ -734,6 +736,8 @@ neuron: 13/13 PASS
 
 ## 边界与安全
 
+> 记忆是**建议性上下文**，不是规则引擎。偏好、约定与检查项以文字注入，是否照做仍取决于模型；需要强制执行的流程请写进 preset / 工具 / 校验脚本，不要只写在记忆里。
+
 - 记忆是**本地明文 JSON**；不要把 API Key、密码、令牌写进对话；
 - 写入前会做基础 secrets 模式拦截，但不能替代你的判断；
 - 蒸馏是 `turn/end` 后的后台调用；headless 一次性任务退出时可能来不及跑最后一条；
@@ -763,7 +767,8 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 近期路线：
 
-- **0.8.0**：数值置信度（ClaimMeta）+ 时间线（asOf / supersede / memory_timeline）+ 检索评估基线（当前版本）；
+- **0.9.0**：置信度接入召回证据/排序（来源化先验）、画像分层（全局 + 项目）、git 根项目标识、删除/取代即时同步、跨层用原始 RRF（当前版本）；
+- **0.8.0**：数值置信度（ClaimMeta）+ 时间线（asOf / supersede / memory_timeline）+ 检索评估基线；
 - **0.7.0**：用户画像命名统一 + 工作台视觉统一；
 - **0.9.x**：冲突检测/解决、衰减与检索回归集；
 - 继续观察证据闸门在长任务中的召回率/精确率；

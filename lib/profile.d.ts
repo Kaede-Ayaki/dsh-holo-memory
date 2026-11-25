@@ -1,4 +1,5 @@
 import type { HoloStore } from './store.js';
+export type ProfileScope = 'user' | 'project';
 export interface AProfile {
     id: string;
     title: string;
@@ -19,18 +20,19 @@ export interface AProfile {
  * Deterministic profile distillation from L1/L2/L3. This deliberately keeps
  * evidence ids instead of inventing a new fact source.
  */
-export declare function buildAProfile(store: HoloStore, previous: AProfile | null): AProfile | null;
+export declare function buildAProfile(store: HoloStore, previous: AProfile | null, scope?: ProfileScope, projectKey?: string): AProfile | null;
 export declare class ProfileStore {
     readonly dir: string;
     private profile;
     private writeGuard;
     private chain;
     private readyPromise;
-    constructor(dir: string);
+    constructor(dir: string, fileName?: string);
+    readonly fileName: string;
     whenReady(): Promise<void>;
     setWriteGuard(guard: () => boolean): void;
     get(): AProfile | null;
     private save;
-    refresh(store: HoloStore): Promise<AProfile | null>;
+    refresh(store: HoloStore, scope?: ProfileScope, projectKey?: string): Promise<AProfile | null>;
 }
 export declare function renderAProfile(profile: AProfile | null, maxChars?: number): string;

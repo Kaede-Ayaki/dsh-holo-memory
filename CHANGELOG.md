@@ -3,6 +3,39 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [0.9.0] - 2026-11-26
+
+**主题：把置信度与时间线真正接进记忆使用决策，并收掉索引/画像的陈旧路径。**
+
+### Added
+
+- 置信度进入召回：证据按 `0.9 + 0.2·confidence` 软加权，并在 RRF/词法同分时作为排序 tie-breaker；不设独立通道、不加硬罚分。
+  - 实测记录：独立 `confidence` RRF 通道会挤掉更强的相关命中（Recall@5 1.000 → 0.925），已弃用；硬性 `+0.05` 证据罚分会误伤迁移数据（→ 0.613），也已弃用。
+- 项目画像：`a-<projectKey>.json`，只收本项目 `scope=project` 的记录；全局画像只收 `scope=user`，**删除了“用户级不足两条就用全部 L2”的回退**。
+- `resolveProjectRoot()`：项目标识优先取最近的 `.git` 根，子目录与会话启动目录不再产生不同 projectKey。
+
+### Fixed
+
+- 删除 / 取代后索引与画像立即刷新：`memory_forget`、`memory_supersede`、控制台删除都会触发 `onMutation`（neuron 同步 + 画像刷新）。
+- neuron 图只索引 active claim：`readRecords()` 过滤 `status != active` 与旧 `supersededBy`，失效记忆不再通过图边继续激活。
+- neuron 同步节流不再直接丢弃：窗口内的调用会安排一次延迟补跑。
+- `queryHits` 移到证据闸门之后：弱匹配被闸门挡掉时，Active Window 仍可兜底注入常驻记忆。
+
+### Changed
+
+- 置信度来源化：抽取不再采用模型自报的数字，改用证据来源先验（用户明确 0.950 / 纠正 0.990 / 模型推断 0.550 …）；模型自报值只记入 `extractionQuality`。
+- 新增 `scripts/recompute-confidence.mjs`：把旧记录（含迁移数据）按来源先验重算，支持 dry-run 与备份。
+- 跨层排序改用原始 RRF；`score` 明确为层内归一化，不再用于跨层比较。
+
+### Verification
+
+```text
+holo:   66/66 PASS
+human eval (50 queries): recall@5 0.944 · nDCG@5 0.903 · hit rate 1.000 (vector+neuron+active)
+confidence recompute: 162 records changed (model self-report -> source prior)
+live store: confidence recomputed by source prior (migration_unknown -> 0.500)
+```
+
 ## [0.8.0] - 2026-11-24
 
 **主题：数值置信度与时间字段（Phase 0–2）。**

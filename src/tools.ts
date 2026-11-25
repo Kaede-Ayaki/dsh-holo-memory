@@ -26,6 +26,8 @@ interface ToolDeps {
   config: HoloConfig;
   profileStore: ProfileStore;
   onRecords?: (records: AnyRecord[]) => void;
+  /** Called after delete/supersede so indexes and the profile stop using stale data. */
+  onMutation?: () => void;
   logger?: { warn(message: string): void };
 }
 
@@ -151,6 +153,7 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
           );
           deps.store.update(newRecord.layer, newRecord.id, { claim: nextClaim });
         }
+        deps.onMutation?.();
         return `Superseded ${oldRecord.id}${newRecord ? ` by ${newRecord.id}` : ''} at ${new Date(claim.validTo ?? Date.now()).toISOString()}.`;
       },
     }),
@@ -339,6 +342,7 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         const found = findBySuffix(deps.store, args.id);
         if (!found) return `No memory matching "${args.id}".`;
         deps.store.remove(found.id);
+        deps.onMutation?.();
         return `Forgot ${found.layer.toUpperCase()} ${found.id}.`;
       },
     }),

@@ -4,7 +4,13 @@ export interface ProjectId {
     key: string;
     label: string;
 }
-/** Stable project identity derived from the session cwd. */
+/**
+ * Walk up from `cwd` to the nearest git root so one repository keeps one
+ * project identity even when a session starts in a subdirectory. Falls back to
+ * the cwd itself when no `.git` marker is found.
+ */
+export declare function resolveProjectRoot(cwd: string): string;
+/** Stable project identity derived from the session cwd (git root when any). */
 export declare function projectIdFor(cwd: string | undefined): ProjectId;
 export declare function contentHash(text: string): string;
 export declare function newId(layer: Layer): string;

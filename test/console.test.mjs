@@ -38,8 +38,8 @@ test('console exposes stats, doctor and open routes', async () => {
   const record = {
     id: newId('l2'),
     layer: 'l2',
-    scope: 'project',
-    projectKey: turn.projectKey,
+    scope: 'user',
+    projectKey: '',
     projectLabel: turn.projectLabel,
     importance: 8,
     createdAt: now,

@@ -8,7 +8,7 @@ import type { AnyRecord, ExtractionResult, FactKind, L1Record, L2Record, L3Recor
 import { HoloStore, contentHash, newId } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { nearDuplicate } from './lexical.js';
-import { createClaimMeta, linkSupersedes, normalizeConfidence, supersedeClaim, withConfidence } from './confidence.js';
+import { createClaimMeta, initialConfidence, linkSupersedes, normalizeConfidence, supersedeClaim, withConfidence } from './confidence.js';
 import { looksSecret, redactSecrets } from './sanitize.js';
 import { sourceFromTurn } from './source.js';
 import { reviseRecord } from './revisions.js';
@@ -33,6 +33,12 @@ export interface ExtractionDeps {
 }
 
 const FACT_KINDS: FactKind[] = ['preference', 'decision', 'fact', 'entity', 'task', 'correction', 'reference'];
+
+function sourceTypeForFact(kind: FactKind, scope: Scope): 'user_correction' | 'user_explicit' | 'model_inference' {
+  if (kind === 'correction') return 'user_correction';
+  if (scope === 'user' && (kind === 'preference' || kind === 'decision')) return 'user_explicit';
+  return 'model_inference';
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -373,15 +379,18 @@ export function applyExtraction(
         hash: contentHash(fact.text),
         revision: 1,
         source,
-        claim: createClaimMeta('model_inference', {
-          confidence: normalizeConfidence(fact.confidence, 0.7),
+        claim: createClaimMeta(sourceTypeForFact(fact.kind ?? 'fact', fact.scope ?? 'project'), {
+          // Trust the evidence source, not the model's self-reported number;
+          // the model's number is kept only as extractionQuality.
+          confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact', fact.scope ?? 'project')),
+          extractionQuality: normalizeConfidence(fact.confidence, 0.7),
           observedAt: now,
           recordedAt: now,
         }),
         text: fact.text,
         kind: fact.kind ?? 'fact',
         tags: fact.tags ?? [],
-        confidence: normalizeConfidence(fact.confidence, 0.7),
+        confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact', fact.scope ?? 'project')),
         sourceSessionId: capture.sessionId,
         sourceTurn: capture.turn,
       };
