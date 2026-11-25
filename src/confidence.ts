@@ -7,7 +7,7 @@
  * UI-only hint and must never be stored.
  */
 import type { ClaimMeta, ConfidenceBasis, ConfidenceSourceType } from './types.js';
-import { applyCalibration } from './calibration.js';
+import { applyCalibration, getCalibration } from './calibration.js';
 
 /** Current schema version for claim metadata and migration bookkeeping. */
 export const SCHEMA_VERSION = '0.8.0';
@@ -133,7 +133,7 @@ export function createConfidenceBasis(
     corroboration: Math.max(0, Math.floor(options.corroboration ?? 0)),
     contradiction: Math.max(0, Math.floor(options.contradiction ?? 0)),
     verified: Boolean(options.verified),
-    calibrationVersion: options.calibrationVersion ?? 'heuristic-v1',
+    calibrationVersion: options.calibrationVersion ?? getCalibration().version,
   };
 }
 
@@ -163,7 +163,9 @@ export const MAX_CONFIDENCE_HISTORY = 10;
  * in `confidenceHistory` so the move stays auditable.
  */
 export function withConfidence(claim: ClaimMeta, nextConfidence: number, reason: string, at = Date.now()): ClaimMeta {
-  const normalized = normalizeConfidence(nextConfidence);
+  // One authority: every stored confidence is normalized *and* calibrated with
+  // the currently loaded mapping, so the number always matches its basis.
+  const normalized = applyCalibration(normalizeConfidence(nextConfidence));
   if (toBasisPoints(normalized) === toBasisPoints(claim.confidence)) return claim;
   const history = [...(claim.confidenceHistory ?? []), { at, confidence: claim.confidence, reason }].slice(-MAX_CONFIDENCE_HISTORY);
   return { ...claim, confidence: normalized, confidenceHistory: history };

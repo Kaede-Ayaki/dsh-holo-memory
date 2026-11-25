@@ -55,6 +55,26 @@ test('console exposes stats, doctor and open routes', async () => {
     sourceTurn: turn.turn,
   };
   store.insert(record);
+  // A project-scope record so the project profile route has an input.
+  store.insert({
+    id: newId('l2'),
+    layer: 'l2',
+    scope: 'project',
+    projectKey: turn.projectKey,
+    projectLabel: turn.projectLabel,
+    importance: 7,
+    createdAt: now,
+    updatedAt: now,
+    hash: contentHash('项目约定：先跑测试再提交。'),
+    text: '项目约定：先跑测试再提交。',
+    kind: 'decision',
+    tags: ['workflow'],
+    confidence: 0.9,
+    revision: 1,
+    source: sourceFromTurn(turn),
+    sourceSessionId: turn.sessionId,
+    sourceTurn: turn.turn,
+  });
   await store.flush();
 
   let handler;
@@ -72,6 +92,7 @@ test('console exposes stats, doctor and open routes', async () => {
     config,
     runtime: new RuntimeToggles(dir),
     profileStore: new ProfileStore(dir),
+    projectProfileStore: (key) => new ProfileStore(dir, `a-${key}.json`),
     logger: { warn() {} },
   });
   assert.equal(typeof handler, 'function');
@@ -82,7 +103,7 @@ test('console exposes stats, doctor and open routes', async () => {
   try {
     const stats = await (await fetch(`${base}/holo-memory/stats`)).json();
     assert.equal(stats.authority, 'dsh-holo-memory');
-    assert.equal(stats.source.backed, 1);
+    assert.equal(stats.source.backed, 2);
     assert.ok(Array.isArray(stats.thresholds));
 
     const toggles = await (await fetch(`${base}/holo-memory/toggles`)).json();
@@ -121,6 +142,14 @@ test('console exposes stats, doctor and open routes', async () => {
     })).json();
     assert.equal(profileRefreshed.ok, true);
     assert.equal(profileRefreshed.profile.title, '用户画像 · 偏好/习惯/人格');
+    const projectRefreshed = await (await fetch(`${base}/holo-memory/profile/refresh?scope=project&projectKey=${encodeURIComponent(turn.projectKey)}`, {
+      method: 'POST',
+      headers: { 'x-holo-memory': '1' },
+    })).json();
+    assert.equal(projectRefreshed.ok, true);
+    assert.equal(projectRefreshed.scope, 'project');
+    assert.equal(projectRefreshed.profile.title, '项目画像 · 工作约定');
+    assert.ok(projectRefreshed.profile.evidenceIds.length > 0);
     assert.ok(profileRefreshed.profile.preferences.length > 0);
     assert.match(profileRefreshed.text, /执行边界/);
   } finally {

@@ -3,6 +3,47 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [1.0.0] - 2026-11-26
+
+**主题：关闭 0.9.0 代码审计的 F-01–F-16，冻结 claim 生命周期、迁移与发布工程。**
+
+### Fixed — P0（1.0 阻断项）
+
+- **F-01** 短输入 `recentFallback()` 现在遵守 `isValidAt()`，并返回结构化 items；注入 id 进入 audit log、buffer 与引用/神经元反馈。
+- **F-02** 画像蒸馏统一按 claim 时间过滤；证据全部失效时删除 `a.json` / `a-<projectKey>.json`，不再保留旧结论。
+- **F-03** 维护归档与容量 trim 通过 `store.takeRemoved()` + `onRemoved` 传播失效，刷新全部磁盘上的项目画像并同步 neuron。
+- **F-04** 新增 `scripts/migrate-project-keys.mjs`：从 L1.cwd 推导旧 key → git 根 key，备份/幂等/未映射报告，不猜测归属。
+- **F-05** `memory_supersede` 校验目标存在、层级/scope/projectKey 一致、active 状态、无环；错误 newId 不改任何数据。
+- **F-06** 时间线改为图遍历：多父合并、分叉、循环与孤儿全部呈现；条目携带 createdAt/observedAt/recordedAt 与时间来源。
+- **F-07** 显式 `supersedes` 不再被近重复合并吞掉：总是创建新 claim 并关闭旧 claim。
+
+### Fixed — P1（正式版前）
+
+- **F-08** 置信度单一权威：`withConfidence` 走校准，`calibrationVersion` 记录实际映射，顶层 `confidence` 由 claim 派生；来源类型表达证据而非 scope。
+- **F-09** 字符预算排序改用原始 RRF；`score` 仅层内使用。
+- **F-10** 评估指标拆分为 `query` / `resident` / `finalInjected` / `quality` 四组，并记录 dataset/store sha256。
+- **F-11** 存储加载按层 schema 校验；坏记录写入 `quarantine/`，合法记录继续加载。
+- **F-12** `memory_profile(scope=user|project|both)`；控制台 profile GET/refresh 支持 `scope=project&projectKey=`。
+- **F-13** abort 后不再生成 fallback 写入；neuron 延迟同步定时器在卸载时清理。
+
+### Fixed — P2（发布工程）
+
+- **F-14** `package.json` 与 `package-lock.json` 根版本统一为 1.0.0。
+- **F-15** 根命令 `npm run test:all` 覆盖 holo + neuron；新增 `.github/workflows/ci.yml`；README 测试数字与 1.0 一致。
+- **F-16** npm `files` 白名单加入 `scripts/`，`npm pack --dry-run` 已确认三个迁移脚本随包发布。
+
+### Verification
+
+```text
+holo:   74/74 PASS
+neuron: 13/13 PASS
+npm pack --dry-run: 64 files, scripts/ included
+human eval (50 queries, split metrics, vector+neuron+active):
+  query  recall@5 0.7645 · hit 0.8387 · quiet 0.6842
+  final  expectedCoverage 0.8387
+  quality evidence 1.0000 · stale 0.0000 · survival 0.9767
+```
+
 ## [0.9.0] - 2026-11-26
 
 **主题：把置信度与时间线真正接进记忆使用决策，并收掉索引/画像的陈旧路径。**

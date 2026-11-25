@@ -50,6 +50,8 @@ export interface ConsoleDeps {
   onConfigSaved?: () => void;
   /** Called after a console delete so indexes/profile refresh immediately. */
   onMutation?: () => void;
+  /** Per-project profile store lookup (scope=project). */
+  projectProfileStore?: (key: string) => ProfileStore;
   /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
   getNeuron?: () => NeuronConsoleService | undefined;
 }
@@ -351,10 +353,23 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
       return;
     }
     if (req.method === 'GET' && path === '/holo-memory/profile') {
-      await deps.profileStore.whenReady().catch(() => undefined);
-      const profile = deps.profileStore.get();
+      const params = new URL(`http://local${req.url ?? ''}`).searchParams;
+      const scope = params.get('scope') === 'project' ? 'project' : 'user';
+      const projectKey = params.get('projectKey') ?? '';
+      let target = deps.profileStore;
+      if (scope === 'project') {
+        if (!projectKey || !deps.projectProfileStore) {
+          sendJson(res, 400, { ok: false, error: 'scope=project requires projectKey' });
+          return;
+        }
+        target = deps.projectProfileStore(projectKey);
+      }
+      await target.whenReady().catch(() => undefined);
+      const profile = target.get();
       sendJson(res, 200, {
         ok: true,
+        scope,
+        projectKey: scope === 'project' ? projectKey : undefined,
         profile,
         text: renderAProfile(profile, deps.config.aSeriesMaxChars),
       });
@@ -365,8 +380,26 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
         sendJson(res, 403, { ok: false, error: 'missing x-holo-memory header' });
         return;
       }
-      const profile = await deps.profileStore.refresh(deps.store);
-      sendJson(res, 200, { ok: true, profile, text: renderAProfile(profile, deps.config.aSeriesMaxChars) });
+      const params = new URL(`http://local${req.url ?? ''}`).searchParams;
+      const scope = params.get('scope') === 'project' ? 'project' : 'user';
+      const projectKey = params.get('projectKey') ?? '';
+      let target = deps.profileStore;
+      if (scope === 'project') {
+        if (!projectKey || !deps.projectProfileStore) {
+          sendJson(res, 400, { ok: false, error: 'scope=project requires projectKey' });
+          return;
+        }
+        target = deps.projectProfileStore(projectKey);
+        await target.whenReady().catch(() => undefined);
+      }
+      const profile = await target.refresh(deps.store, scope === 'project' ? 'project' : 'user', projectKey || undefined);
+      sendJson(res, 200, {
+        ok: true,
+        scope,
+        projectKey: scope === 'project' ? projectKey : undefined,
+        profile,
+        text: renderAProfile(profile, deps.config.aSeriesMaxChars),
+      });
       return;
     }
     if (req.method === 'GET' && path === '/holo-memory/neuron') {

@@ -21,14 +21,15 @@ eval/
 
 | 指标 | 定义 |
 |---|---|
-| Recall@K | `|期望命中 ∩ 返回前 K| / |期望命中|` |
-| Precision@K | `|期望命中 ∩ 返回前 K| / K` |
-| MRR | 第一个期望命中的倒数排名 |
-| nDCG@K | 二值增益归一化 |
-| quiet rate | 期望为空时，返回也为空的比例 |
-| expected survival | 期望 id 在活库里还存在的比例（L1 归档会让这个数下降） |
-| stale hit rate | 返回结果里带 `supersededBy`（已被替代）的比例 |
-| evidence rate | 返回结果里带可校验原文（`excerptHash`）的比例 |
+指标分四组，分子分母不再混用：
+
+| 组 | 指标 | 定义 |
+|---|---|---|
+| `query` | recall/precision/MRR/nDCG/hit/quiet | 只看查询命中项（不含 resident） |
+| `resident` | avgItems / negativeWithResident | Active Window 常驻注入量 |
+| `finalInjected` | avgItems / expectedCoverage | 查询 + resident 的最终注入 |
+| `quality` | evidenceRate / staleRate / expectedSurvival / evaporated | 证据、时效与标注存活 |
+| `reproducibility` | datasetSha256 / storeSha256 | 固定数据与 store 快照哈希 |
 
 > 指标只统计**查询命中项**；active-window（resident）项单独计数，不混进 Recall。
 

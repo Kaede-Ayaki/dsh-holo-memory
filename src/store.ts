@@ -55,14 +55,49 @@ export function newId(layer: Layer): string {
   return `${layer}_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`;
 }
 
-function isRecord(value: unknown): value is AnyRecord {
-  if (typeof value !== 'object' || value === null) return false;
-  const record = value as Partial<AnyRecord>;
-  return (
-    typeof record.id === 'string' &&
-    (record.layer === 'l1' || record.layer === 'l2' || record.layer === 'l3') &&
-    typeof record.createdAt === 'number'
-  );
+const CLAIM_STATUSES = new Set(['active', 'superseded', 'expired', 'disputed']);
+
+/** Return a reason string when a claim is structurally invalid. */
+function validateClaim(claim: unknown): string | null {
+  if (claim === undefined || claim === null) return null;
+  if (typeof claim !== 'object') return 'claim is not an object';
+  const value = claim as Record<string, unknown>;
+  const confidence = value.confidence;
+  if (typeof confidence !== 'number' || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+    return 'claim.confidence is not a number in 0..1';
+  }
+  if (typeof value.status !== 'string' || !CLAIM_STATUSES.has(value.status)) return 'claim.status is invalid';
+  if (typeof value.confidenceBasis !== 'object' || value.confidenceBasis === null) return 'claim.confidenceBasis is missing';
+  return null;
+}
+
+/** Validate one record against its layer schema; return a reason instead of throwing. */
+function validateRecord(layer: Layer, value: unknown, seen: Set<string>): { record?: AnyRecord; reason?: string } {
+  if (typeof value !== 'object' || value === null) return { reason: 'not an object' };
+  const record = value as Partial<AnyRecord> & Record<string, unknown>;
+  if (typeof record.id !== 'string' || record.id.length === 0) return { reason: 'id is missing' };
+  if (seen.has(record.id)) return { reason: 'duplicate id' };
+  if (record.layer !== layer) return { reason: `layer mismatch (expected ${layer})` };
+  if (typeof record.createdAt !== 'number' || !Number.isFinite(record.createdAt)) return { reason: 'createdAt is missing' };
+
+  if (layer === 'l1') {
+    if (typeof record.summary !== 'string') return { reason: 'l1.summary is missing' };
+    if (!Array.isArray(record.topics)) return { reason: 'l1.topics is not an array' };
+    if (typeof record.sessionId !== 'string') return { reason: 'l1.sessionId is missing' };
+  } else if (layer === 'l2') {
+    if (typeof record.text !== 'string') return { reason: 'l2.text is missing' };
+    if (!Array.isArray(record.tags)) return { reason: 'l2.tags is not an array' };
+    if (typeof record.kind !== 'string') return { reason: 'l2.kind is missing' };
+  } else {
+    if (typeof record.title !== 'string') return { reason: 'l3.title is missing' };
+    if (typeof record.hologram !== 'string') return { reason: 'l3.hologram is missing' };
+    if (!Array.isArray(record.themes)) return { reason: 'l3.themes is not an array' };
+  }
+
+  const claimReason = validateClaim(record.claim);
+  if (claimReason) return { reason: claimReason };
+  seen.add(record.id);
+  return { record: record as AnyRecord };
 }
 
 export interface StoreStats {
@@ -101,6 +136,10 @@ export class HoloStore {
   private loaded = false;
   /** Runtime write switch; canonical writes are refused while it is false. */
   private writeGuard: () => boolean = () => true;
+  /** Records removed by delete/trim since the last drain (for index invalidation). */
+  private removedRecords: AnyRecord[] = [];
+  /** Records rejected at load time, written to quarantine files. */
+  readonly quarantine: Array<{ layer: Layer; file: string; count: number }> = [];
 
   constructor(dir: string, config: HoloConfig) {
     this.dir = path.resolve(dir);
@@ -142,10 +181,30 @@ export class HoloStore {
       const raw = await fs.readFile(this.fileFor(layer), 'utf8');
       const parsed: unknown = JSON.parse(raw);
       if (!Array.isArray(parsed)) return;
-      const records = parsed
-        .filter(isRecord)
-        .filter((record) => record.layer === layer)
-        .map((record) => normalizeRecordSource(record));
+      const seen = new Set<string>();
+      const valid: AnyRecord[] = [];
+      const rejected: Array<{ reason: string; record: unknown }> = [];
+      for (const entry of parsed) {
+        const result = validateRecord(layer, entry, seen);
+        if (result.record) valid.push(normalizeRecordSource(result.record));
+        else rejected.push({ reason: result.reason ?? 'invalid record', record: entry });
+      }
+      if (rejected.length > 0) {
+        // Never drop a bad row silently: keep it in quarantine for recovery.
+        const file = path.join(this.dir, 'quarantine', `${layer}-${Date.now()}.jsonl`);
+        try {
+          await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+          await fs.appendFile(
+            file,
+            rejected.map((item) => JSON.stringify({ reason: item.reason, record: item.record })).join('\n') + '\n',
+            { encoding: 'utf8', mode: 0o600 },
+          );
+          this.quarantine.push({ layer, file, count: rejected.length });
+        } catch {
+          // Quarantine is best-effort; the valid records must still load.
+        }
+      }
+      const records = valid;
       if (layer === 'l1') this.data.l1 = records as L1Record[];
       else if (layer === 'l2') this.data.l2 = records as L2Record[];
       else this.data.l3 = records as L3Record[];
@@ -212,7 +271,8 @@ export class HoloStore {
       const records = this.data[layer] as AnyRecord[];
       const index = records.findIndex((record) => record.id === id);
       if (index >= 0) {
-        records.splice(index, 1);
+        const [removed] = records.splice(index, 1);
+        this.removedRecords.push(removed);
         this.scheduleSave(layer);
         return true;
       }
@@ -231,7 +291,15 @@ export class HoloStore {
       return a.createdAt - b.createdAt;
     });
     const drop = records.length - limit;
-    records.splice(0, drop);
+    const dropped = records.splice(0, drop);
+    this.removedRecords.push(...(dropped as AnyRecord[]));
+  }
+
+  /** Drain records removed by delete/trim so callers can invalidate indexes. */
+  takeRemoved(): AnyRecord[] {
+    const removed = this.removedRecords;
+    this.removedRecords = [];
+    return removed;
   }
 
   private scheduleSave(layer: Layer): void {

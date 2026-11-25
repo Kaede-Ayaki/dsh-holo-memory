@@ -9,6 +9,8 @@ interface ToolDeps {
     config: HoloConfig;
     profileStore: ProfileStore;
     onRecords?: (records: AnyRecord[]) => void;
+    /** Lazily-created per-project profile stores (a-<projectKey>.json). */
+    projectProfileStore?: (key: string) => ProfileStore;
     /** Called after delete/supersede so indexes and the profile stop using stale data. */
     onMutation?: () => void;
     logger?: {

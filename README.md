@@ -1,6 +1,6 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-0.9.0-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.0.0-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-43%2F43-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,7 +11,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`0.9.0`（2026-11-26）
+- 当前版本：`1.0.0`（2026-11-26）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 界面预览：[docs/preview/](docs/preview/) —— 手工绘制的矢量示意图（示例数据）
@@ -701,16 +701,38 @@ DSH 自带 `@deepseek-ai/dsh-hmr`。桌面版 profile 通常已经启用；如�
 
 ---
 
+## 升级到 1.0
+
+从 0.8/0.9 升级时按顺序执行（均支持 `--dry-run`，默认不改数据）：
+
+```sh
+# 1) 0.8 schema：补 claim 元数据（0.8 用户可跳过）
+node scripts/migrate-0.8.mjs --data "$DSH_HOME/holo-memory" --apply
+
+# 2) 0.9 项目身份：cwd 哈希 -> git 根哈希（先看报告，再执行）
+node scripts/migrate-project-keys.mjs --data "$DSH_HOME/holo-memory"
+node scripts/migrate-project-keys.mjs --data "$DSH_HOME/holo-memory" --apply
+
+# 3) 置信度来源化：模型自报值 -> 来源先验
+node scripts/recompute-confidence.mjs --data "$DSH_HOME/holo-memory" --apply
+```
+
+三条规则从 1.0 起保持不变：
+
+- 自动注入（常规召回、短输入 fallback、画像）使用同一套 `isValidAt` 时间判断；过期/未生效/被取代的 claim 不会注入；
+- 删除、取代、归档、容量 trim 都会触发画像与神经元索引刷新；
+- `score` 只用于层内排序；跨层与字符预算使用原始 RRF。
+
 ## 测试
 
 ```sh
-npm test
+npm run test:all   # holo + neuron 两个包
 ```
 
 当前：
 
 ```text
-holo:   43/43 PASS
+holo:   74/74 PASS
 neuron: 13/13 PASS
 ```
 
@@ -719,7 +741,7 @@ neuron: 13/13 PASS
 - L1/L2/L3 提取、JSON 解析失败降级；
 - 来源指针、逐字 excerpt、哈希校验；
 - 修订历史、删除、归档；
-- 四通道召回、RRF、neuron 候选预留；
+- 四通道召回、RRF、neuron 激活闸门；短输入 fallback 时效过滤；
 - 证据闸门、L2 标签闸门、Active Window 兜底；
 - 任务 query 不携带无关提示词规则；显式规则 query 仍能召回；
 - 控制台路由、体检、阈值合法性。
@@ -767,10 +789,11 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 近期路线：
 
-- **0.9.0**：置信度接入召回证据/排序（来源化先验）、画像分层（全局 + 项目）、git 根项目标识、删除/取代即时同步、跨层用原始 RRF（当前版本）；
+- **1.0.0**：代码审计 F-01–F-16 全部关闭（时效回退、画像清除、失效传播、项目键迁移、supersede 校验、多父时间线、近重复取代、置信度一致性、预算排序、指标拆分、schema 校验、项目画像入口、HMR、打包/CI）（当前版本）；
+- **0.9.0**：置信度接入召回证据/排序（来源化先验）、画像分层（全局 + 项目）、git 根项目标识、删除/取代即时同步、跨层用原始 RRF；
 - **0.8.0**：数值置信度（ClaimMeta）+ 时间线（asOf / supersede / memory_timeline）+ 检索评估基线；
 - **0.7.0**：用户画像命名统一 + 工作台视觉统一；
-- **0.9.x**：冲突检测/解决、衰减与检索回归集；
+- **1.1.x**：冲突检测/解决（memory_conflicts / memory_resolve）、独立 freshness 衰减、固定回归集；
 - 继续观察证据闸门在长任务中的召回率/精确率；
 - 增加 HMR 演练与 reload-safe 生命周期检查。
 

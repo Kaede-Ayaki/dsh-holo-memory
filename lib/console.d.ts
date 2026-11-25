@@ -17,6 +17,8 @@ export interface ConsoleDeps {
     onConfigSaved?: () => void;
     /** Called after a console delete so indexes/profile refresh immediately. */
     onMutation?: () => void;
+    /** Per-project profile store lookup (scope=project). */
+    projectProfileStore?: (key: string) => ProfileStore;
     /** Optional associative index; absent when dsh-neuron-memory is not loaded. */
     getNeuron?: () => NeuronConsoleService | undefined;
 }

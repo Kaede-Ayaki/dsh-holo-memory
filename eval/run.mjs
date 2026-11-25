@@ -22,6 +22,7 @@ const { recall } = await import('../lib/retrieval.js');
 const { DEFAULT_CONFIG, normalizeConfig } = await import('../lib/config.js');
 const { EmbeddingClient } = await import('../lib/embeddings.js');
 const { evidenceOf } = await import('../lib/source.js');
+const { isValidAt } = await import('../lib/confidence.js');
 const { NeuronGraph } = await import('../neuron-memory/lib/graph.js');
 const { normalizeConfig: normalizeNeuron } = await import('../neuron-memory/lib/config.js');
 
@@ -200,116 +201,128 @@ if (labelPath) {
 
 const dataset = readJsonl(datasetPath);
 const rows = limit > 0 ? dataset.slice(0, limit) : dataset;
+const crypto = await import('node:crypto');
+const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
+const datasetSha = sha256(fs.readFileSync(datasetPath));
+const storeSha = sha256(
+  ['l1', 'l2', 'l3']
+    .map((layer) => {
+      const file = path.join(dataDir, `${layer}.json`);
+      return fs.existsSync(file) ? fs.readFileSync(file) : Buffer.from('');
+    })
+    .join('\n'),
+);
+
 const perItem = [];
-let returnedTotal = 0;
-let staleCount = 0;
-let evidenceCount = 0;
-const recalls = [];
-const precisions = [];
-const mrrs = [];
-const ndcgs = [];
-let hitCount = 0;
+const queryMetrics = { recalls: [], precisions: [], mrrs: [], ndcgs: [], positives: 0, negatives: 0, hitQueries: 0, quietNegatives: 0, returnedTotal: 0 };
+const finalMetrics = { coverage: 0, positives: 0, returnedTotal: 0 };
+const residentCounts = [];
+let queryEvidenceHits = 0;
+let queryEvidenceTotal = 0;
+let staleHits = 0;
 let expectedTotal = 0;
 let expectedMissing = 0;
-let evaporatedItems = 0;
-let positiveItems = 0;
-let negativeItems = 0;
-let quietItems = 0;
+let evaporated = 0;
 
 for (const item of rows) {
-  const { items, returnedIds, queryItems, residentItems } = await retrieve(item);
-  const returned = returnedIds;
+  const { queryItems, residentItems, items } = await retrieve(item);
+  const queryIds = queryItems.map((entry) => entry.record.id);
+  const finalIds = items.map((entry) => entry.record.id);
+  queryMetrics.returnedTotal += queryIds.length;
+  finalMetrics.returnedTotal += finalIds.length;
+  residentCounts.push(residentItems.length);
+
+  for (const entry of queryItems) {
+    queryEvidenceTotal += 1;
+    if (evidenceOf(entry.record) !== 'none') queryEvidenceHits += 1;
+    if (!isValidAt(entry.record.claim, Date.now())) staleHits += 1;
+  }
+
   const expectedAll = Array.isArray(item.expected) ? item.expected : [];
   const expected = new Set(expectedAll.filter((id) => store.find(id) !== undefined));
   expectedTotal += expectedAll.length;
   expectedMissing += expectedAll.length - expected.size;
-  returnedTotal += returned.length;
-  for (const entry of queryItems) {
-    if (entry.record.supersededBy) staleCount += 1;
-    if (evidenceOf(entry.record) !== 'none') evidenceCount += 1;
-  }
-  let recallValue = null;
-  let precisionValue = null;
-  let mrrValue = null;
-  let ndcgValue = null;
+
   if (expectedAll.length > 0 && expected.size === 0) {
-    evaporatedItems += 1;
-  } else if (expected.size > 0) {
-    positiveItems += 1;
-    const top = returned.slice(0, k);
-    const hits = top.filter((id) => expected.has(id)).length;
-    recallValue = hits / expected.size;
-    precisionValue = hits / k;
-    recalls.push(recallValue);
-    precisions.push(precisionValue);
-    if (hits > 0) {
-      hitCount += 1;
-      const firstIndex = top.findIndex((id) => expected.has(id));
-      mrrValue = 1 / (firstIndex + 1);
-    } else {
-      mrrValue = 0;
-    }
-    mrrs.push(mrrValue);
-    ndcgValue = ndcg(returned, expected, k);
-    ndcgs.push(ndcgValue);
-  } else {
-    negativeItems += 1;
-    if (returned.length === 0) quietItems += 1;
+    evaporated += 1;
+    perItem.push({ id: item.id, expected: expectedAll.length, expectedSurviving: 0, returned: queryIds.length, resident: residentItems.length, hit: null });
+    continue;
   }
-  perItem.push({
-    id: item.id,
-    expected: expected.size,
-    returned: returned.length,
-    resident: residentItems.length,
-    hit: expected.size > 0 ? returned.slice(0, k).some((id) => expected.has(id)) : null,
-    recall: recallValue,
-    precision: precisionValue,
-    mrr: mrrValue,
-    ndcg: ndcgValue,
-  });
+
+  if (expected.size > 0) {
+    queryMetrics.positives += 1;
+    finalMetrics.positives += 1;
+    const top = queryIds.slice(0, k);
+    const hits = top.filter((id) => expected.has(id));
+    const recall = hits.length / expected.size;
+    queryMetrics.recalls.push(recall);
+    queryMetrics.precisions.push(hits.length / k);
+    if (hits.length > 0) {
+      queryMetrics.hitQueries += 1;
+      queryMetrics.mrrs.push(1 / (top.findIndex((id) => expected.has(id)) + 1));
+    } else {
+      queryMetrics.mrrs.push(0);
+    }
+    queryMetrics.ndcgs.push(ndcg(queryIds, expected, k));
+    if (finalIds.slice(0, k).some((id) => expected.has(id))) finalMetrics.coverage += 1;
+    perItem.push({ id: item.id, expected: expected.size, expectedSurviving: expected.size, returned: queryIds.length, resident: residentItems.length, hit: hits.length > 0, recall });
+  } else {
+    queryMetrics.negatives += 1;
+    if (queryIds.length === 0) queryMetrics.quietNegatives += 1;
+    perItem.push({ id: item.id, expected: 0, expectedSurviving: 0, returned: queryIds.length, resident: residentItems.length, hit: null });
+  }
 }
 
-const mean = (values) => (values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length);
+const mean = (values) => (values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length);
+const residentAvg = mean(residentCounts);
 const metrics = {
   items: rows.length,
-  positives: positiveItems,
-  negatives: negativeItems,
-  evaporated: evaporatedItems,
   k,
-  recallAtK: Number(mean(recalls).toFixed(4)),
-  precisionAtK: Number(mean(precisions).toFixed(4)),
-  mrr: Number(mean(mrrs).toFixed(4)),
-  ndcgAtK: Number(mean(ndcgs).toFixed(4)),
-  hitRate: positiveItems === 0 ? 0 : Number((hitCount / positiveItems).toFixed(4)),
-  quietRate: negativeItems === 0 ? 0 : Number((quietItems / negativeItems).toFixed(4)),
-  recallP10: Number(percentile(recalls, 10).toFixed(4)),
-  recallP50: Number(percentile(recalls, 50).toFixed(4)),
-  recallP90: Number(percentile(recalls, 90).toFixed(4)),
-  avgReturned: Number((returnedTotal / Math.max(1, rows.length)).toFixed(3)),
-  expectedSurvival: expectedTotal === 0 ? 0 : Number(((expectedTotal - expectedMissing) / expectedTotal).toFixed(4)),
-  staleHitRate: returnedTotal === 0 ? 0 : Number((staleCount / returnedTotal).toFixed(4)),
-  evidenceRate: returnedTotal === 0 ? 0 : Number((evidenceCount / returnedTotal).toFixed(4)),
-  embeddingReason: embedder.reason ?? null,
+  query: {
+    positives: queryMetrics.positives,
+    negatives: queryMetrics.negatives,
+    recallAtK: Number(mean(queryMetrics.recalls).toFixed(4)),
+    precisionAtK: Number(mean(queryMetrics.precisions).toFixed(4)),
+    mrr: Number(mean(queryMetrics.mrrs).toFixed(4)),
+    ndcgAtK: Number(mean(queryMetrics.ndcgs).toFixed(4)),
+    hitRate: queryMetrics.positives === 0 ? 0 : Number((queryMetrics.hitQueries / queryMetrics.positives).toFixed(4)),
+    quietRate: queryMetrics.negatives === 0 ? 0 : Number((queryMetrics.quietNegatives / queryMetrics.negatives).toFixed(4)),
+    avgReturned: Number((queryMetrics.returnedTotal / Math.max(1, rows.length)).toFixed(3)),
+  },
+  resident: {
+    avgItems: Number(residentAvg.toFixed(3)),
+    negativeWithResident: Number(
+      (perItem.filter((entry) => entry.expected === 0 && entry.resident > 0).length / Math.max(1, queryMetrics.negatives)).toFixed(4),
+    ),
+  },
+  finalInjected: {
+    avgItems: Number((finalMetrics.returnedTotal / Math.max(1, rows.length)).toFixed(3)),
+    expectedCoverage: finalMetrics.positives === 0 ? 0 : Number((finalMetrics.coverage / finalMetrics.positives).toFixed(4)),
+  },
+  quality: {
+    evidenceRate: queryEvidenceTotal === 0 ? 0 : Number((queryEvidenceHits / queryEvidenceTotal).toFixed(4)),
+    staleRate: queryEvidenceTotal === 0 ? 0 : Number((staleHits / queryEvidenceTotal).toFixed(4)),
+    expectedSurvival: expectedTotal === 0 ? 0 : Number(((expectedTotal - expectedMissing) / expectedTotal).toFixed(4)),
+    evaporated,
+  },
+  reproducibility: {
+    datasetSha256: datasetSha,
+    storeSha256: storeSha,
+  },
 };
 
 const report = {
   generatedAt: new Date().toISOString(),
-  store: dataDir,
+  store: '$DSH_HOME/holo-memory',
   dataset: datasetPath,
   datasetAnnotator: dataset[0] ? dataset[0].annotator : 'unknown',
-  channels: {
-    vector: useVector && embedder.enabled,
-    neuron: Boolean(neuronGraph),
-    active: useActive,
-  },
+  channels: { vector: useVector && embedder.enabled, neuron: Boolean(neuronGraph), active: useActive },
   config: {
     injectMaxChars: config.injectMaxChars,
     injectMinScore: config.injectMinScore,
-    injectMinEvidence: config.injectMinEvidence,
     injectL1: config.injectL1,
     injectL2: config.injectL2,
     injectL3: config.injectL3,
-    activeWindowFallbackOnly: config.activeWindowFallbackOnly,
   },
   metrics,
   perItem,
@@ -319,7 +332,5 @@ if (outPath) {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, JSON.stringify(report, null, 2) + '\n', 'utf8');
 }
-
 console.log(JSON.stringify(metrics, null, 2));
 if (outPath) console.log(`wrote ${outPath}`);
-process.exit(0);

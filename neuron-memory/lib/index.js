@@ -19,6 +19,13 @@ export function apply(ctx, rawConfig) {
     const graph = new NeuronGraph(config.graphDir, config);
     let lastSyncAt = 0;
     let pendingSync;
+    // Teardown must not leave a delayed sync running against a disposed graph.
+    ctx.effect?.(() => () => {
+        if (pendingSync) {
+            clearTimeout(pendingSync);
+            pendingSync = undefined;
+        }
+    });
     const getHolo = () => {
         try {
             return ctx.get?.('holoMemory');

@@ -60,4 +60,16 @@ export declare function recall(store: HoloStore, embedder: EmbeddingClient, conf
  * (for example "继续"): surface the most important L3 capsules plus the most
  * recent L1 summaries so the agent still wakes up with context.
  */
-export declare function recentFallback(store: HoloStore, projectKey: string, maxChars: number): Promise<string | null>;
+export interface RecentFallbackResult {
+    text: string;
+    items: RecallItem[];
+    activeCount: 0;
+}
+/**
+ * Short-input fallback ("继续", "接着做"): recent/important L3 and L1.
+ *
+ * It must obey the same claim validity rule as normal recall, and it returns
+ * structured items so the injected ids reach the audit log, citation feedback
+ * and neuron feedback instead of disappearing into a bare string.
+ */
+export declare function recentFallback(store: HoloStore, projectKey: string, maxChars: number): Promise<RecentFallbackResult | null>;

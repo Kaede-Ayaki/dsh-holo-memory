@@ -45,6 +45,14 @@ export declare class HoloStore {
     private loaded;
     /** Runtime write switch; canonical writes are refused while it is false. */
     private writeGuard;
+    /** Records removed by delete/trim since the last drain (for index invalidation). */
+    private removedRecords;
+    /** Records rejected at load time, written to quarantine files. */
+    readonly quarantine: Array<{
+        layer: Layer;
+        file: string;
+        count: number;
+    }>;
     constructor(dir: string, config: HoloConfig);
     /** Install the runtime write switch. */
     setWriteGuard(guard: () => boolean): void;
@@ -64,6 +72,8 @@ export declare class HoloStore {
     remove(id: string): boolean;
     /** Drop the least valuable records when a layer exceeds its cap. */
     private trim;
+    /** Drain records removed by delete/trim so callers can invalidate indexes. */
+    takeRemoved(): AnyRecord[];
     private scheduleSave;
     private saveLayer;
     /** Persist every dirty layer immediately. */

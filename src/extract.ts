@@ -34,9 +34,11 @@ export interface ExtractionDeps {
 
 const FACT_KINDS: FactKind[] = ['preference', 'decision', 'fact', 'entity', 'task', 'correction', 'reference'];
 
-function sourceTypeForFact(kind: FactKind, scope: Scope): 'user_correction' | 'user_explicit' | 'model_inference' {
+function sourceTypeForFact(kind: FactKind): 'user_correction' | 'user_explicit' | 'model_inference' {
   if (kind === 'correction') return 'user_correction';
-  if (scope === 'user' && (kind === 'preference' || kind === 'decision')) return 'user_explicit';
+  // The fact text came from the user's own words regardless of whether it is a
+  // project-local rule or a cross-project preference.
+  if (kind === 'preference' || kind === 'decision') return 'user_explicit';
   return 'model_inference';
 }
 
@@ -344,7 +346,11 @@ export function applyExtraction(
   }
 
   for (const fact of extraction.l2 ?? []) {
-    const existing = findExistingFact(store, capture.projectKey, fact.scope ?? 'project', fact.text);
+    // An explicit supersedes list is a requirement change, not a wording fix.
+    // Near-duplicate merging must never swallow it; it always creates a new
+    // claim and closes the old one(s).
+    const declaresSupersede = (fact.supersedes ?? []).length > 0;
+    const existing = declaresSupersede ? undefined : findExistingFact(store, capture.projectKey, fact.scope ?? 'project', fact.text);
     if (existing) {
       const kind = fact.kind ?? existing.kind;
       const baseClaim = existing.claim ?? createClaimMeta('migration_unknown', { confidence: existing.confidence });
@@ -356,7 +362,7 @@ export function applyExtraction(
         kind,
         claim: nextClaim,
         tags: fact.tags ?? existing.tags,
-        confidence: normalizeConfidence(fact.confidence ?? nextClaim.confidence),
+        confidence: nextClaim.confidence,
         importance: fact.importance ?? existing.importance,
         sourceSessionId: capture.sessionId,
         sourceTurn: capture.turn,
@@ -379,10 +385,10 @@ export function applyExtraction(
         hash: contentHash(fact.text),
         revision: 1,
         source,
-        claim: createClaimMeta(sourceTypeForFact(fact.kind ?? 'fact', fact.scope ?? 'project'), {
+        claim: createClaimMeta(sourceTypeForFact(fact.kind ?? 'fact'), {
           // Trust the evidence source, not the model's self-reported number;
           // the model's number is kept only as extractionQuality.
-          confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact', fact.scope ?? 'project')),
+          confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact')),
           extractionQuality: normalizeConfidence(fact.confidence, 0.7),
           observedAt: now,
           recordedAt: now,
@@ -390,7 +396,7 @@ export function applyExtraction(
         text: fact.text,
         kind: fact.kind ?? 'fact',
         tags: fact.tags ?? [],
-        confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact', fact.scope ?? 'project')),
+        confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact')),
         sourceSessionId: capture.sessionId,
         sourceTurn: capture.turn,
       };
@@ -490,6 +496,7 @@ export async function extractTurn(deps: ExtractionDeps, capture: TurnCapture): P
       deps.logger?.warn('[holo-memory] extraction output was not valid JSON; using fallback summary');
     }
   }
+  if (deps.signal?.aborted) return null;
   if (!extraction) extraction = fallbackSummary(capture);
   if (!extraction.l1) extraction.l1 = fallbackSummary(capture).l1;
   if (!extraction.l1) return null;

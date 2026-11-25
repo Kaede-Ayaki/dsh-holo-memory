@@ -17,6 +17,8 @@ export interface MaintenanceOptions {
   dryRun?: boolean;
   /** Override `config.l1ArchiveAfterDays` for a manual aggressive pass. */
   olderThanDays?: number;
+  /** Called with the archived records so indexes/profiles can be invalidated. */
+  onRemoved?: (records: import('./types.js').AnyRecord[]) => void;
 }
 
 export interface MaintenanceResult {
@@ -123,8 +125,10 @@ async function runMaintenance(
     }),
   );
   await fs.appendFile(archiveFile, `${lines.join('\n')}\n`, { encoding: 'utf8', mode: 0o600 });
+  const removed: import('./types.js').AnyRecord[] = selected.map((entry) => entry.record);
   for (const entry of selected) store.remove(entry.record.id);
   await store.flush();
+  options.onRemoved?.(removed);
   await writeMaintenanceState(store, {
     lastRunAt: now,
     lastArchived: selected.length,
@@ -174,6 +178,7 @@ export function startMaintenanceSchedule(
   store: HoloStore,
   config: HoloConfig,
   logger: MaintenanceLogger,
+  onRemoved?: (records: import('./types.js').AnyRecord[]) => void,
 ): () => void {
   if (!config.maintenanceEnabled) return () => undefined;
   let stopped = false;
@@ -181,7 +186,7 @@ export function startMaintenanceSchedule(
 
   const run = async (): Promise<void> => {
     try {
-      const result = await maintainMemory(store, config);
+      const result = await maintainMemory(store, config, { onRemoved });
       if (result.archived > 0) {
         logger.info?.(`[holo-memory] maintenance archived ${result.archived} L1 → ${result.archiveFile}`);
       }

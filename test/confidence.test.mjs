@@ -15,6 +15,7 @@ import {
   withConfidence,
   MAX_CONFIDENCE_HISTORY,
 } from '../lib/confidence.js';
+import { getCalibration } from '../lib/calibration.js';
 
 test('normalizeConfidence clamps, rounds to three decimals, rejects NaN', () => {
   assert.equal(normalizeConfidence(0.84249), 0.842);
@@ -82,7 +83,7 @@ test('claim metadata starts active with honest recorded times', () => {
   assert.equal(claim.status, 'active');
   assert.equal(claim.confidence, 0.5);
   assert.equal(claim.confidenceBasis.sourceType, 'migration_unknown');
-  assert.equal(claim.confidenceBasis.calibrationVersion, 'heuristic-v1');
+  assert.equal(claim.confidenceBasis.calibrationVersion, getCalibration().version);
   assert.ok(claim.recordedAt > 0);
   assert.ok(isActiveClaim(claim));
 });

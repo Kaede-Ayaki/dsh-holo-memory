@@ -6,6 +6,8 @@ export interface MaintenanceOptions {
     dryRun?: boolean;
     /** Override `config.l1ArchiveAfterDays` for a manual aggressive pass. */
     olderThanDays?: number;
+    /** Called with the archived records so indexes/profiles can be invalidated. */
+    onRemoved?: (records: import('./types.js').AnyRecord[]) => void;
 }
 export interface MaintenanceResult {
     at: number;
@@ -38,4 +40,4 @@ export interface MaintenanceLogger {
  * (or absent), run once shortly after startup to catch up, then resume the
  * normal daily slot.
  */
-export declare function startMaintenanceSchedule(store: HoloStore, config: HoloConfig, logger: MaintenanceLogger): () => void;
+export declare function startMaintenanceSchedule(store: HoloStore, config: HoloConfig, logger: MaintenanceLogger, onRemoved?: (records: import('./types.js').AnyRecord[]) => void): () => void;

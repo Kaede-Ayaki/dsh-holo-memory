@@ -202,13 +202,14 @@ test('timeline walks the supersede chain oldest-first', async () => {
     supersededBy: newIdRecord,
   });
 
-  const entries = buildTimeline(store, newIdRecord);
+  const timeline = buildTimeline(store, newIdRecord);
+  const entries = timeline.entries;
   assert.equal(entries.length, 2);
   assert.match(entries[0].text, /tag 流。/);
   assert.equal(entries[0].status, 'superseded');
   assert.match(entries[1].text, /英文长描述/);
   assert.equal(entries[1].status, 'active');
-  const text = formatTimeline(entries);
+  const text = formatTimeline(timeline);
   assert.match(text, /时间线（旧 → 新）/);
   assert.match(text, /superseded/);
 });

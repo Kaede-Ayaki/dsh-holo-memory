@@ -9,7 +9,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write';
 import type { HoloStore } from './store.js';
-import type { L1Record, L2Record, L3Record } from './types.js';
+import type { AnyRecord, L1Record, L2Record, L3Record } from './types.js';
+import { isValidAt } from './confidence.js';
 import { redactSecrets } from './sanitize.js';
 
 export type ProfileScope = 'user' | 'project';
@@ -150,14 +151,22 @@ export function buildAProfile(
   // Global profile: only user-scope facts. Project profile: only that project.
   // Never fall back to "all L2": a project constraint must not leak into the
   // cross-project profile.
+  // One validity rule for every profile source: legacy replacement markers and
+  // claim windows both count. A superseded/expired/disputed claim must not be
+  // distilled into the profile that is injected every turn.
+  const validAt = Date.now();
+  const live = (record: AnyRecord): boolean => {
+    if ((record as { supersededBy?: string }).supersededBy && !record.claim) return false;
+    return isValidAt(record.claim, validAt);
+  };
   const baseL2 =
     scope === 'user'
-      ? l2.filter((record) => record.scope === 'user' && !record.supersededBy)
-      : l2.filter((record) => record.scope === 'project' && record.projectKey === projectKey && !record.supersededBy);
+      ? l2.filter((record) => record.scope === 'user' && live(record))
+      : l2.filter((record) => record.scope === 'project' && record.projectKey === projectKey && live(record));
   const baseL3 =
     scope === 'user'
-      ? l3.filter((record) => record.scope === 'user')
-      : l3.filter((record) => record.scope === 'project' && record.projectKey === projectKey);
+      ? l3.filter((record) => record.scope === 'user' && live(record))
+      : l3.filter((record) => record.scope === 'project' && record.projectKey === projectKey && live(record));
   const baseL1 = scope === 'user' ? [] : l1.filter((record) => record.projectKey === projectKey);
   const evidenceIds: string[] = [];
 
@@ -197,8 +206,10 @@ export function buildAProfile(
   const workingStyle = uniq(styleSources.filter((value) => value.length > 0), 8, 40);
   evidenceIds.push(...(scope === 'user' ? baseL2.slice(-10) : baseL1.slice(-10)).map((record) => record.id));
 
+  // No live evidence means no profile: returning `previous` would keep injecting
+  // a conclusion whose evidence was deleted, expired or superseded.
   if (preferences.length === 0 && habits.length === 0 && personality.length === 0 && workingStyle.length === 0) {
-    return previous;
+    return null;
   }
 
   const now = Date.now();
@@ -278,7 +289,14 @@ export class ProfileStore {
     if (!this.writeGuard()) return this.get();
     await store.whenReady();
     const next = buildAProfile(store, this.profile, scope, projectKey);
-    if (!next) return this.get();
+    if (!next) {
+      const file = path.join(this.dir, this.fileName);
+      if (this.writeGuard()) {
+        await fs.rm(file, { force: true }).catch(() => undefined);
+        this.profile = null;
+      }
+      return null;
+    }
     this.chain = this.chain.catch(() => undefined).then(async () => {
       await this.save(next);
       this.profile = next;

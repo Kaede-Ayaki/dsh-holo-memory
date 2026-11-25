@@ -17,6 +17,7 @@
  * loses `inject`).
  */
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths';
 import { loadCalibrationFile } from './calibration.js';
@@ -130,7 +131,12 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
 
   // Daily L1 archival / maintenance timer (catch-up run shortly after startup
   // when the last recorded run is older than 20h).
-  ctx.effect(() => startMaintenanceSchedule(store, config, logger));
+  ctx.effect(() =>
+    startMaintenanceSchedule(store, config, logger, (removed) => {
+      refreshProfiles(removed);
+      drainRemovals();
+    }),
+  );
 
   // ------------------------------------------------------------------ //
   // Background embedding indexer                                        //
@@ -159,14 +165,41 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
     }
   };
 
+  const refreshProfilesFromDisk = (): void => {
+    void fs
+      .readdir(storageDir)
+      .then(async (names) => {
+        for (const name of names) {
+          const match = /^a-(.+)\.json$/.exec(name);
+          if (!match) continue;
+          const key = match[1];
+          const storeForProject = projectProfileStore(key);
+          await storeForProject.whenReady().catch(() => undefined);
+          await storeForProject.refresh(store, 'project', key).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+  };
+
+  const drainRemovals = (): void => {
+    const removed = store.takeRemoved();
+    if (removed.length === 0) return;
+    refreshProfiles(removed);
+    if (removed.length > 0) refreshProfilesFromDisk();
+    syncNeuron();
+  };
+
   const refreshProfiles = (records: AnyRecord[]): void => {
     if (!config.aSeriesEnabled || !config.aSeriesRefreshOnExtract || !store.writesAllowed()) return;
     void profileStore.refresh(store, 'user').catch(() => undefined);
     const keys = new Set(
       records.filter((record) => record.scope === 'project' && record.projectKey).map((record) => record.projectKey),
     );
-    // A delete/supersede carries no records: refresh every loaded project view.
-    if (records.length === 0) for (const key of projectProfiles.keys()) keys.add(key);
+    // A delete/supersede carries no records: refresh every known project view.
+    if (records.length === 0) {
+      for (const key of projectProfiles.keys()) keys.add(key);
+      refreshProfilesFromDisk();
+    }
     for (const key of keys) void projectProfileStore(key).refresh(store, 'project', key).catch(() => undefined);
   };
 
@@ -174,6 +207,7 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
     queueEmbedding(records);
     syncNeuron();
     refreshProfiles(records);
+    drainRemovals();
   };
 
   // Deletes and supersedes do not carry new records, but they invalidate the
@@ -542,6 +576,7 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
     embedder,
     config,
     profileStore,
+    projectProfileStore,
     onRecords,
     onMutation,
     logger,
@@ -558,6 +593,7 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
             config,
             runtime,
             profileStore,
+            projectProfileStore,
             logger,
             onConfigSaved: () => queueEmbedding([...store.list('l1'), ...store.list('l2'), ...store.list('l3')]),
             onMutation,

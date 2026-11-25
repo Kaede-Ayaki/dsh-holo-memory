@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Build and test root plugin
+        run: npm run build && npm run test:holo
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Install neuron deps and test
+        run: |
+          cd neuron-memory
+          npm ci
+          npm test
+      - name: Package check
+        run: npm pack --dry-run

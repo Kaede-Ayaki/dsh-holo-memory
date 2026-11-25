@@ -202,10 +202,11 @@ test('a strong neuron hit opens the relevance gate, a weak one does not', async 
 
 test('recentFallback surfaces L3 and recent L1 without a query', async () => {
   const { dir, store, project } = await seed();
-  const text = await recentFallback(store, project.key, 1000);
-  assert.ok(text);
-  assert.match(text, /Python 后端工程师/);
-  assert.match(text, /SQLite/);
+  const result = await recentFallback(store, project.key, 1000);
+  assert.ok(result);
+  assert.match(result.text, /Python 后端工程师/);
+  assert.match(result.text, /SQLite/);
+  assert.ok(result.items.length > 0, 'fallback returns structured items so ids reach the audit log');
   await fs.rm(dir, { recursive: true, force: true });
 });
 
