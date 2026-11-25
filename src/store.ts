@@ -24,6 +24,10 @@ export interface ProjectId {
  */
 export function resolveProjectRoot(cwd: string): string {
   const start = path.resolve(cwd);
+  // Only an existing directory can have a meaningful git root. Without this
+  // guard a relative-looking test cwd on another platform would resolve into
+  // the current checkout and silently merge unrelated projects.
+  if (!existsSync(start)) return start;
   let current = start;
   for (let depth = 0; depth < 12; depth += 1) {
     try {
@@ -56,6 +60,20 @@ export function newId(layer: Layer): string {
 }
 
 const CLAIM_STATUSES = new Set(['active', 'superseded', 'expired', 'disputed']);
+const FACT_KINDS = new Set(['preference', 'decision', 'fact', 'entity', 'task', 'correction', 'reference']);
+const SCOPES = new Set(['user', 'project']);
+const SOURCE_TYPES = new Set([
+  'user_explicit',
+  'user_correction',
+  'multi_turn_inference',
+  'model_inference',
+  'imported',
+  'migration_unknown',
+]);
+
+function isStringArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
 
 /** Return a reason string when a claim is structurally invalid. */
 function validateClaim(claim: unknown): string | null {
@@ -67,7 +85,30 @@ function validateClaim(claim: unknown): string | null {
     return 'claim.confidence is not a number in 0..1';
   }
   if (typeof value.status !== 'string' || !CLAIM_STATUSES.has(value.status)) return 'claim.status is invalid';
-  if (typeof value.confidenceBasis !== 'object' || value.confidenceBasis === null) return 'claim.confidenceBasis is missing';
+  for (const field of ['observedAt', 'recordedAt']) {
+    if (typeof value[field] !== 'number' || !Number.isFinite(value[field] as number)) return `claim.${field} is invalid`;
+  }
+  for (const field of ['validFrom', 'validTo']) {
+    const timestamp = value[field];
+    if (timestamp !== undefined && (typeof timestamp !== 'number' || !Number.isFinite(timestamp))) {
+      return `claim.${field} is invalid`;
+    }
+  }
+  if (value.supersedes !== undefined && !isStringArray(value.supersedes)) return 'claim.supersedes is invalid';
+
+  const basis = value.confidenceBasis as Record<string, unknown> | undefined;
+  if (typeof basis !== 'object' || basis === null) return 'claim.confidenceBasis is missing';
+  if (typeof basis.sourceType !== 'string' || !SOURCE_TYPES.has(basis.sourceType)) return 'claim.basis.sourceType is invalid';
+  if (typeof basis.calibrationVersion !== 'string') return 'claim.basis.calibrationVersion is missing';
+  const quality = basis.extractionQuality;
+  if (typeof quality !== 'number' || !Number.isFinite(quality) || quality < 0 || quality > 1) {
+    return 'claim.basis.extractionQuality is invalid';
+  }
+  for (const field of ['corroboration', 'contradiction']) {
+    const count = basis[field];
+    if (typeof count !== 'number' || !Number.isFinite(count) || count < 0) return `claim.basis.${field} is invalid`;
+  }
+  if (typeof basis.verified !== 'boolean') return 'claim.basis.verified is invalid';
   return null;
 }
 
@@ -79,19 +120,30 @@ function validateRecord(layer: Layer, value: unknown, seen: Set<string>): { reco
   if (seen.has(record.id)) return { reason: 'duplicate id' };
   if (record.layer !== layer) return { reason: `layer mismatch (expected ${layer})` };
   if (typeof record.createdAt !== 'number' || !Number.isFinite(record.createdAt)) return { reason: 'createdAt is missing' };
+  if (record.scope !== undefined && (typeof record.scope !== 'string' || !SCOPES.has(record.scope))) {
+    return { reason: 'scope is invalid' };
+  }
+  if (record.projectKey !== undefined && typeof record.projectKey !== 'string') return { reason: 'projectKey is invalid' };
+  if (record.importance !== undefined && (typeof record.importance !== 'number' || !Number.isFinite(record.importance))) {
+    return { reason: 'importance is invalid' };
+  }
 
   if (layer === 'l1') {
     if (typeof record.summary !== 'string') return { reason: 'l1.summary is missing' };
-    if (!Array.isArray(record.topics)) return { reason: 'l1.topics is not an array' };
+    if (!isStringArray(record.topics)) return { reason: 'l1.topics must be an array of strings' };
     if (typeof record.sessionId !== 'string') return { reason: 'l1.sessionId is missing' };
   } else if (layer === 'l2') {
     if (typeof record.text !== 'string') return { reason: 'l2.text is missing' };
-    if (!Array.isArray(record.tags)) return { reason: 'l2.tags is not an array' };
-    if (typeof record.kind !== 'string') return { reason: 'l2.kind is missing' };
+    if (!isStringArray(record.tags)) return { reason: 'l2.tags must be an array of strings' };
+    if (typeof record.kind !== 'string' || !FACT_KINDS.has(record.kind)) return { reason: 'l2.kind is invalid' };
   } else {
     if (typeof record.title !== 'string') return { reason: 'l3.title is missing' };
     if (typeof record.hologram !== 'string') return { reason: 'l3.hologram is missing' };
-    if (!Array.isArray(record.themes)) return { reason: 'l3.themes is not an array' };
+    if (!isStringArray(record.themes)) return { reason: 'l3.themes must be an array of strings' };
+    for (const field of ['entities', 'openLoops', 'sourceSessions']) {
+      const value = record[field];
+      if (value !== undefined && !isStringArray(value)) return { reason: `l3.${field} must be an array of strings` };
+    }
   }
 
   const claimReason = validateClaim(record.claim);
@@ -140,6 +192,8 @@ export class HoloStore {
   private removedRecords: AnyRecord[] = [];
   /** Records rejected at load time, written to quarantine files. */
   readonly quarantine: Array<{ layer: Layer; file: string; count: number }> = [];
+  /** Quarantine write failures (surfaced by doctor, never swallowed silently). */
+  readonly quarantineFailures: string[] = [];
 
   constructor(dir: string, config: HoloConfig) {
     this.dir = path.resolve(dir);
@@ -186,7 +240,11 @@ export class HoloStore {
       const rejected: Array<{ reason: string; record: unknown }> = [];
       for (const entry of parsed) {
         const result = validateRecord(layer, entry, seen);
-        if (result.record) valid.push(normalizeRecordSource(result.record));
+        if (result.record) {
+          const normalized = normalizeRecordSource(result.record);
+          if (normalized.layer === 'l2' && normalized.claim) normalized.confidence = normalized.claim.confidence;
+          valid.push(normalized);
+        }
         else rejected.push({ reason: result.reason ?? 'invalid record', record: entry });
       }
       if (rejected.length > 0) {
@@ -200,8 +258,10 @@ export class HoloStore {
             { encoding: 'utf8', mode: 0o600 },
           );
           this.quarantine.push({ layer, file, count: rejected.length });
-        } catch {
-          // Quarantine is best-effort; the valid records must still load.
+        } catch (error) {
+          // Quarantine is best-effort for loading, but the failure must be
+          // visible to the doctor instead of being swallowed.
+          this.quarantineFailures.push(`${layer}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       const records = valid;

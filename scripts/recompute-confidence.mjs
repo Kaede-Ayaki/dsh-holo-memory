@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const { initialConfidence, normalizeConfidence } = await import('../lib/confidence.js');
+const { applyCalibration, getCalibration } = await import('../lib/calibration.js');
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
@@ -25,19 +26,23 @@ const has = (name) => process.argv.includes(`--${name}`);
 
 const dataDir = arg('data');
 const apply = has('apply');
+const mode = arg('mode', 'calibrated') === 'raw' ? 'raw' : 'calibrated';
 if (!dataDir || !fs.existsSync(dataDir)) {
   console.error('missing --data <holo-memory dir>');
   process.exit(2);
 }
 
 const HISTORY_REASON = 'recompute-source-prior';
-const report = { dryRun: !apply, layers: {}, changed: 0, bySource: {} };
+const report = { dryRun: !apply, mode, calibrationVersion: getCalibration().version, layers: {}, changed: 0, bySource: {} };
 
 function recompute(record) {
   const claim = record.claim;
   if (!claim) return record;
   const sourceType = claim.confidenceBasis?.sourceType ?? 'migration_unknown';
-  const next = normalizeConfidence(initialConfidence(sourceType));
+  const base = normalizeConfidence(initialConfidence(sourceType));
+  // `raw` keeps the source prior; `calibrated` maps it through the loaded
+  // Platt params and records the matching version.
+  const next = mode === 'raw' ? base : applyCalibration(base);
   report.bySource[sourceType] = (report.bySource[sourceType] ?? 0) + 1;
   if (normalizeConfidence(claim.confidence) === next) return record;
   report.changed += 1;
@@ -48,7 +53,7 @@ function recompute(record) {
   return {
     ...record,
     confidence: next,
-    claim: { ...claim, confidence: next, confidenceHistory: history },
+    claim: { ...claim, confidence: next, confidenceBasis: { ...claim.confidenceBasis, calibrationVersion: getCalibration().version }, confidenceHistory: history },
   };
 }
 
@@ -85,7 +90,8 @@ for (const { next } of pending) {
   for (const record of next) {
     const claim = record.claim;
     if (!claim) continue;
-    const expected = normalizeConfidence(initialConfidence(claim.confidenceBasis?.sourceType ?? 'migration_unknown'));
+    const base = normalizeConfidence(initialConfidence(claim.confidenceBasis?.sourceType ?? 'migration_unknown'));
+    const expected = mode === 'raw' ? base : applyCalibration(base);
     if (claim.confidence !== expected) illegal += 1;
   }
 }

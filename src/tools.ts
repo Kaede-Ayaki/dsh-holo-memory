@@ -2,6 +2,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { createClaimMeta, linkSupersedes, normalizeConfidence, supersedeClaim } from './confidence.js';
 import { buildTimeline, formatTimeline } from './timeline.js';
+import { validateSupersedeTargets } from './relations.js';
 import type { HoloConfig } from './config.js';
 import type { AnyRecord, L1Record, L2Record, L3Record, Layer, Scope } from './types.js';
 import { HoloStore, contentHash, newId, projectIdFor } from './store.js';
@@ -146,24 +147,12 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         if (newId && !newRecord) return `Not found: ${newId}. Nothing was changed.`;
         if (newRecord && newRecord.id === oldRecord.id) return 'Refusing to supersede a record with itself.';
         if (newRecord) {
-          if (newRecord.layer !== oldRecord.layer) return 'Refusing to link records from different layers.';
-          const oldScope = oldRecord.scope;
-          const newScope = newRecord.scope;
-          if (oldScope !== newScope) return 'Refusing to link records with different scopes.';
-          if (oldScope === 'project' && oldRecord.projectKey !== newRecord.projectKey) {
-            return 'Refusing to link records from different projects.';
-          }
-          // Reject a cycle: the new claim must not already descend from old.
-          const seen = new Set<string>();
-          const stack = [...(newRecord.claim?.supersedes ?? [])];
-          while (stack.length > 0) {
-            const next = stack.pop() as string;
-            if (next === oldRecord.id) return 'Refusing to create a supersedes cycle.';
-            if (seen.has(next)) continue;
-            seen.add(next);
-            const record = deps.store.find(next);
-            if (record) stack.push(...(record.claim?.supersedes ?? []));
-          }
+          const check = validateSupersedeTargets(
+            deps.store,
+            { id: newRecord.id, layer: newRecord.layer, scope: newRecord.scope, projectKey: newRecord.projectKey },
+            [oldRecord.id],
+          );
+          if (!check.ok) return `Refusing to link records: ${check.errors.join('; ')}`;
         }
         if (oldRecord.claim && oldRecord.claim.status !== 'active') {
           return `Refusing to supersede ${oldRecord.id}: status is ${oldRecord.claim.status}.`;
@@ -280,8 +269,12 @@ export function registerTools(ctx: { tools: { register(tool: unknown): void } },
         const now = Date.now();
         const sessionId = exec.agent?.session?.id;
         const source = sourceFromManual(text, sessionId);
-        const confidence = normalizeConfidence(args.confidence, 0.95);
-        const claim = createClaimMeta('user_explicit', { confidence, observedAt: now, recordedAt: now });
+        const claim = createClaimMeta('user_explicit', {
+          confidence: normalizeConfidence(args.confidence, 0.95),
+          observedAt: now,
+          recordedAt: now,
+        });
+        const confidence = claim.confidence;
         if (layer === 'l3') {
           const title = (args.title ?? text.slice(0, 60)).trim();
           if (title.length === 0) return 'Not saved: an l3 capsule needs a title.';

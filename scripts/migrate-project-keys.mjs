@@ -34,7 +34,7 @@ for (const layer of layers) {
   loaded[layer] = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
 }
 
-const mapping = new Map();
+const mapping = new Map(); // oldKey -> { newKey, label, sourceCwds:Set, conflicted:boolean }
 const conflicts = [];
 const keysFromL1 = new Set();
 for (const record of loaded.l1) {
@@ -44,25 +44,33 @@ for (const record of loaded.l1) {
   keysFromL1.add(oldKey);
   const next = projectIdFor(record.cwd);
   if (next.key === oldKey) continue;
-  if (mapping.has(oldKey) && mapping.get(oldKey) !== next.key) {
-    conflicts.push({ oldKey, first: mapping.get(oldKey), second: next.key });
+  const existing = mapping.get(oldKey);
+  if (!existing) {
+    mapping.set(oldKey, { newKey: next.key, label: next.label, sourceCwds: new Set([record.cwd]), conflicted: false });
     continue;
   }
-  mapping.set(oldKey, next.key);
-  mapping.set(`${oldKey}:label`, next.label);
+  existing.sourceCwds.add(record.cwd);
+  if (existing.newKey !== next.key) {
+    existing.conflicted = true;
+    conflicts.push({ oldKey, first: existing.newKey, second: next.key });
+  }
 }
 
 const perLayer = {};
 let changed = 0;
+const skippedConflicts = [];
 for (const layer of layers) {
   perLayer[layer] = { records: loaded[layer].length, changed: 0 };
   for (const record of loaded[layer]) {
     if (!record || typeof record.projectKey !== 'string') continue;
-    const nextKey = mapping.get(record.projectKey);
-    if (!nextKey) continue;
-    record.projectKey = nextKey;
-    const label = mapping.get(`${nextKey}:label`);
-    if (label) record.projectLabel = label;
+    const entry = mapping.get(record.projectKey);
+    if (!entry) continue;
+    if (entry.conflicted) {
+      if (!skippedConflicts.includes(record.projectKey)) skippedConflicts.push(record.projectKey);
+      continue;
+    }
+    record.projectKey = entry.newKey;
+    if (entry.label) record.projectLabel = entry.label;
     changed += 1;
     perLayer[layer].changed += 1;
   }
@@ -84,8 +92,15 @@ for (const layer of layers) {
 
 const report = {
   dryRun: !apply,
-  mappings: [...mapping.entries()].filter(([key]) => !key.endsWith(':label')),
+  mappings: [...mapping.entries()].map(([oldKey, entry]) => ({
+    oldKey,
+    newKey: entry.newKey,
+    label: entry.label,
+    cwds: [...entry.sourceCwds],
+    conflicted: entry.conflicted,
+  })),
   conflicts,
+  skippedConflicts,
   unmapped: [...unmapped.entries()].map(([projectKey, records]) => ({ projectKey, records })),
   perLayer,
   changed,

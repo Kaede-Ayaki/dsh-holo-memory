@@ -24,7 +24,7 @@ jobs:
       - name: Install neuron deps and test
         run: |
           cd neuron-memory
-          npm ci
+          npm install --no-audit --no-fund
           npm test
       - name: Package check
         run: npm pack --dry-run

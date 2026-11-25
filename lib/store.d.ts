@@ -53,6 +53,8 @@ export declare class HoloStore {
         file: string;
         count: number;
     }>;
+    /** Quarantine write failures (surfaced by doctor, never swallowed silently). */
+    readonly quarantineFailures: string[];
     constructor(dir: string, config: HoloConfig);
     /** Install the runtime write switch. */
     setWriteGuard(guard: () => boolean): void;

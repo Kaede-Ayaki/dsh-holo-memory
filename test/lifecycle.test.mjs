@@ -314,7 +314,7 @@ test('memory_supersede rejects a missing target and cross-project links', async 
   assert.equal(store.find(oldId).claim.status, before, 'invalid target must not change the old claim');
 
   const crossProject = await tool.execute({ oldId, newId: otherProjectId }, {});
-  assert.match(crossProject, /different projects/);
+  assert.match(crossProject, /project mismatch|different projects/);
   assert.equal(store.find(oldId).claim.status, before);
 
   const closed = await tool.execute({ oldId, reason: 'retired without replacement' }, {});

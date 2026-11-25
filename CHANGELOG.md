@@ -3,6 +3,30 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [1.0.1] - 2026-11-26
+
+**主题：关闭 1.0.0 后续审计 R-01–R-09，并让 Linux CI 真正变绿。**
+
+### Fixed
+
+- **R-01（P0）** 自动抽取的 supersedes 与 `memory_supersede` 共用 `validateSupersedeTargets()`：目标必须存在、同层、同 scope、同 projectKey、active 且在有效期内、无环、无重复；任一非法则整条关系零写入。
+- **R-05（P0）** CI 夹具修复：`resolveProjectRoot()` 对不存在的 cwd 不再向上穿越；测试改用临时仓库/子目录，Linux runner 上不再把 `D:\work\...` 当成相对路径折叠到仓库根。neuron 无 lockfile 的 CI 安装步骤改为 `npm install`。
+- **R-02** 项目画像的 L1 来源也走 `live()` 时效过滤；过期 L1 不再进入 habits / workingStyle。
+- **R-03** 项目键格式约束为 `^p-[0-9a-f]{12}$`（API + 存储层），`ProfileStore` 用 `path.resolve` + `path.relative` 拒绝越出 storageDir 的文件名。
+- **R-04** `claim.confidence` 是唯一权威：抽取与 `memory_note` 的顶层 confidence 均由 claim 派生，加载时同样归一；控制台输出 claim 值；`recompute-confidence.mjs` 新增 `--mode raw|calibrated` 并写入实际 `calibrationVersion`。
+- **R-06** schema 校验加严：数组元素必须是字符串、`kind` 枚举、scope、时间戳、`confidenceBasis` 字段；隔离失败进入 `store.quarantineFailures`，doctor 新增 `schema:quarantine` 检查。
+- **R-07** 迁移脚本映射改为 `{newKey,label,sourceCwds}`，label 正确写入；同一 oldKey 出现多个 newKey 时该 key 中止写入并列入 `skippedConflicts`；新增迁移脚本测试（单项目、幂等、冲突阻断）。
+- **R-08** 时间线结果新增 `truncated` / `frontier`，达到 200 节点上限时输出明确提示。
+- **R-09** 新增 `eval/regression-manifest.json`（private dataset SHA-256）与 `eval/check-regression.mjs`；文档说明私有回归集的获取与哈希校验方式。
+
+### Verification
+
+```text
+holo:   84/84 PASS
+neuron: 13/13 PASS
+CI:     workflow fixes pushed; see Actions
+```
+
 ## [1.0.0] - 2026-11-26
 
 **主题：关闭 0.9.0 代码审计的 F-01–F-16，冻结 claim 生命周期、迁移与发布工程。**

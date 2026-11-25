@@ -1,6 +1,6 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-1.0.0-2f6f63)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.0.1-2f6f63)](CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-43%2F43-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,7 +11,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`1.0.0`（2026-11-26）
+- 当前版本：`1.0.1`（2026-11-26）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 界面预览：[docs/preview/](docs/preview/) —— 手工绘制的矢量示意图（示例数据）
@@ -732,7 +732,7 @@ npm run test:all   # holo + neuron 两个包
 当前：
 
 ```text
-holo:   74/74 PASS
+holo:   84/84 PASS
 neuron: 13/13 PASS
 ```
 
@@ -789,6 +789,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 近期路线：
 
+- **1.0.1**：关闭 1.0.0 后续审计 R-01–R-09（自动 supersedes 校验、项目画像 L1 时效、profile key 路径约束、置信度权威、schema 深化、迁移脚本修正、时间线截断标记、Linux CI 夹具）（当前版本）；
 - **1.0.0**：代码审计 F-01–F-16 全部关闭（时效回退、画像清除、失效传播、项目键迁移、supersede 校验、多父时间线、近重复取代、置信度一致性、预算排序、指标拆分、schema 校验、项目画像入口、HMR、打包/CI）（当前版本）；
 - **0.9.0**：置信度接入召回证据/排序（来源化先验）、画像分层（全局 + 项目）、git 根项目标识、删除/取代即时同步、跨层用原始 RRF；
 - **0.8.0**：数值置信度（ClaimMeta）+ 时间线（asOf / supersede / memory_timeline）+ 检索评估基线；

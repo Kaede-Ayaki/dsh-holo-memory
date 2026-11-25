@@ -150,6 +150,13 @@ test('console exposes stats, doctor and open routes', async () => {
     assert.equal(projectRefreshed.scope, 'project');
     assert.equal(projectRefreshed.profile.title, '项目画像 · 工作约定');
     assert.ok(projectRefreshed.profile.evidenceIds.length > 0);
+    const badKey = await fetch(`${base}/holo-memory/profile/refresh?scope=project&projectKey=${encodeURIComponent('../../evil')}`, {
+      method: 'POST',
+      headers: { 'x-holo-memory': '1' },
+    });
+    assert.equal(badKey.status, 400);
+    const badGet = await fetch(`${base}/holo-memory/profile?scope=project&projectKey=${encodeURIComponent('..\\..\\evil')}`);
+    assert.equal(badGet.status, 400);
     assert.ok(profileRefreshed.profile.preferences.length > 0);
     assert.match(profileRefreshed.text, /执行边界/);
   } finally {

@@ -91,6 +91,12 @@ node eval/run.mjs --data ".dsh/holo-memory" --dataset eval/dataset-human.jsonl `
 
 四路通道可以任意组合做消融：`lexical / +vector / +neuron / +active`。
 
+## 可复现策略
+
+- `eval/regression-manifest.json` 记录私有 human 数据集的 SHA-256、条数、正负例数与 store 快照哈希；
+- 真实 query 不入库（含隐私），任何人拿到同一份私有 `dataset-human.jsonl` 都可用 `node eval/check-regression.mjs --store ...` 校验哈希后再跑；
+- committed baseline（`eval/baseline-1.0.0.json`）记录同一组 dataset/store 哈希；哈希对不上时先停下，不要拿数字做比较。
+
 ## 隐私
 
 `dataset.jsonl`、`candidates.jsonl`、`label-sheet.md` 含真实对话 query，**一律 gitignore，不进仓库**。  

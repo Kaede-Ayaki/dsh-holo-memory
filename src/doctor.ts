@@ -80,6 +80,25 @@ export async function runDoctor(deps: DoctorDeps, options: { deep?: boolean } = 
       detail: total > 0 ? `${total} 条记录 · ${stats.dir}` : `存储可读，但还没有记忆 · ${stats.dir}`,
     });
 
+    const quarantined = store.quarantine.reduce((sum, entry) => sum + entry.count, 0);
+    if (store.quarantineFailures.length > 0) {
+      add(checks, {
+        id: 'schema:quarantine',
+        level: 'error',
+        title: '坏记录隔离失败',
+        detail: store.quarantineFailures.join('; '),
+      });
+    } else if (quarantined > 0) {
+      add(checks, {
+        id: 'schema:quarantine',
+        level: 'warn',
+        title: '坏记录已隔离',
+        detail: `${quarantined} 条记录未加载；文件：${store.quarantine.map((entry) => entry.file).join(', ')}`,
+      });
+    } else {
+      add(checks, { id: 'schema:quarantine', level: 'ok', title: '坏记录隔离', detail: '没有坏记录' });
+    }
+
     add(checks, {
       id: 'source:coverage',
       level: total === 0 ? 'skip' : stats.sourceNone === 0 ? 'ok' : sourceCovered / total >= 0.8 ? 'warn' : 'error',

@@ -31,7 +31,7 @@ export declare function parseJsonObject(raw: string): unknown | null;
 export declare function normalizeExtraction(value: unknown): ExtractionResult | null;
 export declare function buildExtractionPrompt(capture: TurnCapture, existingL3: L3Record[], existingL2: L2Record[], config: HoloConfig): string;
 /** Apply one validated extraction payload to the store. */
-export declare function applyExtraction(store: HoloStore, config: HoloConfig, capture: TurnCapture, extraction: ExtractionResult): AnyRecord[];
+export declare function applyExtraction(store: HoloStore, config: HoloConfig, capture: TurnCapture, extraction: ExtractionResult, onRelationError?: (message: string) => void): AnyRecord[];
 /**
  * Distill one completed turn and merge it into memory.
  * Falls back to a deterministic L1 summary when no model route is available,

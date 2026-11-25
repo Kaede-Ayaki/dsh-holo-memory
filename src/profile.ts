@@ -167,7 +167,7 @@ export function buildAProfile(
     scope === 'user'
       ? l3.filter((record) => record.scope === 'user' && live(record))
       : l3.filter((record) => record.scope === 'project' && record.projectKey === projectKey && live(record));
-  const baseL1 = scope === 'user' ? [] : l1.filter((record) => record.projectKey === projectKey);
+  const baseL1 = scope === 'user' ? [] : l1.filter((record) => record.projectKey === projectKey && live(record));
   const evidenceIds: string[] = [];
 
   const preferenceRecords = topByImportance(
@@ -252,6 +252,11 @@ export class ProfileStore {
 
   constructor(dir: string, fileName: string = FILE) {
     this.dir = path.resolve(dir);
+    const resolved = path.resolve(this.dir, fileName);
+    const relative = path.relative(this.dir, resolved);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`profile file must stay inside the storage dir: ${fileName}`);
+    }
     this.fileName = fileName;
   }
 

@@ -9,6 +9,7 @@ import { HoloStore, contentHash, newId } from './store.js';
 import type { EmbeddingClient } from './embeddings.js';
 import { nearDuplicate } from './lexical.js';
 import { createClaimMeta, initialConfidence, linkSupersedes, normalizeConfidence, supersedeClaim, withConfidence } from './confidence.js';
+import { validateSupersedeTargets } from './relations.js';
 import { looksSecret, redactSecrets } from './sanitize.js';
 import { sourceFromTurn } from './source.js';
 import { reviseRecord } from './revisions.js';
@@ -294,6 +295,7 @@ export function applyExtraction(
   config: HoloConfig,
   capture: TurnCapture,
   extraction: ExtractionResult,
+  onRelationError?: (message: string) => void,
 ): AnyRecord[] {
   const touched: AnyRecord[] = [];
   const now = Date.now();
@@ -373,6 +375,14 @@ export function applyExtraction(
       }, 'extraction'));
       touched.push(store.find(existing.id)!);
     } else {
+      // Same authority and calibration path for every write: the claim value
+      // is the only confidence, the legacy top-level field is derived from it.
+      const claimForFact = createClaimMeta(sourceTypeForFact(fact.kind ?? 'fact'), {
+        confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact')),
+        extractionQuality: normalizeConfidence(fact.confidence, 0.7),
+        observedAt: now,
+        recordedAt: now,
+      });
       const record: L2Record = {
         id: newId('l2'),
         layer: 'l2',
@@ -385,23 +395,28 @@ export function applyExtraction(
         hash: contentHash(fact.text),
         revision: 1,
         source,
-        claim: createClaimMeta(sourceTypeForFact(fact.kind ?? 'fact'), {
-          // Trust the evidence source, not the model's self-reported number;
-          // the model's number is kept only as extractionQuality.
-          confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact')),
-          extractionQuality: normalizeConfidence(fact.confidence, 0.7),
-          observedAt: now,
-          recordedAt: now,
-        }),
+        claim: claimForFact,
         text: fact.text,
         kind: fact.kind ?? 'fact',
         tags: fact.tags ?? [],
-        confidence: initialConfidence(sourceTypeForFact(fact.kind ?? 'fact')),
+        confidence: claimForFact.confidence,
         sourceSessionId: capture.sessionId,
         sourceTurn: capture.turn,
       };
       store.insert(record);
-      const replaced = (fact.supersedes ?? []).filter((id) => id !== record.id);
+      // The extraction path must obey the same relationship rules as
+      // memory_supersede: one invalid target means zero relation writes.
+      const relationCheck = (fact.supersedes ?? []).length > 0
+        ? validateSupersedeTargets(
+            store,
+            { layer: 'l2', scope: record.scope, projectKey: record.projectKey },
+            (fact.supersedes ?? []).filter((id) => id !== record.id),
+          )
+        : { ok: true, errors: [], targets: [] };
+      if (!relationCheck.ok && relationCheck.errors.length > 0) {
+        onRelationError?.(`[holo-memory] supersede skipped: ${relationCheck.errors.join('; ')}`);
+      }
+      const replaced = relationCheck.ok ? relationCheck.targets : [];
       if (replaced.length > 0) {
         const linked = linkSupersedes(record.claim!, replaced, now);
         record.claim = linked;
@@ -501,7 +516,7 @@ export async function extractTurn(deps: ExtractionDeps, capture: TurnCapture): P
   if (!extraction.l1) extraction.l1 = fallbackSummary(capture).l1;
   if (!extraction.l1) return null;
 
-  const touched = applyExtraction(deps.store, deps.config, capture, extraction);
+  const touched = applyExtraction(deps.store, deps.config, capture, extraction, (message) => deps.logger?.warn(message));
   if (touched.length > 0) deps.onRecords?.(touched);
   return extraction;
 }

@@ -104,7 +104,9 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
   // Per-project profiles live next to the global one; a project constraint must
   // never be injected into a different project's session.
   const projectProfiles = new Map<string, ProfileStore>();
+  const projectKeyPattern = /^p-[0-9a-f]{12}$/;
   const projectProfileStore = (key: string): ProfileStore => {
+    if (!projectKeyPattern.test(key)) throw new Error(`invalid projectKey: ${key}`);
     let existing = projectProfiles.get(key);
     if (!existing) {
       existing = new ProfileStore(storageDir, `a-${key}.json`);

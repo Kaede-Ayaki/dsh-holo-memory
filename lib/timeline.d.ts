@@ -31,6 +31,10 @@ export interface TimelineResult {
     orphans: string[];
     /** Cycle edges that were ignored while walking. */
     cycles: string[];
+    /** True when the 200-node safety limit stopped the traversal. */
+    truncated: boolean;
+    /** Nodes still queued when the limit was reached. */
+    frontier: number;
 }
 export declare function buildTimeline(store: HoloStore, id: string): TimelineResult;
 export declare function formatTimeline(result: TimelineResult): string;

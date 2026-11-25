@@ -1,0 +1,13 @@
+{
+  "name": "human-50",
+  "createdAt": "2026-11-25",
+  "annotator": "owner",
+  "queries": 50,
+  "positives": 31,
+  "negatives": 19,
+  "expectedIds": 539,
+  "datasetFile": "eval/dataset-human.jsonl",
+  "datasetSha256": "51769b941f7ac93413bdd67bbae4f9a59695b73829362d97cc69b21da7db4ee5",
+  "storeSnapshotSha256": "cc09632d22f411407c89b90ed4210a8852276db6288d500f69a124918dddd3cc",
+  "policy": "private: contains real user queries; kept out of the repository (gitignored). The SHA-256 is the stable identity for reproductions; Baseline files in eval/ record the same hash."
+}

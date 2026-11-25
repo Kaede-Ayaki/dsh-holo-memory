@@ -33,6 +33,7 @@ import { type ProfileStore, renderAProfile } from './profile.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const DEFAULT_LIMIT = 200;
+const PROJECT_KEY_PATTERN = /^p-[0-9a-f]{12}$/;
 const MAX_LIMIT = 1000;
 
 interface LoggerLike {
@@ -171,7 +172,7 @@ function publicRecord(record: AnyRecord): Record<string, unknown> {
       text: redactSecrets(l2.text),
       kind: l2.kind,
       tags: l2.tags.map(redactSecrets),
-      confidence: l2.confidence,
+      confidence: l2.claim?.confidence ?? l2.confidence,
       sourceSessionId: l2.sourceSessionId ?? '',
       sourceTurn: l2.sourceTurn ?? 0,
     };
@@ -358,8 +359,8 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
       const projectKey = params.get('projectKey') ?? '';
       let target = deps.profileStore;
       if (scope === 'project') {
-        if (!projectKey || !deps.projectProfileStore) {
-          sendJson(res, 400, { ok: false, error: 'scope=project requires projectKey' });
+        if (!projectKey || !PROJECT_KEY_PATTERN.test(projectKey) || !deps.projectProfileStore) {
+          sendJson(res, 400, { ok: false, error: 'scope=project requires a valid projectKey' });
           return;
         }
         target = deps.projectProfileStore(projectKey);
@@ -385,8 +386,8 @@ async function handle(deps: ConsoleDeps, req: IncomingMessage, res: ServerRespon
       const projectKey = params.get('projectKey') ?? '';
       let target = deps.profileStore;
       if (scope === 'project') {
-        if (!projectKey || !deps.projectProfileStore) {
-          sendJson(res, 400, { ok: false, error: 'scope=project requires projectKey' });
+        if (!projectKey || !PROJECT_KEY_PATTERN.test(projectKey) || !deps.projectProfileStore) {
+          sendJson(res, 400, { ok: false, error: 'scope=project requires a valid projectKey' });
           return;
         }
         target = deps.projectProfileStore(projectKey);

@@ -33,6 +33,10 @@ export interface TimelineResult {
   orphans: string[];
   /** Cycle edges that were ignored while walking. */
   cycles: string[];
+  /** True when the 200-node safety limit stopped the traversal. */
+  truncated: boolean;
+  /** Nodes still queued when the limit was reached. */
+  frontier: number;
 }
 
 const MAX_NODES = 200;
@@ -57,7 +61,7 @@ function timeOf(entry: TimelineEntry): number | undefined {
 
 export function buildTimeline(store: HoloStore, id: string): TimelineResult {
   const start = store.find(id);
-  const result: TimelineResult = { entries: [], orphans: [], cycles: [] };
+  const result: TimelineResult = { entries: [], orphans: [], cycles: [], truncated: false, frontier: 0 };
   if (!start) {
     result.orphans.push(id);
     return result;
@@ -89,6 +93,11 @@ export function buildTimeline(store: HoloStore, id: string): TimelineResult {
       const pointsAtNode = supersedesOf(record).includes(node.id) || supersededByOf(record) === node.id;
       if (pointsAtNode) queue.push(record);
     }
+  }
+
+  if (queue.length > 0) {
+    result.truncated = true;
+    result.frontier = queue.length;
   }
 
   for (const record of collected.values()) {
@@ -164,5 +173,6 @@ export function formatTimeline(result: TimelineResult): string {
   });
   if (result.orphans.length > 0) lines.push('', `orphans: ${result.orphans.join(', ')}`);
   if (result.cycles.length > 0) lines.push('', `cycles detected: ${result.cycles.join(', ')}`);
+  if (result.truncated) lines.push('', `结果达到 ${MAX_NODES} 节点上限，时间线不完整（frontier ${result.frontier}）。`);
   return lines.join('\n');
 }
