@@ -18,6 +18,7 @@ export function apply(ctx, rawConfig) {
     const config = normalizeConfig(rawConfig);
     const graph = new NeuronGraph(config.graphDir, config);
     let lastSyncAt = 0;
+    let pendingSync;
     const getHolo = () => {
         try {
             return ctx.get?.('holoMemory');
@@ -28,9 +29,19 @@ export function apply(ctx, rawConfig) {
     };
     const readRecords = async () => {
         const holo = getHolo();
-        if (holo?.listRecords)
-            return (await holo.listRecords());
-        return readHoloRecords(config.holoStoreDir);
+        const records = holo?.listRecords
+            ? (await holo.listRecords())
+            : await readHoloRecords(config.holoStoreDir);
+        // Only active claims belong in the associative index: superseded or
+        // expired memories must not keep firing through graph edges.
+        return records.filter((record) => {
+            const claim = record.claim;
+            if (claim && claim.status !== 'active')
+                return false;
+            if (record.supersededBy)
+                return false;
+            return true;
+        });
     };
     const service = {
         async ingest(options = {}) {
@@ -38,9 +49,20 @@ export function apply(ctx, rawConfig) {
         },
         async sync() {
             // Throttle: holo may call sync after every extraction, but a full graph
-            // refresh is only useful a few times per minute.
-            if (Date.now() - lastSyncAt < 15_000)
-                return { skipped: true };
+            // refresh is only useful a few times per minute. A throttled call now
+            // schedules one deferred run at the end of the window instead of being
+            // dropped, so delete/supersede changes always reach the graph.
+            const remaining = 15_000 - (Date.now() - lastSyncAt);
+            if (remaining > 0) {
+                if (!pendingSync) {
+                    pendingSync = setTimeout(() => {
+                        pendingSync = undefined;
+                        void service.sync().catch(() => undefined);
+                    }, remaining);
+                    pendingSync.unref?.();
+                }
+                return { deferred: true, inMs: remaining };
+            }
             lastSyncAt = Date.now();
             return graph.ingest(await readRecords());
         },
