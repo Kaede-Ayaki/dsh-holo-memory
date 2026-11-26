@@ -1,6 +1,6 @@
 {
   "name": "dsh-holo-memory",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Auditable three-layer long-term memory for DeepSeek Harness: L1 dialogue summaries, L2 atomic facts, L3 holographic capsules, hybrid recall, neuron graph, source pointers and web console.",
   "type": "module",
   "main": "lib/index.js",
@@ -31,7 +31,8 @@
     "test:neuron": "npm --prefix neuron-memory test",
     "test:all": "npm run test:holo && npm run test:neuron",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "pack:check": "npm pack --dry-run"
+    "pack:check": "npm pack --dry-run",
+    "eval:regression": "node eval/regression.mjs"
   },
   "dependencies": {},
   "peerDependencies": {

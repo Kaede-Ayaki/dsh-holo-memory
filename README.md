@@ -1,7 +1,8 @@
 # dsh-holo-memory
 
-[![version](https://img.shields.io/badge/version-1.0.1-2f6f63)](CHANGELOG.md)
-[![tests](https://img.shields.io/badge/tests-43%2F43-brightgreen)](test/)
+[![version](https://img.shields.io/badge/version-1.0.2-2f6f63)](CHANGELOG.md)
+[![CI](https://github.com/Kaede-Ayaki/dsh-holo-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaede-Ayaki/dsh-holo-memory/actions/workflows/ci.yml)
+[![tests](https://img.shields.io/badge/tests-90%2F90%20holo%20%C2%B7%2013%2F13%20neuron-brightgreen)](test/)
 [![license](https://img.shields.io/badge/license-MIT-c4553b)](LICENSE)
 [![DSH](https://img.shields.io/badge/DeepSeek-Harness-1d1b17)](https://github.com/deepseek-ai/deepseek-harness)
 
@@ -11,7 +12,7 @@
 `dsh-holo-memory` 是一个给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）使用的长期记忆插件。它不在模型权重里“记住”，也不把完整聊天记录硬塞回上下文；它在本地维护一本可检索、可核对、可修订的记忆账本，并在每一轮只注入和当前问题真正相关的一小段。
 
 - 仓库：<https://github.com/Kaede-Ayaki/dsh-holo-memory>
-- 当前版本：`1.0.1`（2026-11-26）
+- 当前版本：`1.0.2`（2026-11-26）
 - 更新日志：[CHANGELOG.md](CHANGELOG.md)
 - 伴侣插件：[neuron-memory/](neuron-memory/)（`dsh-neuron-memory`）
 - 界面预览：[docs/preview/](docs/preview/) —— 手工绘制的矢量示意图（示例数据）
@@ -563,6 +564,7 @@ POST /holo-memory/delete   { "id": "..." }
 - 评估基线在 `eval/`：50 条人工标注集上 Recall@5 `1.000`、nDCG@5 `0.950`（vector + neuron + active）；纯 lexical 只有 `0.384`。
 - `score` 是**层内归一化**结果（每层最高分为 1.0），只用于层内排序与预算；跨层排序用原始 RRF 值，不要把三层各自的 1.0 当成同一把尺子。
 - 召回里置信度只做**软加权**（`0.9 + 0.2·confidence`）与**同分 tie-break**，不设独立通道、不加硬性罚分：独立通道会被高置信但弱相关的记录挤占配额。
+- `confidenceBasis` 的 `corroboration / contradiction / verified` 目前是**实验字段**：生产写入路径不会自动累加它们；`deriveConfidence()` 仅供实验与显式工具使用。
 
 ---
 
@@ -583,7 +585,7 @@ POST /holo-memory/delete   { "id": "..." }
 | `memory_stats()` | 数量、覆盖率、存储路径、蒸馏状态、阈值 |
 | `memory_doctor(deep?)` | 记忆体检；deep 会真打开原文并跑召回探针 |
 | `memory_maintenance(olderThanDays?, dryRun?)` | 手动运行维护/归档预览 |
-| `memory_profile(refresh?)` | 读取用户画像；refresh=true 时从当前 L1/L2/L3 重新蒸馏 |
+| `memory_profile(refresh?, scope?)` | 读取画像；scope=user/project/both；refresh=true 时重新蒸馏 |
 
 ### neuron 工具
 
@@ -723,6 +725,14 @@ node scripts/recompute-confidence.mjs --data "$DSH_HOME/holo-memory" --apply
 - 删除、取代、归档、容量 trim 都会触发画像与神经元索引刷新；
 - `score` 只用于层内排序；跨层与字符预算使用原始 RRF。
 
+## 回归门禁
+
+```sh
+npm run eval:regression   # 校验私有数据集 hash → 实跑 evaluator → 指标相对基线下降超阈值即非零退出
+```
+
+真实 query 不入库；CI 只跑合成 smoke，私有人工集在本机执行。
+
 ## 测试
 
 ```sh
@@ -732,7 +742,7 @@ npm run test:all   # holo + neuron 两个包
 当前：
 
 ```text
-holo:   84/84 PASS
+holo:   90/90 PASS
 neuron: 13/13 PASS
 ```
 
@@ -789,6 +799,7 @@ ALTM、内置记忆、笔记等只作只读参考；不要把同一条事实同�
 
 近期路线：
 
+- **1.0.2**：关闭 v1.0.1 审计 N-01–N-10（纠正元数据、刷新门控、回归门禁、迁移报告、schema 加固、祖先截断失败闭合、neuron lockfile）（当前版本）；
 - **1.0.1**：关闭 1.0.0 后续审计 R-01–R-09（自动 supersedes 校验、项目画像 L1 时效、profile key 路径约束、置信度权威、schema 深化、迁移脚本修正、时间线截断标记、Linux CI 夹具）（当前版本）；
 - **1.0.0**：代码审计 F-01–F-16 全部关闭（时效回退、画像清除、失效传播、项目键迁移、supersede 校验、多父时间线、近重复取代、置信度一致性、预算排序、指标拆分、schema 校验、项目画像入口、HMR、打包/CI）（当前版本）；
 - **0.9.0**：置信度接入召回证据/排序（来源化先验）、画像分层（全局 + 项目）、git 根项目标识、删除/取代即时同步、跨层用原始 RRF；

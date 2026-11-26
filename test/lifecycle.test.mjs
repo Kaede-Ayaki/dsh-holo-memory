@@ -348,7 +348,7 @@ test('loader quarantines malformed records instead of crashing', async () => {
     id: 'l2_valid01',
     layer: 'l2',
     scope: 'project',
-    projectKey: 'p-x',
+    projectKey: 'p-aaaaaaaaaaaa',
     projectLabel: 'x',
     importance: 5,
     createdAt: now,

@@ -45,7 +45,11 @@ export interface ConfidenceEvidence {
     prior?: number;
 }
 /**
- * Heuristic confidence update (heuristic-v1).
+ * Heuristic confidence update (heuristic-v1) — experimental only.
+ *
+ * Production write paths do NOT advance corroboration/contradiction/verified
+ * automatically. Keep this for experiments and explicit tooling until a real
+ * evidence-event interface exists.
  *
  *   logit(p) = logit(prior)
  *            + 0.25 * log1p(corroboration)
@@ -78,7 +82,9 @@ export declare const MAX_CONFIDENCE_HISTORY = 10;
  * correction or corroboration changes the number; the previous value is kept
  * in `confidenceHistory` so the move stays auditable.
  */
-export declare function withConfidence(claim: ClaimMeta, nextConfidence: number, reason: string, at?: number): ClaimMeta;
+export declare function withConfidence(claim: ClaimMeta, nextConfidence: number, reason: string, at?: number, options?: {
+    sourceType?: ConfidenceSourceType;
+}): ClaimMeta;
 /**
  * True when the claim is valid at `at`. Historical queries can therefore read a
  * superseded/expired claim as long as `at` falls inside [validFrom, validTo).

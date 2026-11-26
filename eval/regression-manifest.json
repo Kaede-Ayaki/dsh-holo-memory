@@ -8,6 +8,6 @@
   "expectedIds": 539,
   "datasetFile": "eval/dataset-human.jsonl",
   "datasetSha256": "51769b941f7ac93413bdd67bbae4f9a59695b73829362d97cc69b21da7db4ee5",
-  "storeSnapshotSha256": "cc09632d22f411407c89b90ed4210a8852276db6288d500f69a124918dddd3cc",
+  "storeSnapshotSha256": "9d460a12326965beb434ae0587c6dff7186e32422ba2c48385558a821be40c44",
   "policy": "private: contains real user queries; kept out of the repository (gitignored). The SHA-256 is the stable identity for reproductions; Baseline files in eval/ record the same hash."
 }

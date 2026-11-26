@@ -24,7 +24,7 @@ const has = (name) => process.argv.includes(`--${name}`);
 const datasetPath = arg('dataset', 'eval/dataset-human.jsonl');
 const manifestPath = arg('manifest', 'eval/regression-manifest.json');
 const storeDir = arg('store', path.join(process.env.DSH_HOME || '', 'holo-memory'));
-const baselinePath = arg('baseline', 'eval/baseline-1.0.0.json');
+const baselinePath = arg('baseline', 'eval/baseline-1.0.2.json');
 const requireStore = has('require-store');
 
 const sha256 = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex');

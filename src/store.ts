@@ -95,6 +95,19 @@ function validateClaim(claim: unknown): string | null {
     }
   }
   if (value.supersedes !== undefined && !isStringArray(value.supersedes)) return 'claim.supersedes is invalid';
+  if (value.supersededBy !== undefined && typeof value.supersededBy !== 'string') return 'claim.supersededBy is invalid';
+  if (value.confidenceHistory !== undefined) {
+    if (!Array.isArray(value.confidenceHistory)) return 'claim.confidenceHistory is not an array';
+    for (const entry of value.confidenceHistory) {
+      if (typeof entry !== 'object' || entry === null) return 'claim.confidenceHistory entry is invalid';
+      const item = entry as Record<string, unknown>;
+      if (typeof item.at !== 'number' || !Number.isFinite(item.at)) return 'claim.confidenceHistory.at is invalid';
+      if (typeof item.confidence !== 'number' || !Number.isFinite(item.confidence) || item.confidence < 0 || item.confidence > 1) {
+        return 'claim.confidenceHistory.confidence is invalid';
+      }
+      if (typeof item.reason !== 'string') return 'claim.confidenceHistory.reason is invalid';
+    }
+  }
 
   const basis = value.confidenceBasis as Record<string, unknown> | undefined;
   if (typeof basis !== 'object' || basis === null) return 'claim.confidenceBasis is missing';
@@ -106,7 +119,7 @@ function validateClaim(claim: unknown): string | null {
   }
   for (const field of ['corroboration', 'contradiction']) {
     const count = basis[field];
-    if (typeof count !== 'number' || !Number.isFinite(count) || count < 0) return `claim.basis.${field} is invalid`;
+    if (typeof count !== 'number' || !Number.isInteger(count) || count < 0) return `claim.basis.${field} is invalid`;
   }
   if (typeof basis.verified !== 'boolean') return 'claim.basis.verified is invalid';
   return null;
@@ -124,6 +137,9 @@ function validateRecord(layer: Layer, value: unknown, seen: Set<string>): { reco
     return { reason: 'scope is invalid' };
   }
   if (record.projectKey !== undefined && typeof record.projectKey !== 'string') return { reason: 'projectKey is invalid' };
+  if (record.scope === 'project' && typeof record.projectKey === 'string' && !/^p-[0-9a-f]{12}$/.test(record.projectKey)) {
+    return { reason: 'projectKey does not match p-<12 hex>' };
+  }
   if (record.importance !== undefined && (typeof record.importance !== 'number' || !Number.isFinite(record.importance))) {
     return { reason: 'importance is invalid' };
   }

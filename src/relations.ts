@@ -26,18 +26,23 @@ export interface SupersedeValidation {
 
 const MAX_CHAIN = 100;
 
-/** Walk a claim's supersedes ancestors. */
-function ancestors(store: HoloStore, id: string): Set<string> {
+/** Walk a claim's supersedes ancestors; report truncation instead of guessing. */
+function ancestors(store: HoloStore, id: string): { ids: Set<string>; truncated: boolean } {
   const seen = new Set<string>();
   const stack = [id];
-  while (stack.length > 0 && seen.size < MAX_CHAIN) {
+  let truncated = false;
+  while (stack.length > 0) {
+    if (seen.size >= MAX_CHAIN) {
+      truncated = true;
+      break;
+    }
     const current = stack.pop() as string;
     if (seen.has(current)) continue;
     seen.add(current);
     const record = store.find(current);
     for (const parent of record?.claim?.supersedes ?? []) stack.push(parent);
   }
-  return seen;
+  return { ids: seen, truncated };
 }
 
 export function validateSupersedeTargets(
@@ -68,7 +73,11 @@ export function validateSupersedeTargets(
     if (!isValidAt(target.claim, now)) errors.push(`target is not valid now: ${targetId}`);
     if (source.id) {
       if (targetId === source.id) errors.push(`supersede cycle at ${targetId}`);
-      else if (ancestors(store, targetId).has(source.id)) errors.push(`supersede cycle at ${targetId}`);
+      else {
+        const ancestry = ancestors(store, targetId);
+        if (ancestry.truncated) errors.push(`ancestry check incomplete for ${targetId}`);
+        else if (ancestry.ids.has(source.id)) errors.push(`supersede cycle at ${targetId}`);
+      }
     }
   }
   return errors.length === 0 ? { ok: true, errors: [], targets } : { ok: false, errors, targets: [] };

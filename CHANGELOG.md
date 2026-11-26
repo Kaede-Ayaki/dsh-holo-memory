@@ -3,6 +3,32 @@
 All notable changes to `dsh-holo-memory` are documented here.
 Format follows Keep a Changelog; versions follow the package version.
 
+## [1.0.2] - 2026-11-26
+
+**主题：关闭 v1.0.1 审计 N-01–N-10，把回归门禁从“哈希检查”升级为“指标门禁”。**
+
+### Fixed
+
+- **N-01（P1）** `withConfidence()` 支持证据元数据：用户纠正时同时更新 `confidenceBasis.sourceType=user_correction` 与 `calibrationVersion`；数值不变也会更新元数据。
+- **N-02（P1）** `confidenceBasis.corroboration/contradiction/verified` 明确标记为实验字段，生产写入不会自动推进；README 与代码注释同步，不再暗示已接线。
+- **N-03（P1）** 画像刷新按事件区分：抽取刷新受 `aSeriesRefreshOnExtract` 控制，删除/取代/归档/trim 的失效刷新只要求 `aSeriesEnabled + writesAllowed`。
+- **N-04（P1）** 新增 `eval/regression.mjs`：校验 dataset/store 哈希 → 实跑 evaluator → 与 `baseline-1.0.2.json` 比较 query/final 指标，回落超过阈值（默认 5%）非零退出；`npm run eval:regression`。
+- **N-05（P2）** 迁移脚本的 `unmapped` 统计改在改写前计算，不再把已迁移 key 误报为未映射。
+- **N-06（P2）** 存储层校验 `scope=project` 的 `projectKey` 必须匹配 `p-<12 hex>`；磁盘项目画像逐个 try/catch，单文件损坏不影响其他项目。
+- **N-07（P2）** `validateSupersedeTargets()` 的祖先遍历超过 100 节点时 fail-closed（报 `ancestry check incomplete`），不再默认无环。
+- **N-08（P2）** schema 校验补齐 `supersededBy`、`confidenceHistory` 条目与整数 `corroboration/contradiction`。
+- **N-09（P2）** README 测试徽章改为 CI + 实际数字；`memory_profile` 工具签名补 `scope`。
+- **N-10（P2）** 生成 `neuron-memory/package-lock.json`，CI 子包安装改回 `npm ci`。
+
+### Verification
+
+```text
+holo:   90/90 PASS
+neuron: 13/13 PASS
+regression gate: PASS (query recall 0.8968 baseline; live run 0.8694, within 5%)
+baseline-1.0.2: query recall@5 0.8968 · hit 0.9677 · quiet 0.6316 · coverage 0.9677
+```
+
 ## [1.0.1] - 2026-11-26
 
 **主题：关闭 1.0.0 后续审计 R-01–R-09，并让 Linux CI 真正变绿。**

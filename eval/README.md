@@ -95,7 +95,8 @@ node eval/run.mjs --data ".dsh/holo-memory" --dataset eval/dataset-human.jsonl `
 
 - `eval/regression-manifest.json` 记录私有 human 数据集的 SHA-256、条数、正负例数与 store 快照哈希；
 - 真实 query 不入库（含隐私），任何人拿到同一份私有 `dataset-human.jsonl` 都可用 `node eval/check-regression.mjs --store ...` 校验哈希后再跑；
-- committed baseline（`eval/baseline-1.0.0.json`）记录同一组 dataset/store 哈希；哈希对不上时先停下，不要拿数字做比较。
+- committed baseline（`eval/baseline-1.0.2.json`）记录同一组 dataset/store 哈希；哈希对不上时先停下，不要拿数字做比较；
+- `node eval/regression.mjs` 会校验哈希 → 实跑 evaluator → 与基线比较（默认允许 5% 回落），指标下降超阈值即非零退出；`npm run eval:regression` 等价。
 
 ## 隐私
 

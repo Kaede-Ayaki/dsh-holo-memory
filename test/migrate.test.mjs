@@ -71,6 +71,7 @@ test('project-key migration maps old cwd keys and updates the label', async () =
 
   const out = JSON.parse(run(['--data', dir, '--apply']));
   assert.ok(out.changed >= 1, 'L1 and L2 records sharing the old key are updated');
+  assert.deepEqual(out.unmapped, [], 'migrated keys must not be reported as unmapped');
   const migrated = JSON.parse(await fs.readFile(path.join(dir, 'l2.json'), 'utf8'))[0];
   assert.equal(migrated.projectKey, projectIdFor(nested).key);
   assert.equal(migrated.projectLabel, projectIdFor(nested).label);

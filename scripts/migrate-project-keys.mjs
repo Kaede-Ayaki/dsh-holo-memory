@@ -56,6 +56,18 @@ for (const record of loaded.l1) {
   }
 }
 
+// Keys that exist but have no L1 cwd evidence cannot be migrated safely.
+// Compute this BEFORE rewriting any record, while old keys are still present.
+const unmapped = new Map();
+for (const layer of layers) {
+  for (const record of loaded[layer]) {
+    if (!record || typeof record.projectKey !== 'string' || record.projectKey.length === 0) continue;
+    if (record.scope === 'user') continue;
+    if (keysFromL1.has(record.projectKey)) continue;
+    unmapped.set(record.projectKey, (unmapped.get(record.projectKey) ?? 0) + 1);
+  }
+}
+
 const perLayer = {};
 let changed = 0;
 const skippedConflicts = [];
@@ -73,20 +85,6 @@ for (const layer of layers) {
     if (entry.label) record.projectLabel = entry.label;
     changed += 1;
     perLayer[layer].changed += 1;
-  }
-}
-
-// Keys that exist but have no L1 cwd evidence cannot be migrated safely.
-const unmapped = new Map();
-for (const layer of layers) {
-  for (const record of loaded[layer]) {
-    if (!record || typeof record.projectKey !== 'string' || record.projectKey.length === 0) continue;
-    if (mapping.has(record.projectKey)) continue;
-    if (record.scope === 'user') continue;
-    // Keys that have L1 cwd evidence were already resolved (mapped or current);
-    // only keys without any recoverable cwd are genuinely unmapped.
-    if (keysFromL1.has(record.projectKey)) continue;
-    unmapped.set(record.projectKey, (unmapped.get(record.projectKey) ?? 0) + 1);
   }
 }
 

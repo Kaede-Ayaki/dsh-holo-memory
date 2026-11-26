@@ -35,6 +35,7 @@ import { applyCitationFeedback } from './feedback.js';
 import { AUTHORITY_NOTE, EVIDENCE_NOTE } from './authority.js';
 import { startMaintenanceSchedule } from './maintenance.js';
 import { RuntimeToggles } from './runtime.js';
+import { shouldRefreshProfiles } from './refresh.js';
 import { ProfileStore, renderAProfile } from './profile.js';
 import type { AnyRecord, ExtractionResult, L1Record, L3Record, TurnCapture } from './types.js';
 
@@ -135,7 +136,7 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
   // when the last recorded run is older than 20h).
   ctx.effect(() =>
     startMaintenanceSchedule(store, config, logger, (removed) => {
-      refreshProfiles(removed);
+      refreshProfiles(removed, true);
       drainRemovals();
     }),
   );
@@ -175,9 +176,13 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
           const match = /^a-(.+)\.json$/.exec(name);
           if (!match) continue;
           const key = match[1];
-          const storeForProject = projectProfileStore(key);
-          await storeForProject.whenReady().catch(() => undefined);
-          await storeForProject.refresh(store, 'project', key).catch(() => undefined);
+          try {
+            const storeForProject = projectProfileStore(key);
+            await storeForProject.whenReady().catch(() => undefined);
+            await storeForProject.refresh(store, 'project', key).catch(() => undefined);
+          } catch {
+            // One malformed profile file must not stop the other projects.
+          }
         }
       })
       .catch(() => undefined);
@@ -186,13 +191,15 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
   const drainRemovals = (): void => {
     const removed = store.takeRemoved();
     if (removed.length === 0) return;
-    refreshProfiles(removed);
-    if (removed.length > 0) refreshProfilesFromDisk();
+    refreshProfiles(removed, true);
+    refreshProfilesFromDisk();
     syncNeuron();
   };
 
-  const refreshProfiles = (records: AnyRecord[]): void => {
-    if (!config.aSeriesEnabled || !config.aSeriesRefreshOnExtract || !store.writesAllowed()) return;
+  const refreshProfiles = (records: AnyRecord[], force = false): void => {
+    // Extract-triggered refresh honours aSeriesRefreshOnExtract; invalidation
+    // events (forget/supersede/archive/trim) must ignore that switch.
+    if (!shouldRefreshProfiles(force, config, store.writesAllowed())) return;
     void profileStore.refresh(store, 'user').catch(() => undefined);
     const keys = new Set(
       records.filter((record) => record.scope === 'project' && record.projectKey).map((record) => record.projectKey),
@@ -214,7 +221,11 @@ loadCalibrationFile(path.join(storageDir, 'calibration.json'));
 
   // Deletes and supersedes do not carry new records, but they invalidate the
   // neuron graph and the profile snapshot just the same.
-  const onMutation = (): void => onRecords([]);
+  const onMutation = (): void => {
+    syncNeuron();
+    refreshProfiles([], true);
+    drainRemovals();
+  };
 
   const drainEmbeddings = async (): Promise<void> => {
     while (pendingEmbeddings.size > 0) {

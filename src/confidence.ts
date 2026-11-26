@@ -101,7 +101,11 @@ export interface ConfidenceEvidence {
 }
 
 /**
- * Heuristic confidence update (heuristic-v1).
+ * Heuristic confidence update (heuristic-v1) — experimental only.
+ *
+ * Production write paths do NOT advance corroboration/contradiction/verified
+ * automatically. Keep this for experiments and explicit tooling until a real
+ * evidence-event interface exists.
  *
  *   logit(p) = logit(prior)
  *            + 0.25 * log1p(corroboration)
@@ -162,13 +166,32 @@ export const MAX_CONFIDENCE_HISTORY = 10;
  * correction or corroboration changes the number; the previous value is kept
  * in `confidenceHistory` so the move stays auditable.
  */
-export function withConfidence(claim: ClaimMeta, nextConfidence: number, reason: string, at = Date.now()): ClaimMeta {
+export function withConfidence(
+  claim: ClaimMeta,
+  nextConfidence: number,
+  reason: string,
+  at = Date.now(),
+  options: { sourceType?: ConfidenceSourceType } = {},
+): ClaimMeta {
   // One authority: every stored confidence is normalized *and* calibrated with
   // the currently loaded mapping, so the number always matches its basis.
   const normalized = applyCalibration(normalizeConfidence(nextConfidence));
-  if (toBasisPoints(normalized) === toBasisPoints(claim.confidence)) return claim;
-  const history = [...(claim.confidenceHistory ?? []), { at, confidence: claim.confidence, reason }].slice(-MAX_CONFIDENCE_HISTORY);
-  return { ...claim, confidence: normalized, confidenceHistory: history };
+  const calibrationVersion = getCalibration().version;
+  const nextSourceType = options.sourceType ?? claim.confidenceBasis.sourceType;
+  const valueChanged = toBasisPoints(normalized) !== toBasisPoints(claim.confidence);
+  const metadataChanged =
+    nextSourceType !== claim.confidenceBasis.sourceType ||
+    calibrationVersion !== claim.confidenceBasis.calibrationVersion;
+  if (!valueChanged && !metadataChanged) return claim;
+  const history = valueChanged
+    ? [...(claim.confidenceHistory ?? []), { at, confidence: claim.confidence, reason }].slice(-MAX_CONFIDENCE_HISTORY)
+    : claim.confidenceHistory;
+  return {
+    ...claim,
+    confidence: normalized,
+    confidenceBasis: { ...claim.confidenceBasis, sourceType: nextSourceType, calibrationVersion },
+    confidenceHistory: history,
+  };
 }
 
 /**

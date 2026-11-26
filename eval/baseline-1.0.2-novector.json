@@ -1,0 +1,484 @@
+{
+  "generatedAt": "2026-11-26T10:46:59.566Z",
+  "store": "$DSH_HOME/holo-memory",
+  "dataset": "eval\\dataset-human.jsonl",
+  "datasetAnnotator": "human",
+  "channels": {
+    "vector": false,
+    "neuron": true,
+    "active": true
+  },
+  "config": {
+    "injectMaxChars": 5000,
+    "injectMinScore": 0.12,
+    "injectL1": 4,
+    "injectL2": 10,
+    "injectL3": 5
+  },
+  "metrics": {
+    "items": 50,
+    "k": 5,
+    "query": {
+      "positives": 31,
+      "negatives": 19,
+      "recallAtK": 0.3505,
+      "precisionAtK": 0.1742,
+      "mrr": 0.5,
+      "ndcgAtK": 0.3827,
+      "hitRate": 0.5161,
+      "quietRate": 0.8947,
+      "avgReturned": 1.04
+    },
+    "resident": {
+      "avgItems": 0.58,
+      "negativeWithResident": 0.8947
+    },
+    "finalInjected": {
+      "avgItems": 1.62,
+      "expectedCoverage": 0.5161
+    },
+    "quality": {
+      "evidenceRate": 1,
+      "staleRate": 0,
+      "expectedSurvival": 0.9767,
+      "evaporated": 0
+    },
+    "reproducibility": {
+      "datasetSha256": "51769b941f7ac93413bdd67bbae4f9a59695b73829362d97cc69b21da7db4ee5",
+      "storeSha256": "9d460a12326965beb434ae0587c6dff7186e32422ba2c48385558a821be40c44"
+    }
+  },
+  "perItem": [
+    {
+      "id": "h-0013a939c4",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 2,
+      "resident": 0,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-0027c1e822",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-005853e1bf",
+      "expected": 3,
+      "expectedSurviving": 3,
+      "returned": 4,
+      "resident": 0,
+      "hit": true,
+      "recall": 1
+    },
+    {
+      "id": "h-009184e956",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 1,
+      "resident": 0,
+      "hit": true,
+      "recall": 1
+    },
+    {
+      "id": "h-0154e24334",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 1,
+      "resident": 0,
+      "hit": true,
+      "recall": 1
+    },
+    {
+      "id": "h-017a704b25",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 10,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.75
+    },
+    {
+      "id": "h-01b33f694d",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 1,
+      "resident": 0,
+      "hit": true,
+      "recall": 1
+    },
+    {
+      "id": "h-022929693c",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 1,
+      "resident": 0,
+      "hit": null
+    },
+    {
+      "id": "h-0293816c18",
+      "expected": 2,
+      "expectedSurviving": 2,
+      "returned": 1,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.5
+    },
+    {
+      "id": "h-02feb7b95e",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-03027633e8",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-03368da492",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-036876b782",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-039bc018c0",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-03e10f534a",
+      "expected": 3,
+      "expectedSurviving": 3,
+      "returned": 2,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.6666666666666666
+    },
+    {
+      "id": "h-03ffcc6d5b",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-0419826c7d",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-042ca22982",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-043b249d10",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-04435245ce",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-05550d348a",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-05d0203587",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-05df03cd6f",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 2,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.5
+    },
+    {
+      "id": "h-06645eeabc",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-0674abdb79",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 1,
+      "resident": 0,
+      "hit": true,
+      "recall": 1
+    },
+    {
+      "id": "h-06de267af0",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 3,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.5
+    },
+    {
+      "id": "h-06e9112126",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-078f986fc8",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 4,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.25
+    },
+    {
+      "id": "h-07990b4288",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-0817646bb1",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-081bb1bbea",
+      "expected": 2,
+      "expectedSurviving": 2,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-082502c7a8",
+      "expected": 5,
+      "expectedSurviving": 5,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-a62b707982",
+      "expected": 5,
+      "expectedSurviving": 5,
+      "returned": 4,
+      "resident": 0,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-0898669c87",
+      "expected": 2,
+      "expectedSurviving": 2,
+      "returned": 1,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.5
+    },
+    {
+      "id": "h-08e3010a12",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-095b160823",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 3,
+      "resident": 0,
+      "hit": null
+    },
+    {
+      "id": "h-0991abdcc8",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-09fc2efafe",
+      "expected": 5,
+      "expectedSurviving": 5,
+      "returned": 3,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.6
+    },
+    {
+      "id": "h-0a779622e5",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-0afc57ba42",
+      "expected": 2,
+      "expectedSurviving": 2,
+      "returned": 2,
+      "resident": 0,
+      "hit": true,
+      "recall": 1
+    },
+    {
+      "id": "h-0b27002fae",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-0b81fe4280",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-0bb04c36fc",
+      "expected": 5,
+      "expectedSurviving": 5,
+      "returned": 1,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.2
+    },
+    {
+      "id": "h-20d0473913",
+      "expected": 1,
+      "expectedSurviving": 1,
+      "returned": 2,
+      "resident": 0,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-0c2561c7b7",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-f99cd90fa8",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-0cd8e562e3",
+      "expected": 0,
+      "expectedSurviving": 0,
+      "returned": 0,
+      "resident": 1,
+      "hit": null
+    },
+    {
+      "id": "h-0d55a1472a",
+      "expected": 2,
+      "expectedSurviving": 2,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    },
+    {
+      "id": "h-0d6899f16c",
+      "expected": 5,
+      "expectedSurviving": 5,
+      "returned": 3,
+      "resident": 0,
+      "hit": true,
+      "recall": 0.4
+    },
+    {
+      "id": "h-0dbf9c4016",
+      "expected": 4,
+      "expectedSurviving": 4,
+      "returned": 0,
+      "resident": 1,
+      "hit": false,
+      "recall": 0
+    }
+  ]
+}

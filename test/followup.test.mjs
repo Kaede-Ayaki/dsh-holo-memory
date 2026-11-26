@@ -184,7 +184,7 @@ test('confidence authority: claim and top-level field match after extraction', a
 test('loader quarantines shallowly-invalid arrays and claim basis', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-shallow-'));
   const now = Date.now();
-  const good = { id: 'l2_ok', layer: 'l2', scope: 'project', projectKey: 'p-x', projectLabel: 'x', importance: 5, createdAt: now, updatedAt: now, hash: 'h', text: 'ok', kind: 'fact', tags: [], confidence: 0.5 };
+  const good = { id: 'l2_ok', layer: 'l2', scope: 'project', projectKey: 'p-aaaaaaaaaaaa', projectLabel: 'x', importance: 5, createdAt: now, updatedAt: now, hash: 'h', text: 'ok', kind: 'fact', tags: [], confidence: 0.5 };
   const bad = [
     { ...good, id: 'l2_badtag', tags: [123] },
     { ...good, id: 'l2_badbasis', claim: { confidence: 0.5, status: 'active', observedAt: now, recordedAt: now, confidenceBasis: {} } },
@@ -236,7 +236,7 @@ test('timeline reports truncation instead of silently cutting a long chain', asy
 test('doctor surfaces quarantined records', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'holo-doctor-q-'));
   const now = Date.now();
-  const good = { id: 'l2_doc_ok', layer: 'l2', scope: 'project', projectKey: 'p-x', projectLabel: 'x', importance: 5, createdAt: now, updatedAt: now, hash: 'h', text: 'ok', kind: 'fact', tags: [], confidence: 0.5 };
+  const good = { id: 'l2_doc_ok', layer: 'l2', scope: 'project', projectKey: 'p-aaaaaaaaaaaa', projectLabel: 'x', importance: 5, createdAt: now, updatedAt: now, hash: 'h', text: 'ok', kind: 'fact', tags: [], confidence: 0.5 };
   const bad = { ...good, id: 'l2_doc_bad', tags: [1] };
   await fs.writeFile(path.join(dir, 'l2.json'), JSON.stringify([good, bad]), 'utf8');
   const config = normalizeConfig({});
